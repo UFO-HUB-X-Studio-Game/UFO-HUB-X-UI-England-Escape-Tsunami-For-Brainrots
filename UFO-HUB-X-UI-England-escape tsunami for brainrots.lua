@@ -739,59 +739,79 @@ local function stroke(ui,t,col)
 end
 
 ------------------------------------------------------------------------
--- GOD MODE LOGIC (100% INVINCIBLE)
+-- ADVANCED GOD MODE LOGIC (100% CONTINUOUS)
 ------------------------------------------------------------------------
 local GOD_ENABLED = SG("GodMode", false)
-local godConn
+local godLoopConn
+local charAddedConn
+
+-- บล็อกการตายที่ระดับ MetaTable (ป้องกันดาเมจต่อเนื่องได้ดีที่สุด)
+local oldIndex
+oldIndex = hookmetamethod(game, "__index", function(self, key)
+    if GOD_ENABLED and tostring(self) == "Humanoid" and key == "Health" then
+        return self.MaxHealth -- หลอกระบบว่าเลือดเต็มตลอดเวลา
+    end
+    return oldIndex(self, key)
+end)
+
+local function applyGodMode(char)
+    if not char then return end
+    local hum = char:WaitForChild("Humanoid", 5)
+    if hum then
+        -- ปิดการตายแบบถาวร
+        hum:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
+        hum.Health = hum.MaxHealth
+        
+        -- บล็อกดาเมจจากการสัมผัส (ต่อเนื่อง)
+        for _, v in ipairs(char:GetDescendants()) do
+            if v:IsA("BasePart") then v.CanTouch = false end
+        end
+    end
+end
 
 local function toggleGodMode(state)
-    if godConn then godConn:Disconnect() godConn = nil end
+    if godLoopConn then godLoopConn:Disconnect() godLoopConn = nil end
+    if charAddedConn then charAddedConn:Disconnect() charAddedConn = nil end
     
     if state then
-        godConn = RunService.Stepped:Connect(function()
-            local char = LP.Character
-            if char then
-                -- 1. ลบ HumanoidRootPart ออกจากระบบรับดาเมจ (บางส่วน)
-                -- 2. ตั้งค่า Humanoid ให้ไม่รับสถานะตาย
-                local hum = char:FindFirstChildOfClass("Humanoid")
-                if hum then
-                    hum:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
-                    if hum.Health < hum.MaxHealth then
-                        hum.Health = hum.MaxHealth
-                    end
-                end
-                -- 3. ป้องกันดาเมจจากสภาพแวดล้อม (Lava, Water, Etc)
-                for _, v in ipairs(char:GetDescendants()) do
-                    if v:IsA("BasePart") then
-                        v.CanTouch = false -- ป้องกันการสัมผัสพาร์ทที่สร้างดาเมจ
-                    end
-                end
-            end
+        -- ตรวจสอบตัวละครปัจจุบัน
+        applyGodMode(LP.Character)
+        
+        -- ตรวจสอบตัวละครใหม่ทันทีที่เกิด (Continuous)
+        charAddedConn = LP.CharacterAdded:Connect(function(char)
+            task.wait(0.1)
+            applyGodMode(char)
         end)
         
-        -- 4. Hook Net เพื่อบล็อก Remote ที่ส่งดาเมจมาที่ตัวละคร (ถ้ามี)
-        local oldNamecall
-        oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
-            local method = getnamecallmethod()
-            if method == "FireServer" and tostring(self) == "Died" then
-                return nil -- บล็อกการส่งค่าว่าเราตายไปที่ Server
+        -- ลูปล็อกเลือดและสถานะทุกเฟรม (ป้องกันหลุด 100%)
+        godLoopConn = RunService.Heartbeat:Connect(function()
+            local char = LP.Character
+            local hum = char and char:FindFirstChildOfClass("Humanoid")
+            if hum then
+                if hum.Health < hum.MaxHealth then
+                    hum.Health = hum.MaxHealth
+                end
+                -- ป้องกันสถานะล้มเหลว
+                if hum:GetState() == Enum.HumanoidStateType.Dead then
+                    hum:ChangeState(Enum.HumanoidStateType.GettingUp)
+                end
             end
-            return oldNamecall(self, ...)
         end)
     else
+        -- ปิดระบบ
         local char = LP.Character
-        if char then
-            local hum = char:FindFirstChildOfClass("Humanoid")
-            if hum then hum:SetStateEnabled(Enum.HumanoidStateType.Dead, true) end
-            for _, v in ipairs(char:GetDescendants()) do
-                if v:IsA("BasePart") then v.CanTouch = true end
-            end
+        local hum = char and char:FindFirstChildOfClass("Humanoid")
+        if hum then 
+            hum:SetStateEnabled(Enum.HumanoidStateType.Dead, true) 
+        end
+        for _, v in ipairs(char:GetDescendants()) do
+            if v:IsA("BasePart") then v.CanTouch = true end
         end
     end
 end
 
 ------------------------------------------------------------------------
--- UI GENERATION (Model A V1 Style)
+-- UI GENERATION (God Mode 🛡️)
 ------------------------------------------------------------------------
 local row = Instance.new("Frame", scroll)
 row.Size = UDim2.new(1, -6, 0, 46)
@@ -807,7 +827,7 @@ txt.Font = Enum.Font.GothamBold
 txt.TextSize = 13
 txt.TextColor3 = THEME.WHITE
 txt.TextXAlignment = Enum.TextXAlignment.Left
-txt.Text = "God mode" -- รายการที่ 1 ไม่มี Emoji
+txt.Text = "God mode" -- รายการข้างในไม่มี Emoji ตามสั่ง
 
 local sw = Instance.new("Frame", row)
 sw.AnchorPoint = Vector2.new(1, 0.5)
@@ -842,7 +862,7 @@ btn.MouseButton1Click:Connect(function()
     toggleGodMode(GOD_ENABLED)
 end)
 
--- Initial State
+-- ทำงานทันทีถ้าเคยเปิดไว้
 refreshUI()
 if GOD_ENABLED then
     task.spawn(function() toggleGodMode(true) end)
