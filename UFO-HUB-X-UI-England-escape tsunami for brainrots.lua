@@ -849,7 +849,6 @@ btn.MouseButton1Click:Connect(function()
 end)
 
 refreshUI()
--- ไม่รันตอนเริ่มทันทีเพราะต้องรอจังหวะตัวละครพร้อมจริงๆ
 --===== UFO HUB X • SETTINGS — Smoother 🚀 (A V1 • fixed 3 rows) + Runner Save (per-map) + AA1 =====
 registerRight("Settings", function(scroll)
     local TweenService = game:GetService("TweenService")
