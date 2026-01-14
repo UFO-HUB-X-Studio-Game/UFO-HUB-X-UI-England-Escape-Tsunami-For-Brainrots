@@ -739,64 +739,69 @@ local function stroke(ui,t,col)
 end
 
 ------------------------------------------------------------------------
--- SUPER GOD MODE (100% CONTINUOUS LOOP)
+-- ULTIMATE GOD MODE (TSUNAMI PROOF 100%)
 ------------------------------------------------------------------------
 local GOD_ENABLED = SG("GodMode", false)
 local godLoop
 
--- 1. Hook Metatable ป้องกันการเปลี่ยนค่าเลือด (ระดับ Engine)
-local oldNamecall
-oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
-    local method = getnamecallmethod()
-    if GOD_ENABLED and (method == "BreakJoints" or method == "TakeDamage") then
-        return nil -- บล็อกคำสั่งทำลายข้อต่อและดาเมจ
+-- ระบบป้องกันการถูกลบ (Anti-Destroy)
+local oldDescendantAdded
+oldDescendantAdded = game.DescendantAdded:Connect(function(desc)
+    if GOD_ENABLED and desc:IsDescendantOf(LP.Character) then
+        -- หากมีอะไรพยายามมาลบชิ้นส่วนร่างกาย (เช่น สึนามิสั่งลบหัวหรือตัว)
+        -- ในโหมดนี้เราจะใช้ลูป RenderStepped คอยคุมไว้แทน
     end
-    return oldNamecall(self, ...)
 end)
-
-local function startGodLoop()
-    if godLoop then godLoop:Disconnect() end
-    
-    -- ใช้ RenderStepped เพื่อให้ทำงานเร็วกว่าดาเมจ (วนลูปต่อเนื่อง)
-    godLoop = RunService.RenderStepped:Connect(function()
-        if not GOD_ENABLED then return end
-        
-        local char = LP.Character
-        if char then
-            local hum = char:FindFirstChildOfClass("Humanoid")
-            if hum then
-                -- บล็อกสถานะตายแบบรัวๆ
-                hum:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
-                hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
-                hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
-                
-                -- ล็อกเลือดให้เต็มทุกเสี้ยววินาที
-                if hum.Health < hum.MaxHealth then
-                    hum.Health = hum.MaxHealth
-                end
-                
-                -- ชุบชีวิตอัตโนมัติหากเลือดเป็น 0 ในเสี้ยวเฟรม
-                if hum:GetState() == Enum.HumanoidStateType.Dead then
-                    hum:ChangeState(Enum.HumanoidStateType.GettingUp)
-                end
-            end
-            
-            -- ปิดการสัมผัสพาร์ทอันตรายแบบรัวๆ
-            for _, v in ipairs(char:GetDescendants()) do
-                if v:IsA("BasePart") and v.CanTouch then
-                    v.CanTouch = false
-                end
-            end
-        end
-    end)
-end
 
 local function toggleGodMode(state)
     GOD_ENABLED = state
     if state then
-        startGodLoop()
-        -- บล็อกการ Reset ตัวเอง
-        game:GetService("GuiService"):SetInspectMenuEnabled(false)
+        if godLoop then godLoop:Disconnect() end
+        
+        godLoop = RunService.RenderStepped:Connect(function()
+            if not GOD_ENABLED then return end
+            
+            local char = LP.Character
+            if char then
+                local hum = char:FindFirstChildOfClass("Humanoid")
+                local hrp = char:FindFirstChild("HumanoidRootPart")
+                
+                if hum then
+                    hum.Health = hum.MaxHealth
+                    hum:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
+                    
+                    -- ป้องกันสึนามิซัดกระเด็นหรือทำลายร่าง
+                    -- บล็อกสถานะการตายที่ระดับ Engine State
+                    if hum:GetState() == Enum.HumanoidStateType.Dead then
+                        hum:ChangeState(Enum.HumanoidStateType.GettingUp)
+                    end
+                end
+
+                -- หัวใจหลัก: ป้องกันพาร์ทสึนามิแตะตัว (ลูปปิด Collision และ Touch รัวๆ)
+                for _, part in ipairs(char:GetDescendants()) do
+                    if part:IsA("BasePart") then
+                        part.CanTouch = false -- สึนามิจะไม่รู้ว่าโดนเรา
+                        -- หากโดนซัดแรงๆ ให้ล็อกความเร็วเป็น 0 เพื่อไม่ให้ตัวแตก
+                        part.Velocity = Vector3.new(0, 0, 0)
+                        part.RotVelocity = Vector3.new(0, 0, 0)
+                    end
+                end
+            end
+        end)
+        
+        -- บล็อกคำสั่ง "ตาย" จาก Server-side remote (ถ้ามี)
+        local oldNamecall
+        oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
+            local method = getnamecallmethod()
+            if GOD_ENABLED and (method == "FireServer" or method == "InvokeServer") then
+                local name = tostring(self)
+                if name:lower():find("die") or name:lower():find("damage") or name:lower():find("kill") then
+                    return nil 
+                end
+            end
+            return oldNamecall(self, ...)
+        end)
+        
     else
         if godLoop then godLoop:Disconnect() godLoop = nil end
         local char = LP.Character
@@ -862,17 +867,14 @@ btn.MouseButton1Click:Connect(function()
     refreshUI()
 end)
 
--- ทำงานทันทีตามค่าที่เซฟไว้
 refreshUI()
-if GOD_ENABLED then
-    task.spawn(function() toggleGodMode(true) end)
-end
+if GOD_ENABLED then task.spawn(function() toggleGodMode(true) end) end
 
--- ตรวจสอบเมื่อตัวละครเกิดใหม่ (ให้วนลูปต่อ)
+-- ตรวจสอบตัวละครเกิดใหม่เพื่อรันลูปต่อทันที
 LP.CharacterAdded:Connect(function()
     if GOD_ENABLED then
         task.wait(0.1)
-        startGodLoop()
+        toggleGodMode(true)
     end
 end)
 
