@@ -738,62 +738,61 @@ local function stroke(ui,t,col)
 end
 
 ------------------------------------------------------------------------
--- CLONE GOD MODE (SHADOW WALK)
+-- INVISIBLE RESET GOD MODE (ร่างเดิมอยู่เดิม + รีเซ็ต 1 ที)
 ------------------------------------------------------------------------
 local GOD_ENABLED = SG("GodMode", false)
-local ghostChar = nil
-local netHook = nil
 
-local function toggleGodMode(state)
-    GOD_ENABLED = state
+local function runGodMode()
     local char = LP.Character
     if not char then return end
     
+    local hum = char:FindFirstChildOfClass("Humanoid")
     local hrp = char:FindFirstChild("HumanoidRootPart")
-    if not hrp then return end
+    if not (hum and hrp) then return end
 
-    if state then
-        -- 1. สร้างร่างปลอม (Ghost) แสดงผลแค่ฝั่งเราเพื่อให้รู้ว่าตัวเราอยู่ที่ไหน
-        hrp.Archivable = true
-        ghostChar = hrp:Clone()
-        ghostChar.Parent = workspace
-        ghostChar.CanCollide = false
-        ghostChar.Transparency = 0.5
-        ghostChar.Color = Color3.fromRGB(255, 255, 255)
-        
-        -- 2. Hook การส่งตำแหน่ง (Net Bypass)
-        -- บล็อกการส่งข้อมูลตำแหน่งไปหา Server ทำให้ตัวจริงค้างอยู่ที่จุดเดิม
-        netHook = hookmetamethod(game, "__namecall", function(self, ...)
-            local method = getnamecallmethod()
-            if GOD_ENABLED and not checkcaller() then
-                if method == "FireServer" and (tostring(self) == "MainEvent" or self.Name:find("Update")) then
-                    return -- บล็อกการอัปเดตตำแหน่ง
-                end
-            end
-            return oldNamecall(self, ...)
-        end)
-
-        -- 3. อมตะ 100% เพราะ Server คิดว่าเราอยู่ที่ปลอดภัย
-        RunService:BindToRenderStep("GhostLoop", 1, function()
-            if not GOD_ENABLED then return end
-            local hum = char:FindFirstChildOfClass("Humanoid")
-            if hum then
-                hum.Health = hum.MaxHealth
-                -- ปิด Collision กับพาร์ทอันตราย
-                for _, v in ipairs(char:GetDescendants()) do
-                    if v:IsA("BasePart") then v.CanTouch = false end
-                end
-            end
-        end)
-    else
-        -- ปิดระบบ: วาร์ปกลับไปร่างจริงหรือดึงร่างจริงมาหา (แล้วแต่ระบบเกม)
-        RunService:UnbindFromRenderStep("GhostLoop")
-        if ghostChar then ghostChar:Destroy() ghostChar = nil end
-        if char then
-            for _, v in ipairs(char:GetDescendants()) do
-                if v:IsA("BasePart") then v.CanTouch = true end
-            end
+    -- 1. เก็บพิกัดเดิมไว้
+    local lastPos = hrp.CFrame
+    
+    -- 2. ทำการ Hook เพื่อไม่ให้ร่างหายไปหลังจากตาย
+    char.Archivable = true
+    local clone = char:Clone()
+    clone.Parent = workspace
+    
+    -- 3. สั่งรีเซ็ต (ฆ่าตัวตาย) เพื่อหลอก Server ว่าเราตายแล้ว
+    hum.Health = 0 
+    
+    task.wait(0.1) -- รอจังหวะระบบประมวลผลการตาย
+    
+    -- 4. ย้ายกล้องและตัวควบคุมมาที่ร่างใหม่ (ร่างปลอมที่เดินได้)
+    LP.Character = clone
+    workspace.CurrentCamera.CameraSubject = clone:FindFirstChildOfClass("Humanoid")
+    
+    -- 5. ลูปป้องกันดาเมจต่อเนื่อง 100%
+    RunService:BindToRenderStep("GodLoop", 1, function()
+        if not GOD_ENABLED then 
+            RunService:UnbindFromRenderStep("GodLoop")
+            return 
         end
+        if clone:FindFirstChildOfClass("Humanoid") then
+            clone:FindFirstChildOfClass("Humanoid").Health = 100
+        end
+        -- ทำให้ร่างปลอมไม่โดนชนหรือโดนดาเมจจากพาร์ท
+        for _, p in ipairs(clone:GetDescendants()) do
+            if p:IsA("BasePart") then p.CanTouch = false end
+        end
+    end)
+    
+    print("God Mode Activated: Server thinks you're dead.")
+end
+
+local function toggleGodMode(state)
+    GOD_ENABLED = state
+    if state then
+        runGodMode()
+    else
+        -- ปิดแล้วให้รีเซ็ตตัวละครกลับสู่สภาวะปกติ
+        LP.Character:BreakJoints()
+        RunService:UnbindFromRenderStep("GodLoop")
     end
 end
 
@@ -850,9 +849,7 @@ btn.MouseButton1Click:Connect(function()
 end)
 
 refreshUI()
-if GOD_ENABLED then task.spawn(function() toggleGodMode(true) end) end
-
-end)
+-- ไม่รันตอนเริ่มทันทีเพราะต้องรอจังหวะตัวละครพร้อมจริงๆ
 --===== UFO HUB X • SETTINGS — Smoother 🚀 (A V1 • fixed 3 rows) + Runner Save (per-map) + AA1 =====
 registerRight("Settings", function(scroll)
     local TweenService = game:GetService("TweenService")
