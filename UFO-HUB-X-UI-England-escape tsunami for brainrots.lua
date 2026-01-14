@@ -738,67 +738,58 @@ local function stroke(ui,t,col)
 end
 
 ------------------------------------------------------------------------
--- PERFECT GOD MODE (CLONE + RESET BYPASS)
+-- NET-BYPASS GOD MODE (FAKE LAG STYLE)
 ------------------------------------------------------------------------
 local GOD_ENABLED = SG("GodMode", false)
-local RealChar = nil
+local lagConn = nil
 
 local function toggleGodMode(state)
     GOD_ENABLED = state
-    if state then
-        -- 1. ล็อกตำแหน่งปัจจุบันและป้องกัน UI หาย
-        local char = LP.Character
-        if not char then return end
-        
-        -- ป้องกัน UI หาย (สำคัญมาก)
-        for _, gui in ipairs(LP.PlayerGui:GetChildren()) do
-            if gui:IsA("ScreenGui") then gui.ResetOnSpawn = false end
-        end
+    local char = LP.Character
+    if not char then return end
+    
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    if not (hrp and hum) then return end
 
-        char.Archivable = true
-        local hrp = char:FindFirstChild("HumanoidRootPart")
-        local spawnPos = hrp.CFrame
+    if state then
+        -- 1. รีเซ็ตตัวเอง 1 ทีตามขั้นตอนที่เขาทำกัน (เพื่อรีเฟรชสถานะ)
+        hum.Health = 0
         
-        -- 2. สร้างร่างปลอม (Clone)
-        local clone = char:Clone()
-        clone.Name = "Ghost_God"
-        clone.Parent = workspace
+        -- รอให้เกิดใหม่และพร้อมทำงาน
+        LP.CharacterAdded:Wait()
+        task.wait(1) -- ให้เวลาโหลด UI และพาร์ท
         
-        -- 3. รีเซ็ตตัวละครจริงเพื่อให้ Server ตัดดาเมจ (แต่เราจะคุมร่าง Clone แทน)
-        char:BreakJoints() -- ฆ่าตัวตาย 1 ทีตามที่คุณต้องการ
+        local newChar = LP.Character
+        local newHrp = newChar:WaitForChild("HumanoidRootPart")
         
-        task.wait(0.2) -- รอจังหวะระบบประมวลผลการตาย
-        
-        -- 4. สลับการควบคุมมาที่ร่าง Clone
-        LP.Character = clone
-        workspace.CurrentCamera.CameraSubject = clone:FindFirstChildOfClass("Humanoid")
-        
-        -- 5. ลูประบบอมตะวนไปเรื่อยๆ 100%
-        RunService:BindToRenderStep("GodSystem", 1, function()
-            if not GOD_ENABLED then 
-                RunService:UnbindFromRenderStep("GodSystem")
-                return 
-            end
+        -- 2. เริ่มระบบ Fake Lag (บล็อกการส่งตำแหน่ง)
+        lagConn = RunService.Heartbeat:Connect(function()
+            if not GOD_ENABLED then return end
+            -- หัวใจหลัก: สั่งให้ Network ไม่ส่งค่าตำแหน่ง แต่ยังส่งอนิเมชัน
+            -- ทำให้คนอื่นเห็นเรา 'วิ่งค้าง' อยู่ที่เดิม
+            sethiddenproperty(LP, "SimulationRadius", 0)
+            sethiddenproperty(LP, "MaxSimulationRadius", 0)
             
-            local hum = clone:FindFirstChildOfClass("Humanoid")
-            if hum then
-                hum.Health = 100
-                -- บล็อกดาเมจจากการสัมผัสสึนามิหรือพาร์ท
-                for _, p in ipairs(clone:GetDescendants()) do
-                    if p:IsA("BasePart") then
-                        p.CanTouch = false
-                        -- ให้เดินทะลุพาร์ทดาเมจไปเลย
-                        if p.Name ~= "HumanoidRootPart" then p.CanCollide = false end
-                    end
-                end
+            -- ป้องกันดาเมจฝั่ง Client ด้วย
+            local newHum = newChar:FindFirstChildOfClass("Humanoid")
+            if newHum then
+                newHum.Health = 100
+                newHum:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
             end
         end)
+        
+        -- 3. ตัดการเชื่อมต่อของ Network Replication
+        settings().Physics.AllowSleep = false
+        settings().Physics.PhysicsEnvironmentalThrottle = Enum.EnviromentalPhysicsThrottle.Disabled
     else
-        -- ปิดระบบ: กลับมาเกิดใหม่ปกติ
-        RunService:UnbindFromRenderStep("GodSystem")
-        LP.Character:BreakJoints()
-        task.wait(0.5)
-        -- คืนค่า UI ให้กลับมา Reset ตามปกติถ้าต้องการ
+        -- ปิดระบบ: กลับมาเป็นปกติ
+        if lagConn then lagConn:Disconnect() lagConn = nil end
+        sethiddenproperty(LP, "SimulationRadius", 1000)
+        sethiddenproperty(LP, "MaxSimulationRadius", 1000)
+        if LP.Character and LP.Character:FindFirstChildOfClass("Humanoid") then
+            LP.Character:FindFirstChildOfClass("Humanoid"):SetStateEnabled(Enum.HumanoidStateType.Dead, true)
+        end
     end
 end
 
@@ -819,7 +810,7 @@ txt.Font = Enum.Font.GothamBold
 txt.TextSize = 13
 txt.TextColor3 = THEME.WHITE
 txt.TextXAlignment = Enum.TextXAlignment.Left
-txt.Text = "God mode" -- รายการไม่มี Emoji
+txt.Text = "God mode" 
 
 local sw = Instance.new("Frame", row)
 sw.AnchorPoint = Vector2.new(1, 0.5)
@@ -855,7 +846,6 @@ btn.MouseButton1Click:Connect(function()
 end)
 
 refreshUI()
--- ไม่รันอัตโนมัติเพื่อป้องกัน Error ตอนโหลดเข้าเกม
 end)
 --===== UFO HUB X • SETTINGS — Smoother 🚀 (A V1 • fixed 3 rows) + Runner Save (per-map) + AA1 =====
 registerRight("Settings", function(scroll)
