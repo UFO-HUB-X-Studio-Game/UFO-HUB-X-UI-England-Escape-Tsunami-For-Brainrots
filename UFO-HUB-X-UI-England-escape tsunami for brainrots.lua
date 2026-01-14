@@ -716,7 +716,7 @@ local function SS(k,v)
 end
 
 ------------------------------------------------------------------------
--- UI UTILS (MODEL A V1)
+-- THEME & UI (MODEL A V1)
 ------------------------------------------------------------------------
 local THEME = {
     GREEN = Color3.fromRGB(25,255,125),
@@ -738,83 +738,67 @@ local function stroke(ui,t,col)
 end
 
 ------------------------------------------------------------------------
--- THE "ULTIMATE OMNIPOTENT" GOD MODE
+-- THE GHOST BYPASS (NO-FLINCH GOD MODE)
 ------------------------------------------------------------------------
 local GOD_ENABLED = SG("GodMode", false)
 local godLoop = nil
 
--- [วิธีที่ 1] Meta-Method Hook: บล็อกการรับรู้ของ Engine
-local oldNamecall
-oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
-    local method = getnamecallmethod()
-    local args = {...}
-    if GOD_ENABLED and not checkcaller() then
-        -- บล็อกการส่งสัญญาณตาย/ดาเมจไป Server
-        if method == "FireServer" or method == "InvokeServer" then
-            local name = tostring(self):lower()
-            if name:find("die") or name:find("death") or name:find("damage") or name:find("health") then
-                return nil
-            end
-        end
-        -- บล็อกคำสั่งทำลายร่าง
-        if method == "BreakJoints" or method == "TakeDamage" then
-            return nil
-        end
-    end
-    return oldNamecall(self, ...)
-end)
-
 local function toggleGodMode(state)
     GOD_ENABLED = state
+    local char = LP.Character
+    if not char then return end
+    
     if state then
-        -- ป้องกัน UI หาย
-        for _, gui in ipairs(LP.PlayerGui:GetChildren()) do
-            if gui:IsA("ScreenGui") then gui.ResetOnSpawn = false end
-        end
+        -- บล็อกการส่งข้อมูลความเสียหายทุกลูกแบบถาวร
+        local oldNamecall
+        oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
+            if GOD_ENABLED and not checkcaller() then
+                local method = getnamecallmethod()
+                if method == "BreakJoints" or method == "TakeDamage" then return nil end
+            end
+            return oldNamecall(self, ...)
+        end)
 
-        -- [วิธีที่ 2] Invisible Reset: ฆ่าตัวตายเพื่อบั๊กค่าเลือด
-        if LP.Character and LP.Character:FindFirstChildOfClass("Humanoid") then
-            LP.Character:FindFirstChildOfClass("Humanoid").Health = 0
-        end
-
-        LP.CharacterAdded:Wait()
-        task.wait(0.5)
-
+        -- ลูปป้องกันอาการกระตุก (RenderStepped)
         if godLoop then godLoop:Disconnect() end
         godLoop = RunService.RenderStepped:Connect(function()
             if not GOD_ENABLED then return end
             
-            local char = LP.Character
-            local hum = char and char:FindFirstChildOfClass("Humanoid")
-            if char and hum then
-                -- [วิธีที่ 3] State Locking: ล็อกเลือดและห้ามตายระดับเฟรม
-                hum.Health = 100
-                hum:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
-                
-                -- [วิธีที่ 4] Network Desync (Fake Lag): คนอื่นเห็นวิ่งค้างที่เดิม
-                sethiddenproperty(LP, "SimulationRadius", 0)
-                sethiddenproperty(LP, "MaxSimulationRadius", 0)
+            local c = LP.Character
+            if c then
+                local hum = c:FindFirstChildOfClass("Humanoid")
+                if hum then
+                    hum.Health = 100
+                    -- บล็อกสถานะกระตุก/ล้ม/ตาย
+                    hum:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
+                    hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
+                    hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
+                    
+                    if hum:GetState() == Enum.HumanoidStateType.Dead then
+                        hum:ChangeState(Enum.HumanoidStateType.GettingUp)
+                    end
+                end
 
-                -- [วิธีที่ 5] Anti-Touch/Anti-Collision: เดินทะลุดาเมจ
-                for _, v in ipairs(char:GetChildren()) do
-                    if v:IsA("BasePart") then
-                        v.CanTouch = false -- สึนามิจะไม่รู้ว่าโดนเรา
-                        -- ล็อกไม่ให้พาร์ทถูกลบ (Anti-Destroy)
-                        v.Parent = char 
-                        if v.Name ~= "HumanoidRootPart" then
-                            v.CanCollide = false
-                        end
+                -- ทำให้ร่างกายล่องหนในสายตาฟิสิกส์ (ดาเมจจะทะลุผ่านไปเลย)
+                for _, part in ipairs(c:GetDescendants()) do
+                    if part:IsA("BasePart") then
+                        part.CanTouch = false
+                        -- ป้องกันพาร์ทสั่นหรือกระตุกเมื่อโดนแรงกระแทก
+                        part.Velocity = Vector3.new(0,0,0)
+                        part.RotVelocity = Vector3.new(0,0,0)
                     end
                 end
             end
         end)
+        
+        -- บังคับรีเซ็ตหนึ่งครั้งเพื่อบั๊กสถานะ (ตามคลิป)
+        char:BreakJoints()
+        
     else
-        -- ปิดระบบ
         if godLoop then godLoop:Disconnect() godLoop = nil end
-        sethiddenproperty(LP, "SimulationRadius", 1000)
-        sethiddenproperty(LP, "MaxSimulationRadius", 1000)
-        if LP.Character and LP.Character:FindFirstChildOfClass("Humanoid") then
-            LP.Character:FindFirstChildOfClass("Humanoid"):SetStateEnabled(Enum.HumanoidStateType.Dead, true)
+        if LP.Character then
+            local hum = LP.Character:FindFirstChildOfClass("Humanoid")
+            if hum then hum:SetStateEnabled(Enum.HumanoidStateType.Dead, true) end
         end
     end
 end
@@ -872,6 +856,19 @@ btn.MouseButton1Click:Connect(function()
 end)
 
 refreshUI()
+if GOD_ENABLED then task.spawn(function() toggleGodMode(true) end) end
+
+-- ตรวจสอบตัวละครเกิดใหม่หลังจากการบั๊ก Reset
+LP.CharacterAdded:Connect(function()
+    if GOD_ENABLED then
+        task.wait(0.5)
+        -- ล็อก UI ไม่ให้หาย
+        for _, gui in ipairs(LP.PlayerGui:GetChildren()) do
+            if gui:IsA("ScreenGui") then gui.ResetOnSpawn = false end
+        end
+    end
+end)
+
 end)
 --===== UFO HUB X • SETTINGS — Smoother 🚀 (A V1 • fixed 3 rows) + Runner Save (per-map) + AA1 =====
 registerRight("Settings", function(scroll)
