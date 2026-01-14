@@ -739,54 +739,65 @@ local function stroke(ui,t,col)
 end
 
 ------------------------------------------------------------------------
--- SHADOW GOD MODE (WALKABLE + 100% INVINCIBLE)
+-- MOTION-PROOF GOD MODE (100% INVINCIBLE WHILE MOVING)
 ------------------------------------------------------------------------
 local GOD_ENABLED = SG("GodMode", false)
 local godLoop
+local physicsLoop
+
+local function applyGodPhysics(char)
+    if not char then return end
+    for _, v in ipairs(char:GetDescendants()) do
+        if v:IsA("BasePart") then
+            -- ปิดการรับแรงกระแทกจากภายนอกแต่ยังคงฟิสิกส์การเดิน
+            v.CanTouch = false
+            -- หัวใจหลัก: ป้องกันการตายจากการขยับตัวไปโดนพาร์ทดาเมจ
+            if v.Name ~= "HumanoidRootPart" then
+                v.CanCollide = false
+            end
+        end
+    end
+end
 
 local function toggleGodMode(state)
     GOD_ENABLED = state
     local char = LP.Character
-    if not char then return end
-    local hum = char:FindFirstChildOfClass("Humanoid")
-    
+    local hum = char and char:FindFirstChildOfClass("Humanoid")
+
     if state then
         if godLoop then godLoop:Disconnect() end
-        
-        -- แก้ไขปัญหาเดินไม่ได้: เลิกใช้การล็อก Velocity แบบหว่านแห
-        -- แก้ไขปัญหาตาย: ใช้การตัดการเชื่อมต่อของ Humanoid กับระบบดาเมจ
-        godLoop = RunService.Heartbeat:Connect(function()
+        if physicsLoop then physicsLoop:Disconnect() end
+
+        -- ลูปคุมฟิสิกส์ให้ทำงานตลอดเวลา (แม้ขณะวิ่งหรือกระโดด)
+        physicsLoop = RunService.PreSimulation:Connect(function()
+            if not GOD_ENABLED then return end
+            applyGodPhysics(LP.Character)
+        end)
+
+        -- ลูปคุมเลือดและสถานะ (ล็อกค่าที่ระดับสูงสุด)
+        godLoop = RunService.PostSimulation:Connect(function()
             if not GOD_ENABLED then return end
             if char and hum then
                 hum.Health = hum.MaxHealth
-                -- บล็อกเฉพาะแรงภายนอกที่ทำให้ตัวแตก แต่ไม่บล็อกแรงเดิน/กระโดด
-                local hrp = char:FindFirstChild("HumanoidRootPart")
-                if hrp then
-                    -- ป้องกันสึนามิผลักจนตาย แต่ยังให้เดินได้ปกติ
-                    for _, v in ipairs(char:GetChildren()) do
-                        if v:IsA("BasePart") then
-                            v.CanTouch = false
-                            -- บล็อกการถูก Destroy จากสคริปต์ภายนอก
-                            if v.Name ~= "HumanoidRootPart" then
-                                v.CanCollide = false
-                            end
-                        end
-                    end
+                hum:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
+                
+                -- ถ้าเกมพยายามบังคับให้ตายตอนกระโดด ให้รีเซ็ตกลับทันที
+                if hum:GetState() == Enum.HumanoidStateType.Dead then
+                    hum:ChangeState(Enum.HumanoidStateType.GettingUp)
                 end
             end
         end)
 
-        -- ฟีเจอร์เด็ด: บล็อกการตาย 100% โดยการหลอก Client
+        -- Hook ป้องกันดาเมจทุกรูปแบบ 100% (รวมถึงดาเมจจากการเคลื่อนที่)
         local oldNamecall
         oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
             local method = getnamecallmethod()
-            local args = {...}
             if GOD_ENABLED and not checkcaller() then
-                if method == "BreakJoints" or method == "TakeDamage" then
+                if method == "TakeDamage" or method == "BreakJoints" then
                     return nil
                 end
-                -- บล็อกการส่งข้อมูลว่าเราตายไปที่ Server (สำคัญมากในเกม Tsunami)
-                if tostring(self) == "Died" or tostring(self) == "Death" then
+                -- บล็อก Remote ที่ส่งค่าการตายไป Server
+                if tostring(self):lower():find("died") or tostring(self):lower():find("death") then
                     return nil
                 end
             end
@@ -794,8 +805,9 @@ local function toggleGodMode(state)
         end)
     else
         if godLoop then godLoop:Disconnect() godLoop = nil end
-        if char and hum then
-            for _, v in ipairs(char:GetChildren()) do
+        if physicsLoop then physicsLoop:Disconnect() physicsLoop = nil end
+        if char then
+            for _, v in ipairs(char:GetDescendants()) do
                 if v:IsA("BasePart") then
                     v.CanTouch = true
                     v.CanCollide = true
@@ -860,6 +872,7 @@ end)
 refreshUI()
 if GOD_ENABLED then task.spawn(function() toggleGodMode(true) end) end
 
+-- ตรวจสอบตัวละครเกิดใหม่
 LP.CharacterAdded:Connect(function()
     if GOD_ENABLED then
         task.wait(0.5)
