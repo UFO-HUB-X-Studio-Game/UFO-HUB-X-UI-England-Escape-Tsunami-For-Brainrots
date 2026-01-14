@@ -738,66 +738,72 @@ local function stroke(ui,t,col)
 end
 
 ------------------------------------------------------------------------
--- INVISIBLE RESET GOD MODE (ร่างเดิมอยู่เดิม + รีเซ็ต 1 ที)
+-- PERFECT GOD MODE (CLONE + RESET BYPASS)
 ------------------------------------------------------------------------
 local GOD_ENABLED = SG("GodMode", false)
-
-local function runGodMode()
-    local char = LP.Character
-    if not char then return end
-    
-    local hum = char:FindFirstChildOfClass("Humanoid")
-    local hrp = char:FindFirstChild("HumanoidRootPart")
-    if not (hum and hrp) then return end
-
-    -- 1. เก็บพิกัดเดิมไว้
-    local lastPos = hrp.CFrame
-    
-    -- 2. ทำการ Hook เพื่อไม่ให้ร่างหายไปหลังจากตาย
-    char.Archivable = true
-    local clone = char:Clone()
-    clone.Parent = workspace
-    
-    -- 3. สั่งรีเซ็ต (ฆ่าตัวตาย) เพื่อหลอก Server ว่าเราตายแล้ว
-    hum.Health = 0 
-    
-    task.wait(0.1) -- รอจังหวะระบบประมวลผลการตาย
-    
-    -- 4. ย้ายกล้องและตัวควบคุมมาที่ร่างใหม่ (ร่างปลอมที่เดินได้)
-    LP.Character = clone
-    workspace.CurrentCamera.CameraSubject = clone:FindFirstChildOfClass("Humanoid")
-    
-    -- 5. ลูปป้องกันดาเมจต่อเนื่อง 100%
-    RunService:BindToRenderStep("GodLoop", 1, function()
-        if not GOD_ENABLED then 
-            RunService:UnbindFromRenderStep("GodLoop")
-            return 
-        end
-        if clone:FindFirstChildOfClass("Humanoid") then
-            clone:FindFirstChildOfClass("Humanoid").Health = 100
-        end
-        -- ทำให้ร่างปลอมไม่โดนชนหรือโดนดาเมจจากพาร์ท
-        for _, p in ipairs(clone:GetDescendants()) do
-            if p:IsA("BasePart") then p.CanTouch = false end
-        end
-    end)
-    
-    print("God Mode Activated: Server thinks you're dead.")
-end
+local RealChar = nil
 
 local function toggleGodMode(state)
     GOD_ENABLED = state
     if state then
-        runGodMode()
+        -- 1. ล็อกตำแหน่งปัจจุบันและป้องกัน UI หาย
+        local char = LP.Character
+        if not char then return end
+        
+        -- ป้องกัน UI หาย (สำคัญมาก)
+        for _, gui in ipairs(LP.PlayerGui:GetChildren()) do
+            if gui:IsA("ScreenGui") then gui.ResetOnSpawn = false end
+        end
+
+        char.Archivable = true
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        local spawnPos = hrp.CFrame
+        
+        -- 2. สร้างร่างปลอม (Clone)
+        local clone = char:Clone()
+        clone.Name = "Ghost_God"
+        clone.Parent = workspace
+        
+        -- 3. รีเซ็ตตัวละครจริงเพื่อให้ Server ตัดดาเมจ (แต่เราจะคุมร่าง Clone แทน)
+        char:BreakJoints() -- ฆ่าตัวตาย 1 ทีตามที่คุณต้องการ
+        
+        task.wait(0.2) -- รอจังหวะระบบประมวลผลการตาย
+        
+        -- 4. สลับการควบคุมมาที่ร่าง Clone
+        LP.Character = clone
+        workspace.CurrentCamera.CameraSubject = clone:FindFirstChildOfClass("Humanoid")
+        
+        -- 5. ลูประบบอมตะวนไปเรื่อยๆ 100%
+        RunService:BindToRenderStep("GodSystem", 1, function()
+            if not GOD_ENABLED then 
+                RunService:UnbindFromRenderStep("GodSystem")
+                return 
+            end
+            
+            local hum = clone:FindFirstChildOfClass("Humanoid")
+            if hum then
+                hum.Health = 100
+                -- บล็อกดาเมจจากการสัมผัสสึนามิหรือพาร์ท
+                for _, p in ipairs(clone:GetDescendants()) do
+                    if p:IsA("BasePart") then
+                        p.CanTouch = false
+                        -- ให้เดินทะลุพาร์ทดาเมจไปเลย
+                        if p.Name ~= "HumanoidRootPart" then p.CanCollide = false end
+                    end
+                end
+            end
+        end)
     else
-        -- ปิดแล้วให้รีเซ็ตตัวละครกลับสู่สภาวะปกติ
+        -- ปิดระบบ: กลับมาเกิดใหม่ปกติ
+        RunService:UnbindFromRenderStep("GodSystem")
         LP.Character:BreakJoints()
-        RunService:UnbindFromRenderStep("GodLoop")
+        task.wait(0.5)
+        -- คืนค่า UI ให้กลับมา Reset ตามปกติถ้าต้องการ
     end
 end
 
 ------------------------------------------------------------------------
--- UI GENERATION
+-- UI GENERATION (MODEL A V1)
 ------------------------------------------------------------------------
 local row = Instance.new("Frame", scroll)
 row.Size = UDim2.new(1, -6, 0, 46)
@@ -813,7 +819,7 @@ txt.Font = Enum.Font.GothamBold
 txt.TextSize = 13
 txt.TextColor3 = THEME.WHITE
 txt.TextXAlignment = Enum.TextXAlignment.Left
-txt.Text = "God mode" 
+txt.Text = "God mode" -- รายการไม่มี Emoji
 
 local sw = Instance.new("Frame", row)
 sw.AnchorPoint = Vector2.new(1, 0.5)
@@ -842,14 +848,15 @@ btn.BackgroundTransparency = 1
 btn.Text = ""
 
 btn.MouseButton1Click:Connect(function()
-    local newState = not GOD_ENABLED
-    SS("GodMode", newState)
-    toggleGodMode(newState)
+    GOD_ENABLED = not GOD_ENABLED
+    SS("GodMode", GOD_ENABLED)
     refreshUI()
+    toggleGodMode(GOD_ENABLED)
 end)
 
 refreshUI()
--- ไม่รันตอนเริ่มทันทีเพราะต้องรอจังหวะตัวละครพร้อมจริงๆ
+-- ไม่รันอัตโนมัติเพื่อป้องกัน Error ตอนโหลดเข้าเกม
+end)
 --===== UFO HUB X • SETTINGS — Smoother 🚀 (A V1 • fixed 3 rows) + Runner Save (per-map) + AA1 =====
 registerRight("Settings", function(scroll)
     local TweenService = game:GetService("TweenService")
