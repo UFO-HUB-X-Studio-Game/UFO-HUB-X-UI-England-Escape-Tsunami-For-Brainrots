@@ -738,55 +738,62 @@ local function stroke(ui,t,col)
 end
 
 ------------------------------------------------------------------------
--- NET-BYPASS GOD MODE (FAKE LAG STYLE)
+-- 100% CONTINUOUS GOD MODE (BYPASS DAMAGE SYSTEM)
 ------------------------------------------------------------------------
 local GOD_ENABLED = SG("GodMode", false)
-local lagConn = nil
+local loopConn
 
 local function toggleGodMode(state)
     GOD_ENABLED = state
-    local char = LP.Character
-    if not char then return end
-    
-    local hrp = char:FindFirstChild("HumanoidRootPart")
-    local hum = char:FindFirstChildOfClass("Humanoid")
-    if not (hrp and hum) then return end
-
     if state then
-        -- 1. รีเซ็ตตัวเอง 1 ทีตามขั้นตอนที่เขาทำกัน (เพื่อรีเฟรชสถานะ)
-        hum.Health = 0
-        
-        -- รอให้เกิดใหม่และพร้อมทำงาน
+        -- 1. บล็อกการส่งข้อมูลการตายไป Server (ทำครั้งเดียวตอนเปิด)
+        local oldNamecall
+        oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
+            local method = getnamecallmethod()
+            if GOD_ENABLED and not checkcaller() then
+                if method == "FireServer" and (tostring(self):lower():find("died") or tostring(self):lower():find("damage")) then
+                    return nil
+                end
+            end
+            return oldNamecall(self, ...)
+        end)
+
+        -- 2. ขั้นตอนรีเซ็ตเพื่อบั๊กตัวละคร (ทำตามของคนอื่นเป๊ะๆ)
+        local char = LP.Character
+        if char and char:FindFirstChildOfClass("Humanoid") then
+            char:FindFirstChildOfClass("Humanoid").Health = 0 -- ฆ่าตัวตาย 1 ที
+        end
+
         LP.CharacterAdded:Wait()
-        task.wait(1) -- ให้เวลาโหลด UI และพาร์ท
-        
-        local newChar = LP.Character
-        local newHrp = newChar:WaitForChild("HumanoidRootPart")
-        
-        -- 2. เริ่มระบบ Fake Lag (บล็อกการส่งตำแหน่ง)
-        lagConn = RunService.Heartbeat:Connect(function()
+        task.wait(0.5)
+
+        -- 3. รันลูปอมตะแบบต่อเนื่อง (แก้ไขปัญหาโดนอันที่ 2 แล้วตาย)
+        if loopConn then loopConn:Disconnect() end
+        loopConn = RunService.RenderStepped:Connect(function()
             if not GOD_ENABLED then return end
-            -- หัวใจหลัก: สั่งให้ Network ไม่ส่งค่าตำแหน่ง แต่ยังส่งอนิเมชัน
-            -- ทำให้คนอื่นเห็นเรา 'วิ่งค้าง' อยู่ที่เดิม
-            sethiddenproperty(LP, "SimulationRadius", 0)
-            sethiddenproperty(LP, "MaxSimulationRadius", 0)
             
-            -- ป้องกันดาเมจฝั่ง Client ด้วย
-            local newHum = newChar:FindFirstChildOfClass("Humanoid")
-            if newHum then
-                newHum.Health = 100
-                newHum:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
+            local c = LP.Character
+            local h = c and c:FindFirstChildOfClass("Humanoid")
+            if h then
+                -- บล็อกสถานะการตายแบบถาวรในระดับเฟรม
+                h:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
+                h.Health = 100 -- ล็อกเลือด
+                
+                -- ลบชิ้นส่วนที่ใช้รับดาเมจ (ทำให้สึนามิมองไม่เห็นว่ามีอะไรให้ดาเมจ)
+                for _, part in ipairs(c:GetChildren()) do
+                    if part:IsA("BasePart") then
+                        part.CanTouch = false
+                        -- บล็อกการชนที่จะทำให้ตัวแตก แต่ยังให้ยืนบนพื้นได้ด้วย HRP
+                        if part.Name ~= "HumanoidRootPart" then
+                            part.CanCollide = false
+                        end
+                    end
+                end
             end
         end)
-        
-        -- 3. ตัดการเชื่อมต่อของ Network Replication
-        settings().Physics.AllowSleep = false
-        settings().Physics.PhysicsEnvironmentalThrottle = Enum.EnviromentalPhysicsThrottle.Disabled
     else
-        -- ปิดระบบ: กลับมาเป็นปกติ
-        if lagConn then lagConn:Disconnect() lagConn = nil end
-        sethiddenproperty(LP, "SimulationRadius", 1000)
-        sethiddenproperty(LP, "MaxSimulationRadius", 1000)
+        -- ปิดระบบ
+        if loopConn then loopConn:Disconnect() loopConn = nil end
         if LP.Character and LP.Character:FindFirstChildOfClass("Humanoid") then
             LP.Character:FindFirstChildOfClass("Humanoid"):SetStateEnabled(Enum.HumanoidStateType.Dead, true)
         end
