@@ -691,545 +691,165 @@ end)
 
 registerRight("Home", function(scroll) end)
 registerRight("Settings", function(scroll) end)
---===== UFO HUB X • Home – Model A V1 + AA1 =====
--- Header : "Auto Event 🤖"
--- Row 1  : "Auto Cookie Hunt 🍪" (speed x5, unlimited)
--- Row 2  : "Auto Find All Elves 🧝‍♂️" (20 spots → auto OFF, hold 5s hover, relay 2s)
--- Changes:
---  - Spot #1 updated (HRP)
---  - Spot #11 updated (HRP)
---  - Spot #11: AFTER HOLD 5s -> NOCLIP “ของในแมพ” ตามชื่อ + NOCLIP “ตัวละคร” ระหว่าง relay เท่านั้น (ONLY #11)
---    Names: Building_05_AwningV2, Cloth.001_Building_04_ClothAwning.001, Metal.001_Cube.001
-
-----------------------------------------------------------------------
--- 0) AA1 MINI (SaveGet/SaveSet + onChanged)
-----------------------------------------------------------------------
-do
-    _G.UFOX_AA1 = _G.UFOX_AA1 or {}
-
-    local function makeAA1(systemName, defaultState)
-        local SAVE = (getgenv and getgenv().UFOX_SAVE) or {
-            get = function(_, _, d) return d end,
-            set = function() end
-        }
-
-        local GAME_ID  = tonumber(game.GameId)  or 0
-        local PLACE_ID = tonumber(game.PlaceId) or 0
-        local BASE_SCOPE = ("AA1/%s/%d/%d"):format(systemName, GAME_ID, PLACE_ID)
-        local function K(f) return BASE_SCOPE .. "/" .. f end
-
-        local function SaveGet(f, d)
-            local ok, v = pcall(function() return SAVE.get(K(f), d) end)
-            return ok and v or d
-        end
-        local function SaveSet(f, v) pcall(function() SAVE.set(K(f), v) end) end
-
-        local STATE = {}
-        for k, v in pairs(defaultState or {}) do
-            STATE[k] = SaveGet(k, v)
-        end
-
-        local listeners = {}
-        local function emit()
-            for i = #listeners, 1, -1 do
-                local cb = listeners[i]
-                if typeof(cb) == "function" then pcall(cb, STATE) end
-            end
-        end
-
-        local obj = {
-            state   = STATE,
-            saveGet = SaveGet,
-            saveSet = SaveSet,
-            onChanged = function(cb)
-                table.insert(listeners, cb)
-                return function()
-                    for i = #listeners, 1, -1 do
-                        if listeners[i] == cb then table.remove(listeners, i) break end
-                    end
-                end
-            end
-        }
-
-        return obj, SaveSet, emit
-    end
-
-    _G.__UFOX_MAKE_AA1 = makeAA1
-end
-
-----------------------------------------------------------------------
--- 1) Row 1 : Auto Cookie Hunt 🍪
-----------------------------------------------------------------------
-do
-    local ReplicatedStorage = game:GetService("ReplicatedStorage")
-
-    local SYSTEM_NAME = "AutoEvent_CookieHunt"
-    local AA1, SaveSet, emit = _G.__UFOX_MAKE_AA1(SYSTEM_NAME, {
-        Enabled  = false,
-        LoopWait = 0.016, -- x5
-        MinWait  = 0.006,
-    })
-
-    local running = false
-    local token = 0
-
-    local function fireCookie()
-        local args = {
-            "Christmas2025Presents",
-            9999,
-            workspace:WaitForChild("Game")
-                :WaitForChild("LiveOpsPersistent")
-                :WaitForChild("Christmas2025")
-                :WaitForChild("Spawners")
-                :WaitForChild("PresentHunt")
-                :WaitForChild("PresentSpawner")
-                :WaitForChild("PresentSpawnerPad")
-        }
-        ReplicatedStorage:WaitForChild("Remotes")
-            :WaitForChild("CaptureItem")
-            :InvokeServer(unpack(args))
-    end
-
-    local function runner()
-        if running or not AA1.state.Enabled then return end
-        running = true
-        token += 1
-        local my = token
-
-        task.spawn(function()
-            while AA1.state.Enabled and token == my do
-                pcall(fireCookie)
-                local w = tonumber(AA1.state.LoopWait) or 0.016
-                local minW = tonumber(AA1.state.MinWait) or 0.006
-                if w < minW then w = minW end
-                task.wait(w)
-            end
-            running = false
-        end)
-    end
-
-    function AA1.setEnabled(v)
-        v = v and true or false
-        AA1.state.Enabled = v
-        SaveSet("Enabled", v)
-        emit()
-        if v then
-            task.defer(runner)
-        else
-            token += 1
-            running = false
-        end
-    end
-
-    function AA1.getEnabled() return AA1.state.Enabled == true end
-    function AA1.ensureRunner() task.defer(runner) end
-
-    _G.UFOX_AA1[SYSTEM_NAME] = AA1
-
-    task.defer(function()
-        if AA1.getEnabled() then AA1.ensureRunner() end
-    end)
-end
-
-----------------------------------------------------------------------
--- 2) Row 2 : Auto Find All Elves 🧝‍♂️
-----------------------------------------------------------------------
-do
-    local Players = game:GetService("Players")
-    local LP = Players.LocalPlayer
-
-    local SYSTEM_NAME = "AutoEvent_FindAllElves"
-    local AA1, SaveSet, emit = _G.__UFOX_MAKE_AA1(SYSTEM_NAME, {
-        Enabled  = false,
-        HoldSec  = 5.0,
-        RelaySec = 2.0,
-        HoldTick = 0.10
-    })
-
-    local SPOTS = {
-        Vector3.new(-441.621, 38.918, -1785.859), -- #1 NEW (HRP)
-        Vector3.new(-213.158, 41.725, -1293.340),
-        Vector3.new(-234.024, 76.116, -1040.624),
-        Vector3.new(-750.364, 74.207, -314.647),
-        Vector3.new(-1051.808, 55.505, 165.125),
-        Vector3.new(198.046, 27.613, 798.797),
-        Vector3.new(914.609, 53.709, -330.283),
-        Vector3.new(258.026, 89.570, -736.259),
-        Vector3.new(-102.506, 61.449, -147.271),
-        Vector3.new(-2682.174, 48.140, 2221.093),
-        Vector3.new(-2465.690, 50.437, 4063.858), -- #11 NEW (HRP)
-        Vector3.new(-922.897, 27.452, 4165.582),
-        Vector3.new(-65.430, 30.698, -2543.421),
-        Vector3.new(-4252.656, 35.623, -6655.789),
-        Vector3.new(-5110.275, 24.272, -7041.276),
-        Vector3.new(-4269.131, 53.457, -7412.088),
-        Vector3.new(-13101.551, 309.012, -5766.058),
-        Vector3.new(-663.808, 98.562, 2094.711),
-        Vector3.new(3682.571, 574.999, -4299.994),
-        Vector3.new(290.374, 54.257, -65.780),
-    }
-
-    local running = false
-    local token = 0
-
-    local function getChar()
-        local ch = LP.Character
-        if not ch then return nil end
-        local hum = ch:FindFirstChildOfClass("Humanoid")
-        local hrp = ch:FindFirstChild("HumanoidRootPart")
-        if hum and hrp and hum.Health > 0 then
-            return ch, hum, hrp
-        end
-        return nil
-    end
-
-    local function safeSetAnchored(hrp, v)
-        if not hrp or not hrp.Parent then return end
-        pcall(function() hrp.Anchored = v and true or false end)
-    end
-
-    ------------------------------------------------------------------
-    -- Spot #11: รายชื่อของในแมพที่ต้อง “ทะลุ” หลัง HOLD (ONLY #11)
-    ------------------------------------------------------------------
-    local NOCLIP_NAMES_SPOT11 = {
-        "Building_05_AwningV2",
-        "Cloth.001_Building_04_ClothAwning.001",
-        "Metal.001_Cube.001",
-    }
-
-    local noclipBackup = nil
-    local function collectTargetsByNames(names)
-        local set = {}
-        for _, n in ipairs(names) do set[n] = true end
-
-        local targets = {}
-        for _, inst in ipairs(workspace:GetDescendants()) do
-            if set[inst.Name] then
-                table.insert(targets, inst)
-            end
-        end
-        return targets
-    end
-
-    local function applyNoClipSpot11Objects(enable)
-        if enable then
-            if noclipBackup then return end
-            noclipBackup = {}
-
-            local targets = collectTargetsByNames(NOCLIP_NAMES_SPOT11)
-            for _, inst in ipairs(targets) do
-                if inst:IsA("BasePart") then
-                    noclipBackup[inst] = { CanCollide = inst.CanCollide, CanTouch = inst.CanTouch }
-                    pcall(function()
-                        inst.CanCollide = false
-                        inst.CanTouch = false
-                    end)
-                elseif inst:IsA("Model") then
-                    for _, d in ipairs(inst:GetDescendants()) do
-                        if d:IsA("BasePart") then
-                            if not noclipBackup[d] then
-                                noclipBackup[d] = { CanCollide = d.CanCollide, CanTouch = d.CanTouch }
-                            end
-                            pcall(function()
-                                d.CanCollide = false
-                                d.CanTouch = false
-                            end)
-                        end
-                    end
-                end
-            end
-        else
-            if not noclipBackup then return end
-            for part, old in pairs(noclipBackup) do
-                if part and part.Parent and part:IsA("BasePart") then
-                    pcall(function()
-                        part.CanCollide = old.CanCollide
-                        part.CanTouch = old.CanTouch
-                    end)
-                end
-            end
-            noclipBackup = nil
-        end
-    end
-
-    ------------------------------------------------------------------
-    -- Spot #11: “ทะลุตัวละครเอง” ระหว่าง relay (ONLY #11)
-    ------------------------------------------------------------------
-    local charNoClipBackup = nil
-    local function applyCharacterNoClip(enable)
-        local ch = (LP and LP.Character)
-        if not ch then return end
-
-        if enable then
-            if charNoClipBackup then return end
-            charNoClipBackup = {}
-            for _, d in ipairs(ch:GetDescendants()) do
-                if d:IsA("BasePart") then
-                    charNoClipBackup[d] = d.CanCollide
-                    pcall(function() d.CanCollide = false end)
-                end
-            end
-        else
-            if not charNoClipBackup then return end
-            for part, old in pairs(charNoClipBackup) do
-                if part and part.Parent and part:IsA("BasePart") then
-                    pcall(function() part.CanCollide = old end)
-                end
-            end
-            charNoClipBackup = nil
-        end
-    end
-
-    ------------------------------------------------------------------
-    -- HOLD logic (ธรรมดา ไม่ผูกกับ Pivot แล้ว — กัน “ลอยขึ้นข้างบน”)
-    ------------------------------------------------------------------
-    local function hardHoldAt(hrp, pos, sec, tick)
-        if not hrp or not hrp.Parent then return end
-        local t0 = os.clock()
-        local dt = tick or 0.1
-        if dt < 0.03 then dt = 0.03 end
-
-        while (os.clock() - t0) < (sec or 5.0) do
-            if not AA1.state.Enabled then return end
-            pcall(function()
-                hrp.CFrame = CFrame.new(pos)
-                hrp.AssemblyLinearVelocity = Vector3.zero
-                hrp.AssemblyAngularVelocity = Vector3.zero
-            end)
-            task.wait(dt)
-        end
-    end
-
-    local function resetSpot11NoClip()
-        applyCharacterNoClip(false)
-        applyNoClipSpot11Objects(false)
-    end
-
-    local function runner()
-        if running or not AA1.state.Enabled then return end
-        running = true
-        token += 1
-        local my = token
-
-        task.spawn(function()
-            for i = 1, #SPOTS do
-                if not AA1.state.Enabled or token ~= my then
-                    running = false
-                    resetSpot11NoClip()
-                    return
-                end
-
-                local _, hum, hrp = getChar()
-                if not hrp then
-                    task.wait(0.25)
-                    continue
-                end
-
-                -- กัน state ค้างจากรอบก่อน
-                if i ~= 11 then
-                    resetSpot11NoClip()
-                end
-
-                local pos = SPOTS[i]
-
-                -- 1) วาร์ปไปจุด
-                pcall(function()
-                    safeSetAnchored(hrp, false)
-                    if hum then
-                        hum.Sit = false
-                        hum.PlatformStand = false
-                    end
-                    hrp.CFrame = CFrame.new(pos)
-                    hrp.AssemblyLinearVelocity = Vector3.zero
-                    hrp.AssemblyAngularVelocity = Vector3.zero
-                end)
-
-                -- 2) HOLD 5 วิ (anchored)
-                safeSetAnchored(hrp, true)
-                hardHoldAt(hrp, pos, tonumber(AA1.state.HoldSec) or 5.0, tonumber(AA1.state.HoldTick) or 0.10)
-                safeSetAnchored(hrp, false)
-
-                -- 3) Relay
-                local relay = tonumber(AA1.state.RelaySec) or 2.0
-                if relay < 0.1 then relay = 0.1 end
-
-                -- ✅ ตามที่ขอ: “พอจบ 5 วิแล้ว” ค่อยเปิดทะลุชื่อที่ให้มา (ONLY #11)
-                if i == 11 then
-                    applyNoClipSpot11Objects(true) -- ทะลุของในแมพตามชื่อ
-                    applyCharacterNoClip(true)     -- ทะลุตัวละครเอง
-                    task.wait(relay)
-                    resetSpot11NoClip()            -- ปิดทันทีหลัง relay กันไปกระทบจุดอื่น
-                else
-                    task.wait(relay)
-                end
-            end
-
-            resetSpot11NoClip()
-
-            -- ครบ 20 จุด -> ปิดสวิตช์
-            AA1.setEnabled(false)
-            running = false
-        end)
-    end
-
-    function AA1.setEnabled(v)
-        v = v and true or false
-        AA1.state.Enabled = v
-        SaveSet("Enabled", v)
-        emit()
-
-        if v then
-            task.defer(runner)
-        else
-            token += 1
-            running = false
-            resetSpot11NoClip()
-            local _, _, hrp = getChar()
-            if hrp then safeSetAnchored(hrp, false) end
-        end
-    end
-
-    function AA1.getEnabled() return AA1.state.Enabled == true end
-    function AA1.ensureRunner() task.defer(runner) end
-
-    _G.UFOX_AA1[SYSTEM_NAME] = AA1
-
-    task.defer(function()
-        if AA1.getEnabled() then AA1.ensureRunner() end
-    end)
-end
-
-----------------------------------------------------------------------
--- 3) UI PART: Model A V1 (Home) - "Auto Event 🤖" (2 Rows)
-----------------------------------------------------------------------
 registerRight("Home", function(scroll)
-    local TweenService = game:GetService("TweenService")
 
-    local AA1_ROW1 = _G.UFOX_AA1 and _G.UFOX_AA1["AutoEvent_CookieHunt"]
-    local AA1_ROW2 = _G.UFOX_AA1 and _G.UFOX_AA1["AutoEvent_FindAllElves"]
+------------------------------------------------------------------------
+-- SERVICES
+------------------------------------------------------------------------
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local LP = Players.LocalPlayer
 
-    local THEME = {
-        GREEN = Color3.fromRGB(25,255,125),
-        RED   = Color3.fromRGB(255,40,40),
-        WHITE = Color3.fromRGB(255,255,255),
-        BLACK = Color3.fromRGB(0,0,0),
-    }
+------------------------------------------------------------------------
+-- SAVE SYSTEM (AA1)
+------------------------------------------------------------------------
+local SAVE = getgenv().UFOX_SAVE
+local SCOPE = ("AA1/GodMode/%d/%d/%s"):format(game.PlaceId, LP.UserId, LP.Name)
 
-    local function corner(ui,r) local c=Instance.new("UICorner"); c.CornerRadius=UDim.new(0,r or 12); c.Parent=ui end
-    local function stroke(ui,t,col) local s=Instance.new("UIStroke"); s.Thickness=t or 2.2; s.Color=col or THEME.GREEN; s.Parent=ui end
-    local function tween(o,p,d) TweenService:Create(o,TweenInfo.new(d or 0.08,Enum.EasingStyle.Quad),p):Play() end
+local function SG(k,d)
+    local ok,v = pcall(function() return SAVE.get(SCOPE.."/"..k,d) end)
+    return ok and v or d
+end
 
-    for _,n in ipairs({"AE_Header","AE_Row1","AE_Row2"}) do
-        local o = scroll:FindFirstChild(n)
-        if o then o:Destroy() end
-    end
+local function SS(k,v)
+    pcall(function() SAVE.set(SCOPE.."/"..k,v) end)
+end
 
-    local list = scroll:FindFirstChildOfClass("UIListLayout")
-    if not list then
-        list = Instance.new("UIListLayout", scroll)
-        list.Padding = UDim.new(0,12)
-        list.SortOrder = Enum.SortOrder.LayoutOrder
-    end
-    scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+------------------------------------------------------------------------
+-- THEME & UI UTILS
+------------------------------------------------------------------------
+local THEME = {
+    GREEN = Color3.fromRGB(25,255,125),
+    RED   = Color3.fromRGB(255,60,60),
+    WHITE = Color3.fromRGB(255,255,255),
+    BLACK = Color3.fromRGB(0,0,0),
+}
 
-    local base = 0
-    for _,c in ipairs(scroll:GetChildren()) do
-        if c:IsA("GuiObject") and c ~= list then
-            base = math.max(base, c.LayoutOrder or 0)
+local function corner(ui,r)
+    local c = Instance.new("UICorner",ui)
+    c.CornerRadius = UDim.new(0,r or 12)
+end
+
+local function stroke(ui,t,col)
+    local s = Instance.new("UIStroke",ui)
+    s.Thickness = t or 2.2
+    s.Color = col or THEME.GREEN
+    s.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+end
+
+------------------------------------------------------------------------
+-- INVISIBLE RESET GOD MODE (ร่างเดิมอยู่เดิม + รีเซ็ต 1 ที)
+------------------------------------------------------------------------
+local GOD_ENABLED = SG("GodMode", false)
+
+local function runGodMode()
+    local char = LP.Character
+    if not char then return end
+    
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    if not (hum and hrp) then return end
+
+    -- 1. เก็บพิกัดเดิมไว้
+    local lastPos = hrp.CFrame
+    
+    -- 2. ทำการ Hook เพื่อไม่ให้ร่างหายไปหลังจากตาย
+    char.Archivable = true
+    local clone = char:Clone()
+    clone.Parent = workspace
+    
+    -- 3. สั่งรีเซ็ต (ฆ่าตัวตาย) เพื่อหลอก Server ว่าเราตายแล้ว
+    hum.Health = 0 
+    
+    task.wait(0.1) -- รอจังหวะระบบประมวลผลการตาย
+    
+    -- 4. ย้ายกล้องและตัวควบคุมมาที่ร่างใหม่ (ร่างปลอมที่เดินได้)
+    LP.Character = clone
+    workspace.CurrentCamera.CameraSubject = clone:FindFirstChildOfClass("Humanoid")
+    
+    -- 5. ลูปป้องกันดาเมจต่อเนื่อง 100%
+    RunService:BindToRenderStep("GodLoop", 1, function()
+        if not GOD_ENABLED then 
+            RunService:UnbindFromRenderStep("GodLoop")
+            return 
         end
-    end
-
-    local header = Instance.new("TextLabel")
-    header.Name = "AE_Header"
-    header.Parent = scroll
-    header.Size = UDim2.new(1,0,0,36)
-    header.BackgroundTransparency = 1
-    header.Font = Enum.Font.GothamBold
-    header.TextSize = 16
-    header.TextColor3 = THEME.WHITE
-    header.TextXAlignment = Enum.TextXAlignment.Left
-    header.Text = "》》》🎄 Auto Event ⚙️《《《"
-    header.LayoutOrder = base + 1
-
-    local function makeRowSwitch(rowName, order, labelText, aa1Ref)
-        local row = Instance.new("Frame")
-        row.Name = rowName
-        row.Parent = scroll
-        row.Size = UDim2.new(1,-6,0,46)
-        row.BackgroundColor3 = THEME.BLACK
-        corner(row,12)
-        stroke(row,2.2,THEME.GREEN)
-        row.LayoutOrder = order
-
-        local lab = Instance.new("TextLabel", row)
-        lab.BackgroundTransparency = 1
-        lab.Position = UDim2.new(0,16,0,0)
-        lab.Size = UDim2.new(1,-160,1,0)
-        lab.Font = Enum.Font.GothamBold
-        lab.TextSize = 13
-        lab.TextColor3 = THEME.WHITE
-        lab.TextXAlignment = Enum.TextXAlignment.Left
-        lab.Text = labelText
-
-        local sw = Instance.new("Frame", row)
-        sw.AnchorPoint = Vector2.new(1,0.5)
-        sw.Position = UDim2.new(1,-12,0.5,0)
-        sw.Size = UDim2.fromOffset(52,26)
-        sw.BackgroundColor3 = THEME.BLACK
-        corner(sw,13)
-
-        local st = Instance.new("UIStroke", sw)
-        st.Thickness = 1.8
-
-        local knob = Instance.new("Frame", sw)
-        knob.Size = UDim2.fromOffset(22,22)
-        knob.Position = UDim2.new(0,2,0.5,-11)
-        knob.BackgroundColor3 = THEME.WHITE
-        corner(knob,11)
-
-        local function update(on)
-            st.Color = on and THEME.GREEN or THEME.RED
-            tween(knob,{ Position = UDim2.new(on and 1 or 0, on and -24 or 2, 0.5, -11) })
+        if clone:FindFirstChildOfClass("Humanoid") then
+            clone:FindFirstChildOfClass("Humanoid").Health = 100
         end
-
-        local btn = Instance.new("TextButton", sw)
-        btn.Size = UDim2.fromScale(1,1)
-        btn.BackgroundTransparency = 1
-        btn.Text = ""
-        btn.AutoButtonColor = false
-
-        btn.MouseButton1Click:Connect(function()
-            local cur = (aa1Ref and aa1Ref.getEnabled and aa1Ref.getEnabled()) or false
-            local v = not cur
-            if aa1Ref and aa1Ref.setEnabled then
-                aa1Ref.setEnabled(v)
-                if v and aa1Ref.ensureRunner then aa1Ref.ensureRunner() end
-            end
-            update(v)
-        end)
-
-        if aa1Ref and aa1Ref.onChanged then
-            aa1Ref.onChanged(function()
-                update((aa1Ref.getEnabled and aa1Ref.getEnabled()) or false)
-            end)
-        end
-
-        update((aa1Ref and aa1Ref.getEnabled and aa1Ref.getEnabled()) or false)
-        return update
-    end
-
-    makeRowSwitch("AE_Row1", base + 2, "Auto Cookies", AA1_ROW1)
-    makeRowSwitch("AE_Row2", base + 3, "Auto Find All Elves", AA1_ROW2)
-
-    task.defer(function()
-        if AA1_ROW1 and AA1_ROW1.getEnabled and AA1_ROW1.getEnabled() and AA1_ROW1.ensureRunner then
-            AA1_ROW1.ensureRunner()
-        end
-        if AA1_ROW2 and AA1_ROW2.getEnabled and AA1_ROW2.getEnabled() and AA1_ROW2.ensureRunner then
-            AA1_ROW2.ensureRunner()
+        -- ทำให้ร่างปลอมไม่โดนชนหรือโดนดาเมจจากพาร์ท
+        for _, p in ipairs(clone:GetDescendants()) do
+            if p:IsA("BasePart") then p.CanTouch = false end
         end
     end)
+    
+    print("God Mode Activated: Server thinks you're dead.")
+end
+
+local function toggleGodMode(state)
+    GOD_ENABLED = state
+    if state then
+        runGodMode()
+    else
+        -- ปิดแล้วให้รีเซ็ตตัวละครกลับสู่สภาวะปกติ
+        LP.Character:BreakJoints()
+        RunService:UnbindFromRenderStep("GodLoop")
+    end
+end
+
+------------------------------------------------------------------------
+-- UI GENERATION
+------------------------------------------------------------------------
+local row = Instance.new("Frame", scroll)
+row.Size = UDim2.new(1, -6, 0, 46)
+row.BackgroundColor3 = THEME.BLACK
+corner(row, 12)
+stroke(row)
+
+local txt = Instance.new("TextLabel", row)
+txt.BackgroundTransparency = 1
+txt.Size = UDim2.new(1, -160, 1, 0)
+txt.Position = UDim2.new(0, 16, 0, 0)
+txt.Font = Enum.Font.GothamBold
+txt.TextSize = 13
+txt.TextColor3 = THEME.WHITE
+txt.TextXAlignment = Enum.TextXAlignment.Left
+txt.Text = "God mode" 
+
+local sw = Instance.new("Frame", row)
+sw.AnchorPoint = Vector2.new(1, 0.5)
+sw.Position = UDim2.new(1, -12, 0.5, 0)
+sw.Size = UDim2.fromOffset(52, 26)
+sw.BackgroundColor3 = THEME.BLACK
+corner(sw, 13)
+
+local swStroke = Instance.new("UIStroke", sw)
+swStroke.Thickness = 1.8
+
+local knob = Instance.new("Frame", sw)
+knob.Size = UDim2.fromOffset(22, 22)
+knob.BackgroundColor3 = THEME.WHITE
+corner(knob, 11)
+
+local function refreshUI()
+    swStroke.Color = GOD_ENABLED and THEME.GREEN or THEME.RED
+    local targetPos = GOD_ENABLED and UDim2.new(1, -24, 0.5, -11) or UDim2.new(0, 2, 0.5, -11)
+    game:GetService("TweenService"):Create(knob, TweenInfo.new(0.1), {Position = targetPos}):Play()
+end
+
+local btn = Instance.new("TextButton", sw)
+btn.Size = UDim2.fromScale(1, 1)
+btn.BackgroundTransparency = 1
+btn.Text = ""
+
+btn.MouseButton1Click:Connect(function()
+    local newState = not GOD_ENABLED
+    SS("GodMode", newState)
+    toggleGodMode(newState)
+    refreshUI()
 end)
+
+refreshUI()
+-- ไม่รันตอนเริ่มทันทีเพราะต้องรอจังหวะตัวละครพร้อมจริงๆ
 --===== UFO HUB X • SETTINGS — Smoother 🚀 (A V1 • fixed 3 rows) + Runner Save (per-map) + AA1 =====
 registerRight("Settings", function(scroll)
     local TweenService = game:GetService("TweenService")
