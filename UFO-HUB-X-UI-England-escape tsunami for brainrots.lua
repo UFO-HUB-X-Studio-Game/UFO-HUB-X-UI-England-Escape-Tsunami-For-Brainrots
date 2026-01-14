@@ -701,7 +701,7 @@ local RunService = game:GetService("RunService")
 local LP = Players.LocalPlayer
 
 ------------------------------------------------------------------------
--- SAVE SYSTEM (AA1)
+-- SAVE SYSTEM
 ------------------------------------------------------------------------
 local SAVE = getgenv().UFOX_SAVE
 local SCOPE = ("AA1/GodMode/%d/%d/%s"):format(game.PlaceId, LP.UserId, LP.Name)
@@ -716,7 +716,7 @@ local function SS(k,v)
 end
 
 ------------------------------------------------------------------------
--- THEME & UI UTILS
+-- UI UTILS (MODEL A V1)
 ------------------------------------------------------------------------
 local THEME = {
     GREEN = Color3.fromRGB(25,255,125),
@@ -738,21 +738,25 @@ local function stroke(ui,t,col)
 end
 
 ------------------------------------------------------------------------
--- ULTIMATE HYBRID GOD MODE (RESET + FAKE LAG + CONTINUOUS LOOP)
+-- THE "ULTIMATE OMNIPOTENT" GOD MODE
 ------------------------------------------------------------------------
 local GOD_ENABLED = SG("GodMode", false)
 local godLoop = nil
 
--- บล็อกการส่งข้อมูลตำแหน่งและการตายระดับ MetaTable (ถาวร)
+-- [วิธีที่ 1] Meta-Method Hook: บล็อกการรับรู้ของ Engine
 local oldNamecall
 oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
     local method = getnamecallmethod()
+    local args = {...}
     if GOD_ENABLED and not checkcaller() then
-        -- บล็อกการส่งข้อมูลดาเมจและการตาย
-        if method == "FireServer" and (tostring(self):lower():find("died") or tostring(self):lower():find("damage")) then
-            return nil
+        -- บล็อกการส่งสัญญาณตาย/ดาเมจไป Server
+        if method == "FireServer" or method == "InvokeServer" then
+            local name = tostring(self):lower()
+            if name:find("die") or name:find("death") or name:find("damage") or name:find("health") then
+                return nil
+            end
         end
-        -- บล็อก BreakJoints และ TakeDamage
+        -- บล็อกคำสั่งทำลายร่าง
         if method == "BreakJoints" or method == "TakeDamage" then
             return nil
         end
@@ -763,17 +767,16 @@ end)
 local function toggleGodMode(state)
     GOD_ENABLED = state
     if state then
-        -- 1. ป้องกัน UI หาย
+        -- ป้องกัน UI หาย
         for _, gui in ipairs(LP.PlayerGui:GetChildren()) do
             if gui:IsA("ScreenGui") then gui.ResetOnSpawn = false end
         end
 
-        -- 2. สั่งรีเซ็ตตัวละคร 1 ครั้งเพื่อบั๊กดาเมจตามสูตร
+        -- [วิธีที่ 2] Invisible Reset: ฆ่าตัวตายเพื่อบั๊กค่าเลือด
         if LP.Character and LP.Character:FindFirstChildOfClass("Humanoid") then
             LP.Character:FindFirstChildOfClass("Humanoid").Health = 0
         end
 
-        -- 3. รอตัวละครเกิดใหม่และรันลูปอมตะ
         LP.CharacterAdded:Wait()
         task.wait(0.5)
 
@@ -784,19 +787,23 @@ local function toggleGodMode(state)
             local char = LP.Character
             local hum = char and char:FindFirstChildOfClass("Humanoid")
             if char and hum then
-                -- ล็อกเลือดและปิดสถานะตายวนไปเรื่อยๆ (กันหลุดอันที่ 2, 3)
+                -- [วิธีที่ 3] State Locking: ล็อกเลือดและห้ามตายระดับเฟรม
                 hum.Health = 100
                 hum:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
                 
-                -- Fake Lag: บล็อกการส่งตำแหน่งคนอื่นเห็นวิ่งค้างที่เดิม
+                -- [วิธีที่ 4] Network Desync (Fake Lag): คนอื่นเห็นวิ่งค้างที่เดิม
                 sethiddenproperty(LP, "SimulationRadius", 0)
                 sethiddenproperty(LP, "MaxSimulationRadius", 0)
 
-                -- ทำให้พาร์ทสึนามิทะลุผ่านร่างไปเลย (ป้องกันโดนซัดอันที่ 2)
+                -- [วิธีที่ 5] Anti-Touch/Anti-Collision: เดินทะลุดาเมจ
                 for _, v in ipairs(char:GetChildren()) do
                     if v:IsA("BasePart") then
-                        v.CanTouch = false
-                        if v.Name ~= "HumanoidRootPart" then v.CanCollide = false end
+                        v.CanTouch = false -- สึนามิจะไม่รู้ว่าโดนเรา
+                        -- ล็อกไม่ให้พาร์ทถูกลบ (Anti-Destroy)
+                        v.Parent = char 
+                        if v.Name ~= "HumanoidRootPart" then
+                            v.CanCollide = false
+                        end
                     end
                 end
             end
@@ -813,7 +820,7 @@ local function toggleGodMode(state)
 end
 
 ------------------------------------------------------------------------
--- UI GENERATION (MODEL A V1)
+-- UI GENERATION
 ------------------------------------------------------------------------
 local row = Instance.new("Frame", scroll)
 row.Size = UDim2.new(1, -6, 0, 46)
@@ -865,7 +872,6 @@ btn.MouseButton1Click:Connect(function()
 end)
 
 refreshUI()
--- ไม่รันอัตโนมัติเพื่อความปลอดภัยตอนโหลด UI
 end)
 --===== UFO HUB X • SETTINGS — Smoother 🚀 (A V1 • fixed 3 rows) + Runner Save (per-map) + AA1 =====
 registerRight("Settings", function(scroll)
