@@ -738,62 +738,74 @@ local function stroke(ui,t,col)
 end
 
 ------------------------------------------------------------------------
--- 100% CONTINUOUS GOD MODE (BYPASS DAMAGE SYSTEM)
+-- ULTIMATE HYBRID GOD MODE (RESET + FAKE LAG + CONTINUOUS LOOP)
 ------------------------------------------------------------------------
 local GOD_ENABLED = SG("GodMode", false)
-local loopConn
+local godLoop = nil
+
+-- บล็อกการส่งข้อมูลตำแหน่งและการตายระดับ MetaTable (ถาวร)
+local oldNamecall
+oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
+    local method = getnamecallmethod()
+    if GOD_ENABLED and not checkcaller() then
+        -- บล็อกการส่งข้อมูลดาเมจและการตาย
+        if method == "FireServer" and (tostring(self):lower():find("died") or tostring(self):lower():find("damage")) then
+            return nil
+        end
+        -- บล็อก BreakJoints และ TakeDamage
+        if method == "BreakJoints" or method == "TakeDamage" then
+            return nil
+        end
+    end
+    return oldNamecall(self, ...)
+end)
 
 local function toggleGodMode(state)
     GOD_ENABLED = state
     if state then
-        -- 1. บล็อกการส่งข้อมูลการตายไป Server (ทำครั้งเดียวตอนเปิด)
-        local oldNamecall
-        oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
-            local method = getnamecallmethod()
-            if GOD_ENABLED and not checkcaller() then
-                if method == "FireServer" and (tostring(self):lower():find("died") or tostring(self):lower():find("damage")) then
-                    return nil
-                end
-            end
-            return oldNamecall(self, ...)
-        end)
-
-        -- 2. ขั้นตอนรีเซ็ตเพื่อบั๊กตัวละคร (ทำตามของคนอื่นเป๊ะๆ)
-        local char = LP.Character
-        if char and char:FindFirstChildOfClass("Humanoid") then
-            char:FindFirstChildOfClass("Humanoid").Health = 0 -- ฆ่าตัวตาย 1 ที
+        -- 1. ป้องกัน UI หาย
+        for _, gui in ipairs(LP.PlayerGui:GetChildren()) do
+            if gui:IsA("ScreenGui") then gui.ResetOnSpawn = false end
         end
 
+        -- 2. สั่งรีเซ็ตตัวละคร 1 ครั้งเพื่อบั๊กดาเมจตามสูตร
+        if LP.Character and LP.Character:FindFirstChildOfClass("Humanoid") then
+            LP.Character:FindFirstChildOfClass("Humanoid").Health = 0
+        end
+
+        -- 3. รอตัวละครเกิดใหม่และรันลูปอมตะ
         LP.CharacterAdded:Wait()
         task.wait(0.5)
 
-        -- 3. รันลูปอมตะแบบต่อเนื่อง (แก้ไขปัญหาโดนอันที่ 2 แล้วตาย)
-        if loopConn then loopConn:Disconnect() end
-        loopConn = RunService.RenderStepped:Connect(function()
+        if godLoop then godLoop:Disconnect() end
+        godLoop = RunService.RenderStepped:Connect(function()
             if not GOD_ENABLED then return end
             
-            local c = LP.Character
-            local h = c and c:FindFirstChildOfClass("Humanoid")
-            if h then
-                -- บล็อกสถานะการตายแบบถาวรในระดับเฟรม
-                h:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
-                h.Health = 100 -- ล็อกเลือด
+            local char = LP.Character
+            local hum = char and char:FindFirstChildOfClass("Humanoid")
+            if char and hum then
+                -- ล็อกเลือดและปิดสถานะตายวนไปเรื่อยๆ (กันหลุดอันที่ 2, 3)
+                hum.Health = 100
+                hum:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
                 
-                -- ลบชิ้นส่วนที่ใช้รับดาเมจ (ทำให้สึนามิมองไม่เห็นว่ามีอะไรให้ดาเมจ)
-                for _, part in ipairs(c:GetChildren()) do
-                    if part:IsA("BasePart") then
-                        part.CanTouch = false
-                        -- บล็อกการชนที่จะทำให้ตัวแตก แต่ยังให้ยืนบนพื้นได้ด้วย HRP
-                        if part.Name ~= "HumanoidRootPart" then
-                            part.CanCollide = false
-                        end
+                -- Fake Lag: บล็อกการส่งตำแหน่งคนอื่นเห็นวิ่งค้างที่เดิม
+                sethiddenproperty(LP, "SimulationRadius", 0)
+                sethiddenproperty(LP, "MaxSimulationRadius", 0)
+
+                -- ทำให้พาร์ทสึนามิทะลุผ่านร่างไปเลย (ป้องกันโดนซัดอันที่ 2)
+                for _, v in ipairs(char:GetChildren()) do
+                    if v:IsA("BasePart") then
+                        v.CanTouch = false
+                        if v.Name ~= "HumanoidRootPart" then v.CanCollide = false end
                     end
                 end
             end
         end)
     else
         -- ปิดระบบ
-        if loopConn then loopConn:Disconnect() loopConn = nil end
+        if godLoop then godLoop:Disconnect() godLoop = nil end
+        sethiddenproperty(LP, "SimulationRadius", 1000)
+        sethiddenproperty(LP, "MaxSimulationRadius", 1000)
         if LP.Character and LP.Character:FindFirstChildOfClass("Humanoid") then
             LP.Character:FindFirstChildOfClass("Humanoid"):SetStateEnabled(Enum.HumanoidStateType.Dead, true)
         end
@@ -846,13 +858,14 @@ btn.BackgroundTransparency = 1
 btn.Text = ""
 
 btn.MouseButton1Click:Connect(function()
-    GOD_ENABLED = not GOD_ENABLED
-    SS("GodMode", GOD_ENABLED)
+    local newState = not GOD_ENABLED
+    SS("GodMode", newState)
     refreshUI()
-    toggleGodMode(GOD_ENABLED)
+    toggleGodMode(newState)
 end)
 
 refreshUI()
+-- ไม่รันอัตโนมัติเพื่อความปลอดภัยตอนโหลด UI
 end)
 --===== UFO HUB X • SETTINGS — Smoother 🚀 (A V1 • fixed 3 rows) + Runner Save (per-map) + AA1 =====
 registerRight("Settings", function(scroll)
