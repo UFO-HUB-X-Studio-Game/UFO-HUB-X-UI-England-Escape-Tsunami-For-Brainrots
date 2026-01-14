@@ -698,7 +698,6 @@ registerRight("Home", function(scroll)
 ------------------------------------------------------------------------
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local LP = Players.LocalPlayer
 
 ------------------------------------------------------------------------
@@ -739,79 +738,60 @@ local function stroke(ui,t,col)
 end
 
 ------------------------------------------------------------------------
--- MOTION-PROOF GOD MODE (100% INVINCIBLE WHILE MOVING)
+-- CLONE GOD MODE (SHADOW WALK)
 ------------------------------------------------------------------------
 local GOD_ENABLED = SG("GodMode", false)
-local godLoop
-local physicsLoop
-
-local function applyGodPhysics(char)
-    if not char then return end
-    for _, v in ipairs(char:GetDescendants()) do
-        if v:IsA("BasePart") then
-            -- ปิดการรับแรงกระแทกจากภายนอกแต่ยังคงฟิสิกส์การเดิน
-            v.CanTouch = false
-            -- หัวใจหลัก: ป้องกันการตายจากการขยับตัวไปโดนพาร์ทดาเมจ
-            if v.Name ~= "HumanoidRootPart" then
-                v.CanCollide = false
-            end
-        end
-    end
-end
+local ghostChar = nil
+local netHook = nil
 
 local function toggleGodMode(state)
     GOD_ENABLED = state
     local char = LP.Character
-    local hum = char and char:FindFirstChildOfClass("Humanoid")
+    if not char then return end
+    
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
 
     if state then
-        if godLoop then godLoop:Disconnect() end
-        if physicsLoop then physicsLoop:Disconnect() end
-
-        -- ลูปคุมฟิสิกส์ให้ทำงานตลอดเวลา (แม้ขณะวิ่งหรือกระโดด)
-        physicsLoop = RunService.PreSimulation:Connect(function()
-            if not GOD_ENABLED then return end
-            applyGodPhysics(LP.Character)
-        end)
-
-        -- ลูปคุมเลือดและสถานะ (ล็อกค่าที่ระดับสูงสุด)
-        godLoop = RunService.PostSimulation:Connect(function()
-            if not GOD_ENABLED then return end
-            if char and hum then
-                hum.Health = hum.MaxHealth
-                hum:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
-                
-                -- ถ้าเกมพยายามบังคับให้ตายตอนกระโดด ให้รีเซ็ตกลับทันที
-                if hum:GetState() == Enum.HumanoidStateType.Dead then
-                    hum:ChangeState(Enum.HumanoidStateType.GettingUp)
-                end
-            end
-        end)
-
-        -- Hook ป้องกันดาเมจทุกรูปแบบ 100% (รวมถึงดาเมจจากการเคลื่อนที่)
-        local oldNamecall
-        oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
+        -- 1. สร้างร่างปลอม (Ghost) แสดงผลแค่ฝั่งเราเพื่อให้รู้ว่าตัวเราอยู่ที่ไหน
+        hrp.Archivable = true
+        ghostChar = hrp:Clone()
+        ghostChar.Parent = workspace
+        ghostChar.CanCollide = false
+        ghostChar.Transparency = 0.5
+        ghostChar.Color = Color3.fromRGB(255, 255, 255)
+        
+        -- 2. Hook การส่งตำแหน่ง (Net Bypass)
+        -- บล็อกการส่งข้อมูลตำแหน่งไปหา Server ทำให้ตัวจริงค้างอยู่ที่จุดเดิม
+        netHook = hookmetamethod(game, "__namecall", function(self, ...)
             local method = getnamecallmethod()
             if GOD_ENABLED and not checkcaller() then
-                if method == "TakeDamage" or method == "BreakJoints" then
-                    return nil
-                end
-                -- บล็อก Remote ที่ส่งค่าการตายไป Server
-                if tostring(self):lower():find("died") or tostring(self):lower():find("death") then
-                    return nil
+                if method == "FireServer" and (tostring(self) == "MainEvent" or self.Name:find("Update")) then
+                    return -- บล็อกการอัปเดตตำแหน่ง
                 end
             end
             return oldNamecall(self, ...)
         end)
+
+        -- 3. อมตะ 100% เพราะ Server คิดว่าเราอยู่ที่ปลอดภัย
+        RunService:BindToRenderStep("GhostLoop", 1, function()
+            if not GOD_ENABLED then return end
+            local hum = char:FindFirstChildOfClass("Humanoid")
+            if hum then
+                hum.Health = hum.MaxHealth
+                -- ปิด Collision กับพาร์ทอันตราย
+                for _, v in ipairs(char:GetDescendants()) do
+                    if v:IsA("BasePart") then v.CanTouch = false end
+                end
+            end
+        end)
     else
-        if godLoop then godLoop:Disconnect() godLoop = nil end
-        if physicsLoop then physicsLoop:Disconnect() physicsLoop = nil end
+        -- ปิดระบบ: วาร์ปกลับไปร่างจริงหรือดึงร่างจริงมาหา (แล้วแต่ระบบเกม)
+        RunService:UnbindFromRenderStep("GhostLoop")
+        if ghostChar then ghostChar:Destroy() ghostChar = nil end
         if char then
             for _, v in ipairs(char:GetDescendants()) do
-                if v:IsA("BasePart") then
-                    v.CanTouch = true
-                    v.CanCollide = true
-                end
+                if v:IsA("BasePart") then v.CanTouch = true end
             end
         end
     end
@@ -871,14 +851,6 @@ end)
 
 refreshUI()
 if GOD_ENABLED then task.spawn(function() toggleGodMode(true) end) end
-
--- ตรวจสอบตัวละครเกิดใหม่
-LP.CharacterAdded:Connect(function()
-    if GOD_ENABLED then
-        task.wait(0.5)
-        toggleGodMode(true)
-    end
-end)
 
 end)
 --===== UFO HUB X • SETTINGS — Smoother 🚀 (A V1 • fixed 3 rows) + Runner Save (per-map) + AA1 =====
