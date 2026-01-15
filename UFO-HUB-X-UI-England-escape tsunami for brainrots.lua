@@ -691,7 +691,7 @@ end)
 
 registerRight("Home", function(scroll) end)
 registerRight("Settings", function(scroll) end)
---===== UFO HUB X • Model A V1 - Ultimate Fast God Mode (Home) =====
+--===== UFO HUB X • Model A V1 - Infinite God Mode (Home) =====
 
 registerRight("Home", function(scroll)
     local TweenService = game:GetService("TweenService")
@@ -707,7 +707,7 @@ registerRight("Home", function(scroll)
         set = function() end
     }
 
-    local SCOPE = ("FastGodMode/%d/%d"):format(game.GameId, game.PlaceId)
+    local SCOPE = ("InfiniteGodMode_v4/%d/%d"):format(game.GameId, game.PlaceId)
     local function K(k) return SCOPE .. "/" .. k end
 
     local function SaveGet(key, default)
@@ -746,12 +746,12 @@ registerRight("Home", function(scroll)
     end
 
     ------------------------------------------------------------------------
-    -- SHADOW GOD MODE LOGIC (ULTRA FAST LOOP)
+    -- LOGIC: INFINITE GOD MODE (RECURSIVE LOOP)
     ------------------------------------------------------------------------
     local GOD_ENABLED = SaveGet("GodMode", false)
     local godLoop = nil
 
-    -- บล็อกการตายถาวร (Hook MetaTable)
+    -- ป้องกันดาเมจจากการส่งข้อมูล (Hook)
     local oldNamecall
     oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
         local method = getnamecallmethod()
@@ -762,54 +762,58 @@ registerRight("Home", function(scroll)
         return oldNamecall(self, ...)
     end)
 
-    local function applyGodMode(state)
-        GOD_ENABLED = state
-        if godLoop then godLoop:Disconnect() godLoop = nil end
+    local function startInfiniteLoop()
+        if godLoop then godLoop:Disconnect() end
         
-        if state then
-            -- ใช้ RenderStepped เพื่อให้ลูปไวที่สุด (ไวกว่า Heartbeat)
-            godLoop = RunService.RenderStepped:Connect(function()
-                if not GOD_ENABLED then return end
-                local char = LP.Character
-                local hum = char and char:FindFirstChildOfClass("Humanoid")
-                
-                if char and hum then
+        -- ใช้ Heartbeat วนลูปเช็คสถานะรัวๆ เพื่อกันตายในคลื่นลูกที่ 2
+        godLoop = RunService.Heartbeat:Connect(function()
+            if not GOD_ENABLED then return end
+            local char = LP.Character
+            if char then
+                local hum = char:FindFirstChildOfClass("Humanoid")
+                if hum then
                     hum.Health = hum.MaxHealth
                     hum:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
-                    
-                    for _, v in ipairs(char:GetChildren()) do
-                        if v:IsA("BasePart") then
-                            v.CanTouch = false -- ปิดการรับดาเมจจากพาร์ทสึนามิ
-                            if v.Name ~= "HumanoidRootPart" then
-                                v.CanCollide = false -- ทะลุคลื่น
-                            end
+                end
+                
+                -- ปิด CanTouch ของทุกส่วนในร่างกายเพื่อไม่ให้ Hitbox ของ Wave มาแตะได้
+                for _, part in ipairs(char:GetChildren()) do
+                    if part:IsA("BasePart") then
+                        part.CanTouch = false
+                        if part.Name ~= "HumanoidRootPart" then
+                            part.CanCollide = false
                         end
                     end
                 end
-            end)
+            end
+        end)
+    end
+
+    local function toggleGodMode(state)
+        GOD_ENABLED = state
+        if state then
+            startInfiniteLoop()
         else
-            -- ปิดระบบ คืนค่าฟิสิกส์
+            if godLoop then godLoop:Disconnect() godLoop = nil end
             if LP.Character then
-                local hum = LP.Character:FindFirstChildOfClass("Humanoid")
-                if hum then hum:SetStateEnabled(Enum.HumanoidStateType.Dead, true) end
-                for _, v in ipairs(LP.Character:GetChildren()) do
-                    if v:IsA("BasePart") then
-                        v.CanTouch = true
-                        v.CanCollide = true
+                for _, part in ipairs(LP.Character:GetChildren()) do
+                    if part:IsA("BasePart") then
+                        part.CanTouch = true
+                        part.CanCollide = true
                     end
                 end
             end
         end
     end
 
-    -- AA1 Auto Start
-    if GOD_ENABLED then task.spawn(function() applyGodMode(true) end) end
+    -- เริ่มทำงานอัตโนมัติ
+    if GOD_ENABLED then task.spawn(function() toggleGodMode(true) end) end
 
-    -- แก้ปัญหาตัวละครเกิดใหม่แล้วอมตะหาย
+    -- เช็คเมื่อตัวละครเกิดใหม่
     LP.CharacterAdded:Connect(function()
         if GOD_ENABLED then
-            task.wait(0.5)
-            applyGodMode(true)
+            task.wait(0.3)
+            toggleGodMode(true)
         end
     end)
 
@@ -821,7 +825,7 @@ registerRight("Home", function(scroll)
     vlist.SortOrder = Enum.SortOrder.LayoutOrder
     scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
 
-    -- HEADER
+    -- HEADER: God Mode Settings
     local header = Instance.new("TextLabel", scroll)
     header.Name = "A_Header_God"
     header.BackgroundTransparency = 1
@@ -833,7 +837,7 @@ registerRight("Home", function(scroll)
     header.Text = "Shadow God Mode 🛡️"
     header.LayoutOrder = 1
 
-    -- ROW: God mode Switch
+    -- ROW: God Mode Toggle
     local row = Instance.new("Frame", scroll)
     row.Name = "A_Row_God"
     row.Size = UDim2.new(1, -6, 0, 46)
@@ -881,7 +885,7 @@ registerRight("Home", function(scroll)
         local newState = not GOD_ENABLED
         SaveSet("GodMode", newState)
         updateUI(newState)
-        applyGodMode(newState)
+        toggleGodMode(newState)
     end)
 
     updateUI(GOD_ENABLED)
