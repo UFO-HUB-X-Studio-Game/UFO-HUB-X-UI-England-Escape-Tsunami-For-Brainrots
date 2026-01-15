@@ -691,183 +691,172 @@ end)
 
 registerRight("Home", function(scroll) end)
 registerRight("Settings", function(scroll) end)
+--===== UFO HUB X • Model A V1 - Auto Delete Tsunami (Home) =====
+
 registerRight("Home", function(scroll)
+    local TweenService = game:GetService("TweenService")
+    local RunService = game:GetService("RunService")
 
-------------------------------------------------------------------------
--- SERVICES
-------------------------------------------------------------------------
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local LP = Players.LocalPlayer
+    ------------------------------------------------------------------------
+    -- AA1 SAVE SYSTEM
+    ------------------------------------------------------------------------
+    local SAVE = (getgenv and getgenv().UFOX_SAVE) or {
+        get = function(_, _, d) return d end,
+        set = function() end
+    }
 
-------------------------------------------------------------------------
--- SAVE SYSTEM
-------------------------------------------------------------------------
-local SAVE = getgenv().UFOX_SAVE
-local SCOPE = ("AA1/GodMode/%d/%d/%s"):format(game.PlaceId, LP.UserId, LP.Name)
+    local SCOPE = ("AutoTsunami/%d/%d"):format(game.GameId, game.PlaceId)
 
-local function SG(k,d)
-    local ok,v = pcall(function() return SAVE.get(SCOPE.."/"..k,d) end)
-    return ok and v or d
-end
+    local function K(k) return SCOPE .. "/" .. k end
 
-local function SS(k,v)
-    pcall(function() SAVE.set(SCOPE.."/"..k,v) end)
-end
+    local function SaveGet(key, default)
+        local ok, v = pcall(function() return SAVE.get(K(key), default) end)
+        return ok and v or default
+    end
 
-------------------------------------------------------------------------
--- THEME & UI (MODEL A V1)
-------------------------------------------------------------------------
-local THEME = {
-    GREEN = Color3.fromRGB(25,255,125),
-    RED   = Color3.fromRGB(255,60,60),
-    WHITE = Color3.fromRGB(255,255,255),
-    BLACK = Color3.fromRGB(0,0,0),
-}
+    local function SaveSet(key, value)
+        pcall(function() SAVE.set(K(key), value) end)
+    end
 
-local function corner(ui,r)
-    local c = Instance.new("UICorner",ui)
-    c.CornerRadius = UDim.new(0,r or 12)
-end
+    ------------------------------------------------------------------------
+    -- THEME + HELPERS
+    ------------------------------------------------------------------------
+    local THEME = {
+        GREEN = Color3.fromRGB(25,255,125),
+        RED   = Color3.fromRGB(255,40,40),
+        WHITE = Color3.fromRGB(255,255,255),
+        BLACK = Color3.fromRGB(0,0,0),
+    }
 
-local function stroke(ui,t,col)
-    local s = Instance.new("UIStroke",ui)
-    s.Thickness = t or 2.2
-    s.Color = col or THEME.GREEN
-    s.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-end
+    local function corner(ui, r)
+        local c = Instance.new("UICorner", ui)
+        c.CornerRadius = UDim.new(0, r or 12)
+    end
 
-------------------------------------------------------------------------
--- THE GHOST BYPASS (NO-FLINCH GOD MODE)
-------------------------------------------------------------------------
-local GOD_ENABLED = SG("GodMode", false)
-local godLoop = nil
+    local function stroke(ui, th, col)
+        local s = Instance.new("UIStroke", ui)
+        s.Thickness = th or 2.2
+        s.Color = col or THEME.GREEN
+        s.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    end
 
-local function toggleGodMode(state)
-    GOD_ENABLED = state
-    local char = LP.Character
-    if not char then return end
-    
-    if state then
-        -- บล็อกการส่งข้อมูลความเสียหายทุกลูกแบบถาวร
-        local oldNamecall
-        oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
-            if GOD_ENABLED and not checkcaller() then
-                local method = getnamecallmethod()
-                if method == "BreakJoints" or method == "TakeDamage" then return nil end
-            end
-            return oldNamecall(self, ...)
-        end)
+    local function tween(o, p, d)
+        TweenService:Create(o, TweenInfo.new(d or 0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), p):Play()
+    end
 
-        -- ลูปป้องกันอาการกระตุก (RenderStepped)
-        if godLoop then godLoop:Disconnect() end
-        godLoop = RunService.RenderStepped:Connect(function()
-            if not GOD_ENABLED then return end
-            
-            local c = LP.Character
-            if c then
-                local hum = c:FindFirstChildOfClass("Humanoid")
-                if hum then
-                    hum.Health = 100
-                    -- บล็อกสถานะกระตุก/ล้ม/ตาย
-                    hum:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
-                    hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
-                    hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
-                    
-                    if hum:GetState() == Enum.HumanoidStateType.Dead then
-                        hum:ChangeState(Enum.HumanoidStateType.GettingUp)
+    ------------------------------------------------------------------------
+    -- LOGIC: DELETE TSUNAMI
+    ------------------------------------------------------------------------
+    local deleteTsunamiOn = SaveGet("deleteTsunamiOn", false)
+    local tsunamiConn = nil
+
+    local function applyTsunamiDelete()
+        if tsunamiConn then tsunamiConn:Disconnect() tsunamiConn = nil end
+        
+        if deleteTsunamiOn then
+            tsunamiConn = RunService.Heartbeat:Connect(function()
+                local folder = workspace:FindFirstChild("ActiveTsunamis")
+                if folder then
+                    for _, obj in ipairs(folder:GetChildren()) do
+                        -- ตรวจสอบว่าชื่อขึ้นต้นด้วย "Wave" หรือไม่ (เช่น Wave2, Wave3)
+                        if obj.Name:find("^Wave%d+") or obj.Name:find("Wave") then
+                            obj:Destroy()
+                        end
                     end
                 end
+            end)
+        end
+    end
 
-                -- ทำให้ร่างกายล่องหนในสายตาฟิสิกส์ (ดาเมจจะทะลุผ่านไปเลย)
-                for _, part in ipairs(c:GetDescendants()) do
-                    if part:IsA("BasePart") then
-                        part.CanTouch = false
-                        -- ป้องกันพาร์ทสั่นหรือกระตุกเมื่อโดนแรงกระแทก
-                        part.Velocity = Vector3.new(0,0,0)
-                        part.RotVelocity = Vector3.new(0,0,0)
-                    end
-                end
-            end
+    -- AA1: รันทันทีเมื่อโหลดสคริปต์
+    applyTsunamiDelete()
+
+    ------------------------------------------------------------------------
+    -- UI CONSTRUCTION (Model A V1)
+    ------------------------------------------------------------------------
+    local vlist = scroll:FindFirstChildOfClass("UIListLayout") or Instance.new("UIListLayout", scroll)
+    vlist.Padding = UDim.new(0, 12)
+    vlist.SortOrder = Enum.SortOrder.LayoutOrder
+    scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+
+    local base = 100 -- ตั้งค่า Base Order
+
+    -- HEADER: Auto Delete Tsunami 🌊
+    local header = Instance.new("TextLabel", scroll)
+    header.Name = "Tsunami_Header"
+    header.BackgroundTransparency = 1
+    header.Size = UDim2.new(1, 0, 0, 36)
+    header.Font = Enum.Font.GothamBold
+    header.TextSize = 16
+    header.TextColor3 = THEME.WHITE
+    header.TextXAlignment = Enum.TextXAlignment.Left
+    header.Text = "Auto Delete Tsunami 🌊"
+    header.LayoutOrder = base + 1
+
+    -- ROW: Switch สำหรับเปิด-ปิด ลบสึนามิ
+    local function makeRowSwitch(name, order, labelText, getState, setState)
+        local row = Instance.new("Frame", scroll)
+        row.Name = name
+        row.Size = UDim2.new(1, -6, 0, 46)
+        row.BackgroundColor3 = THEME.BLACK
+        row.LayoutOrder = order
+        corner(row, 12)
+        stroke(row, 2.2, THEME.GREEN)
+
+        local lab = Instance.new("TextLabel", row)
+        lab.BackgroundTransparency = 1
+        lab.Size = UDim2.new(1, -160, 1, 0)
+        lab.Position = UDim2.new(0, 16, 0, 0)
+        lab.Font = Enum.Font.GothamBold
+        lab.TextSize = 13
+        lab.TextColor3 = THEME.WHITE
+        lab.TextXAlignment = Enum.TextXAlignment.Left
+        lab.Text = labelText
+
+        local sw = Instance.new("Frame", row)
+        sw.AnchorPoint = Vector2.new(1, 0.5)
+        sw.Position = UDim2.new(1, -12, 0.5, 0)
+        sw.Size = UDim2.fromOffset(52, 26)
+        sw.BackgroundColor3 = THEME.BLACK
+        corner(sw, 13)
+
+        local swStroke = Instance.new("UIStroke", sw)
+        swStroke.Thickness = 1.8
+
+        local knob = Instance.new("Frame", sw)
+        knob.Size = UDim2.fromOffset(22, 22)
+        knob.BackgroundColor3 = THEME.WHITE
+        corner(knob, 11)
+
+        local function update(on)
+            swStroke.Color = on and THEME.GREEN or THEME.RED
+            tween(knob, {
+                Position = UDim2.new(on and 1 or 0, on and -24 or 2, 0.5, -11)
+            }, 0.08)
+        end
+
+        local btn = Instance.new("TextButton", sw)
+        btn.BackgroundTransparency = 1
+        btn.Size = UDim2.fromScale(1, 1)
+        btn.Text = ""
+
+        btn.MouseButton1Click:Connect(function()
+            local new = not getState()
+            setState(new)
+            update(new)
         end)
-        
-        -- บังคับรีเซ็ตหนึ่งครั้งเพื่อบั๊กสถานะ (ตามคลิป)
-        char:BreakJoints()
-        
-    else
-        if godLoop then godLoop:Disconnect() godLoop = nil end
-        if LP.Character then
-            local hum = LP.Character:FindFirstChildOfClass("Humanoid")
-            if hum then hum:SetStateEnabled(Enum.HumanoidStateType.Dead, true) end
-        end
+
+        update(getState())
     end
-end
 
-------------------------------------------------------------------------
--- UI GENERATION
-------------------------------------------------------------------------
-local row = Instance.new("Frame", scroll)
-row.Size = UDim2.new(1, -6, 0, 46)
-row.BackgroundColor3 = THEME.BLACK
-corner(row, 12)
-stroke(row)
-
-local txt = Instance.new("TextLabel", row)
-txt.BackgroundTransparency = 1
-txt.Size = UDim2.new(1, -160, 1, 0)
-txt.Position = UDim2.new(0, 16, 0, 0)
-txt.Font = Enum.Font.GothamBold
-txt.TextSize = 13
-txt.TextColor3 = THEME.WHITE
-txt.TextXAlignment = Enum.TextXAlignment.Left
-txt.Text = "God mode" 
-
-local sw = Instance.new("Frame", row)
-sw.AnchorPoint = Vector2.new(1, 0.5)
-sw.Position = UDim2.new(1, -12, 0.5, 0)
-sw.Size = UDim2.fromOffset(52, 26)
-sw.BackgroundColor3 = THEME.BLACK
-corner(sw, 13)
-
-local swStroke = Instance.new("UIStroke", sw)
-swStroke.Thickness = 1.8
-
-local knob = Instance.new("Frame", sw)
-knob.Size = UDim2.fromOffset(22, 22)
-knob.BackgroundColor3 = THEME.WHITE
-corner(knob, 11)
-
-local function refreshUI()
-    swStroke.Color = GOD_ENABLED and THEME.GREEN or THEME.RED
-    local targetPos = GOD_ENABLED and UDim2.new(1, -24, 0.5, -11) or UDim2.new(0, 2, 0.5, -11)
-    game:GetService("TweenService"):Create(knob, TweenInfo.new(0.1), {Position = targetPos}):Play()
-end
-
-local btn = Instance.new("TextButton", sw)
-btn.Size = UDim2.fromScale(1, 1)
-btn.BackgroundTransparency = 1
-btn.Text = ""
-
-btn.MouseButton1Click:Connect(function()
-    local newState = not GOD_ENABLED
-    SS("GodMode", newState)
-    refreshUI()
-    toggleGodMode(newState)
-end)
-
-refreshUI()
-if GOD_ENABLED then task.spawn(function() toggleGodMode(true) end) end
-
--- ตรวจสอบตัวละครเกิดใหม่หลังจากการบั๊ก Reset
-LP.CharacterAdded:Connect(function()
-    if GOD_ENABLED then
-        task.wait(0.5)
-        -- ล็อก UI ไม่ให้หาย
-        for _, gui in ipairs(LP.PlayerGui:GetChildren()) do
-            if gui:IsA("ScreenGui") then gui.ResetOnSpawn = false end
-        end
-    end
-end)
+    -- สร้างสวิตช์รายการที่ 1: Delete Tsunami
+    makeRowSwitch("Tsunami_Row1", base + 2, "Delete Tsunami", function()
+        return deleteTsunamiOn
+    end, function(v)
+        deleteTsunamiOn = v
+        SaveSet("deleteTsunamiOn", v)
+        applyTsunamiDelete()
+    end)
 
 end)
 --===== UFO HUB X • SETTINGS — Smoother 🚀 (A V1 • fixed 3 rows) + Runner Save (per-map) + AA1 =====
