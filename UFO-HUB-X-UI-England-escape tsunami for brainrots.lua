@@ -693,6 +693,8 @@ registerRight("Home", function(scroll) end)
 registerRight("Settings", function(scroll) end)
 --===== UFO HUB X • Model A V1 - World-Wide Anti Damage (Home) =====
 
+--===== UFO HUB X • Model A V1 - Safe Zone Anchor (Home) =====
+
 registerRight("Home", function(scroll)
     local TweenService = game:GetService("TweenService")
     local RunService = game:GetService("RunService")
@@ -707,7 +709,7 @@ registerRight("Home", function(scroll)
         set = function() end
     }
 
-    local SCOPE = ("WorldAntiDamage/%d/%d"):format(game.GameId, game.PlaceId)
+    local SCOPE = ("SafeGap_v1/%d/%d"):format(game.GameId, game.PlaceId)
     local function K(k) return SCOPE .. "/" .. k end
 
     local function SaveGet(key, default)
@@ -742,65 +744,49 @@ registerRight("Home", function(scroll)
     end
 
     ------------------------------------------------------------------------
-    -- LOGIC: WORLD-WIDE DAMAGE NULLIFIER
+    -- LOGIC: SAFE ZONE ANCHOR (GAP1)
     ------------------------------------------------------------------------
-    local GOD_ENABLED = SaveGet("GodMode", false)
-    local mainLoop = nil
+    local SAFE_ENABLED = SaveGet("SafeGap", false)
+    local gapLoop = nil
 
-    -- 1. บล็อกระบบตายที่ระดับ Global (MetaTable Hook)
-    local oldNamecall
-    oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
-        local method = getnamecallmethod()
-        if GOD_ENABLED and not checkcaller() then
-            -- บล็อกทุกอย่างที่สั่งให้เราเจ็บหรือตาย
-            if method == "TakeDamage" or method == "BreakJoints" then return nil end
-            if tostring(self) == "Died" or tostring(self) == "Death" then return nil end
-        end
-        return oldNamecall(self, ...)
-    end)
-
-    local function applyGodLogic()
-        if mainLoop then mainLoop:Disconnect() end
+    local function applySafeZone()
+        if gapLoop then gapLoop:Disconnect() end
         
-        mainLoop = RunService.Heartbeat:Connect(function()
-            if not GOD_ENABLED then return end
-            
-            local char = LP.Character
-            if char then
-                -- A. อมตะที่ตัวละคร (Ghost Mode)
-                local hum = char:FindFirstChildOfClass("Humanoid")
+        if SAFE_ENABLED then
+            gapLoop = RunService.Heartbeat:Connect(function()
+                local char = LP.Character
+                local hrp = char and char:FindFirstChild("HumanoidRootPart")
+                
+                -- ค้นหาพาร์ทใน Workspace.Misc.Gaps.Gap1
+                local gap1 = workspace:FindFirstChild("Misc") 
+                             and workspace.Misc:FindFirstChild("Gaps") 
+                             and workspace.Misc.Gaps:FindFirstChild("Gap1")
+
+                if hrp and gap1 then
+                    -- ดึงลูกทั้งหมดใน Gap1 รวมถึง Mud และพาร์ทลำดับที่ 2, 3
+                    for _, part in ipairs(gap1:GetChildren()) do
+                        if part:IsA("BasePart") then
+                            -- ปิดแรงโน้มถ่วงพาร์ทเพื่อให้วาร์ปตามได้ลื่นไหล
+                            part.CanCollide = false
+                            part.Anchored = true
+                            -- วาร์ปพาร์ทมาไว้ที่เท้าตัวละคร (ต่ำลงมาจาก RootPart 3 หน่วย)
+                            part.CFrame = hrp.CFrame * CFrame.new(0, -3, 0)
+                        end
+                    end
+                end
+                
+                -- เสริมระบบอมตะพื้นฐานป้องกันพลาด
+                local hum = char and char:FindFirstChildOfClass("Humanoid")
                 if hum then
                     hum.Health = hum.MaxHealth
                     hum:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
                 end
-                
-                -- ปิดการรับสัมผัสจากทุกอย่าง (รวมถึงพาร์ทล่องหนทั่วแมพ)
-                for _, p in ipairs(char:GetChildren()) do
-                    if p:IsA("BasePart") then
-                        p.CanTouch = false
-                        if p.Name ~= "HumanoidRootPart" then p.CanCollide = false end
-                    end
-                end
-            end
-
-            -- B. สแกนลบ "พาร์ทล่องหน" ที่สร้างดาเมจ (กวาดล้างทั้ง Workspace)
-            for _, v in ipairs(workspace:GetDescendants()) do
-                -- ถ้าเจอพาร์ทที่มี TouchInterest (ตัวสร้างดาเมจ) และไม่ใช่ตัวเรา
-                if v:IsA("TouchInterest") or v:IsA("TouchTransmitter") then
-                    local p = v.Parent
-                    if p and p:IsA("BasePart") and not p:IsDescendantOf(char) then
-                        -- ปิดดาเมจพาร์ทนั้นทิ้งทันที
-                        p.CanTouch = false 
-                        v:Destroy() -- ลบตัวรับสัญญาณดาเมจทิ้ง
-                    end
-                end
-            end
-        end)
+            end)
+        end
     end
 
-    -- AA1 Start
-    if GOD_ENABLED then applyGodLogic() end
-    LP.CharacterAdded:Connect(function() if GOD_ENABLED then task.wait(0.3) applyGodLogic() end end)
+    -- เริ่มทำงานอัตโนมัติ
+    if SAFE_ENABLED then applySafeZone() end
 
     ------------------------------------------------------------------------
     -- UI CONSTRUCTION (Model A V1)
@@ -812,19 +798,19 @@ registerRight("Home", function(scroll)
 
     -- HEADER
     local header = Instance.new("TextLabel", scroll)
-    header.Name = "A_Header_God"
+    header.Name = "A_Header_Safe"
     header.BackgroundTransparency = 1
     header.Size = UDim2.new(1, 0, 0, 36)
     header.Font = Enum.Font.GothamBold
     header.TextSize = 16
     header.TextColor3 = THEME.WHITE
     header.TextXAlignment = Enum.TextXAlignment.Left
-    header.Text = "Anti-Damage World 🛡️"
+    header.Text = "Safe Zone Follower 🛡️"
     header.LayoutOrder = 1
 
-    -- ROW: God Mode Switch
+    -- ROW: Toggle Switch
     local row = Instance.new("Frame", scroll)
-    row.Name = "A_Row_God"
+    row.Name = "A_Row_Safe"
     row.Size = UDim2.new(1, -6, 0, 46)
     row.BackgroundColor3 = THEME.BLACK
     row.LayoutOrder = 2
@@ -839,7 +825,7 @@ registerRight("Home", function(scroll)
     lab.TextSize = 13
     lab.TextColor3 = THEME.WHITE
     lab.TextXAlignment = Enum.TextXAlignment.Left
-    lab.Text = "God mode"
+    lab.Text = "Attach Gap1 to Feet"
 
     local sw = Instance.new("Frame", row)
     sw.AnchorPoint = Vector2.new(1, 0.5)
@@ -859,7 +845,7 @@ registerRight("Home", function(scroll)
     local function updateUI(on)
         swStroke.Color = on and THEME.GREEN or THEME.RED
         local targetPos = on and UDim2.new(1, -24, 0.5, -11) or UDim2.new(0, 2, 0.5, -11)
-        TweenService:Create(knob, TweenInfo.new(0.08), {Position = targetPos}):Play()
+        game:GetService("TweenService"):Create(knob, TweenInfo.new(0.08), {Position = targetPos}):Play()
     end
 
     local btn = Instance.new("TextButton", sw)
@@ -868,13 +854,13 @@ registerRight("Home", function(scroll)
     btn.Text = ""
 
     btn.MouseButton1Click:Connect(function()
-        GOD_ENABLED = not GOD_ENABLED
-        SaveSet("GodMode", GOD_ENABLED)
-        updateUI(GOD_ENABLED)
-        if GOD_ENABLED then applyGodLogic() else if mainLoop then mainLoop:Disconnect() end end
+        SAFE_ENABLED = not SAFE_ENABLED
+        SaveSet("SafeGap", SAFE_ENABLED)
+        updateUI(SAFE_ENABLED)
+        applySafeZone()
     end)
 
-    updateUI(GOD_ENABLED)
+    updateUI(SAFE_ENABLED)
 end)
 --===== UFO HUB X • SETTINGS — Smoother 🚀 (A V1 • fixed 3 rows) + Runner Save (per-map) + AA1 =====
 registerRight("Settings", function(scroll)
