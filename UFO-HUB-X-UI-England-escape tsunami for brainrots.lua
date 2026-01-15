@@ -745,7 +745,7 @@ registerRight("Home", function(scroll)
     end
 
     ------------------------------------------------------------------------
-    -- LOGIC: DELETE TSUNAMI
+    -- LOGIC: DEEP DELETE TSUNAMI (ลบทุกอย่างใน Wave)
     ------------------------------------------------------------------------
     local deleteTsunamiOn = SaveGet("deleteTsunamiOn", false)
     local tsunamiConn = nil
@@ -757,10 +757,15 @@ registerRight("Home", function(scroll)
             tsunamiConn = RunService.Heartbeat:Connect(function()
                 local folder = workspace:FindFirstChild("ActiveTsunamis")
                 if folder then
-                    for _, obj in ipairs(folder:GetChildren()) do
-                        -- ตรวจสอบว่าชื่อขึ้นต้นด้วย "Wave" หรือไม่ (เช่น Wave2, Wave3)
-                        if obj.Name:find("^Wave%d+") or obj.Name:find("Wave") then
-                            obj:Destroy()
+                    for _, waveObj in ipairs(folder:GetChildren()) do
+                        -- ตรวจสอบชื่อ Wave1, Wave2, Wave4...
+                        if waveObj.Name:find("Wave") then
+                            -- ลบทุกอย่างข้างใน (TsunamiWave, Hitbox, Water, TouchInterest)
+                            for _, child in ipairs(waveObj:GetChildren()) do
+                                child:Destroy()
+                            end
+                            -- ลบตัวโฟลเดอร์ Wave เองด้วย
+                            waveObj:Destroy()
                         end
                     end
                 end
@@ -768,7 +773,7 @@ registerRight("Home", function(scroll)
         end
     end
 
-    -- AA1: รันทันทีเมื่อโหลดสคริปต์
+    -- AA1 Run
     applyTsunamiDelete()
 
     ------------------------------------------------------------------------
@@ -779,11 +784,11 @@ registerRight("Home", function(scroll)
     vlist.SortOrder = Enum.SortOrder.LayoutOrder
     scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
 
-    local base = 100 -- ตั้งค่า Base Order
+    local base = 100 
 
     -- HEADER: Auto Delete Tsunami 🌊
     local header = Instance.new("TextLabel", scroll)
-    header.Name = "Tsunami_Header"
+    header.Name = "A_Header_Tsunami"
     header.BackgroundTransparency = 1
     header.Size = UDim2.new(1, 0, 0, 36)
     header.Font = Enum.Font.GothamBold
@@ -793,71 +798,60 @@ registerRight("Home", function(scroll)
     header.Text = "Auto Delete Tsunami 🌊"
     header.LayoutOrder = base + 1
 
-    -- ROW: Switch สำหรับเปิด-ปิด ลบสึนามิ
-    local function makeRowSwitch(name, order, labelText, getState, setState)
-        local row = Instance.new("Frame", scroll)
-        row.Name = name
-        row.Size = UDim2.new(1, -6, 0, 46)
-        row.BackgroundColor3 = THEME.BLACK
-        row.LayoutOrder = order
-        corner(row, 12)
-        stroke(row, 2.2, THEME.GREEN)
+    -- ROW: Delete Tsunami Switch
+    local row = Instance.new("Frame", scroll)
+    row.Name = "A_Row_DeleteTsunami"
+    row.Size = UDim2.new(1, -6, 0, 46)
+    row.BackgroundColor3 = THEME.BLACK
+    row.LayoutOrder = base + 2
+    corner(row, 12)
+    stroke(row, 2.2, THEME.GREEN)
 
-        local lab = Instance.new("TextLabel", row)
-        lab.BackgroundTransparency = 1
-        lab.Size = UDim2.new(1, -160, 1, 0)
-        lab.Position = UDim2.new(0, 16, 0, 0)
-        lab.Font = Enum.Font.GothamBold
-        lab.TextSize = 13
-        lab.TextColor3 = THEME.WHITE
-        lab.TextXAlignment = Enum.TextXAlignment.Left
-        lab.Text = labelText
+    local lab = Instance.new("TextLabel", row)
+    lab.BackgroundTransparency = 1
+    lab.Size = UDim2.new(1, -160, 1, 0)
+    lab.Position = UDim2.new(0, 16, 0, 0)
+    lab.Font = Enum.Font.GothamBold
+    lab.TextSize = 13
+    lab.TextColor3 = THEME.WHITE
+    lab.TextXAlignment = Enum.TextXAlignment.Left
+    lab.Text = "Delete Tsunami"
 
-        local sw = Instance.new("Frame", row)
-        sw.AnchorPoint = Vector2.new(1, 0.5)
-        sw.Position = UDim2.new(1, -12, 0.5, 0)
-        sw.Size = UDim2.fromOffset(52, 26)
-        sw.BackgroundColor3 = THEME.BLACK
-        corner(sw, 13)
+    local sw = Instance.new("Frame", row)
+    sw.AnchorPoint = Vector2.new(1, 0.5)
+    sw.Position = UDim2.new(1, -12, 0.5, 0)
+    sw.Size = UDim2.fromOffset(52, 26)
+    sw.BackgroundColor3 = THEME.BLACK
+    corner(sw, 13)
 
-        local swStroke = Instance.new("UIStroke", sw)
-        swStroke.Thickness = 1.8
+    local swStroke = Instance.new("UIStroke", sw)
+    swStroke.Thickness = 1.8
 
-        local knob = Instance.new("Frame", sw)
-        knob.Size = UDim2.fromOffset(22, 22)
-        knob.BackgroundColor3 = THEME.WHITE
-        corner(knob, 11)
+    local knob = Instance.new("Frame", sw)
+    knob.Size = UDim2.fromOffset(22, 22)
+    knob.BackgroundColor3 = THEME.WHITE
+    corner(knob, 11)
 
-        local function update(on)
-            swStroke.Color = on and THEME.GREEN or THEME.RED
-            tween(knob, {
-                Position = UDim2.new(on and 1 or 0, on and -24 or 2, 0.5, -11)
-            }, 0.08)
-        end
-
-        local btn = Instance.new("TextButton", sw)
-        btn.BackgroundTransparency = 1
-        btn.Size = UDim2.fromScale(1, 1)
-        btn.Text = ""
-
-        btn.MouseButton1Click:Connect(function()
-            local new = not getState()
-            setState(new)
-            update(new)
-        end)
-
-        update(getState())
+    local function update(on)
+        swStroke.Color = on and THEME.GREEN or THEME.RED
+        tween(knob, {
+            Position = UDim2.new(on and 1 or 0, on and -24 or 2, 0.5, -11)
+        }, 0.08)
     end
 
-    -- สร้างสวิตช์รายการที่ 1: Delete Tsunami
-    makeRowSwitch("Tsunami_Row1", base + 2, "Delete Tsunami", function()
-        return deleteTsunamiOn
-    end, function(v)
-        deleteTsunamiOn = v
-        SaveSet("deleteTsunamiOn", v)
+    local btn = Instance.new("TextButton", sw)
+    btn.BackgroundTransparency = 1
+    btn.Size = UDim2.fromScale(1, 1)
+    btn.Text = ""
+
+    btn.MouseButton1Click:Connect(function()
+        deleteTsunamiOn = not deleteTsunamiOn
+        SaveSet("deleteTsunamiOn", deleteTsunamiOn)
+        update(deleteTsunamiOn)
         applyTsunamiDelete()
     end)
 
+    update(deleteTsunamiOn)
 end)
 --===== UFO HUB X • SETTINGS — Smoother 🚀 (A V1 • fixed 3 rows) + Runner Save (per-map) + AA1 =====
 registerRight("Settings", function(scroll)
