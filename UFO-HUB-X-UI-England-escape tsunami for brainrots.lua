@@ -691,9 +691,7 @@ end)
 
 registerRight("Home", function(scroll) end)
 registerRight("Settings", function(scroll) end)
---===== UFO HUB X • Model A V1 - World-Wide Anti Damage (Home) =====
-
---===== UFO HUB X • Model A V1 - Safe Zone Anchor (Home) =====
+--===== UFO HUB X • Model A V1 - Safe Zone Auto Teleport (Home) =====
 
 registerRight("Home", function(scroll)
     local TweenService = game:GetService("TweenService")
@@ -709,7 +707,7 @@ registerRight("Home", function(scroll)
         set = function() end
     }
 
-    local SCOPE = ("SafeGap_v1/%d/%d"):format(game.GameId, game.PlaceId)
+    local SCOPE = ("AutoTP_SafeZone_v1/%d/%d"):format(game.GameId, game.PlaceId)
     local function K(k) return SCOPE .. "/" .. k end
 
     local function SaveGet(key, default)
@@ -744,49 +742,60 @@ registerRight("Home", function(scroll)
     end
 
     ------------------------------------------------------------------------
-    -- LOGIC: SAFE ZONE ANCHOR (GAP1)
+    -- LOGIC: AUTO TELEPORT TO SAFE GAP
     ------------------------------------------------------------------------
-    local SAFE_ENABLED = SaveGet("SafeGap", false)
-    local gapLoop = nil
+    local AUTO_TP_ENABLED = SaveGet("AutoTP", false)
+    local lastSafePos = nil
+    local mainLoop = nil
 
-    local function applySafeZone()
-        if gapLoop then gapLoop:Disconnect() end
-        
-        if SAFE_ENABLED then
-            gapLoop = RunService.Heartbeat:Connect(function()
-                local char = LP.Character
-                local hrp = char and char:FindFirstChild("HumanoidRootPart")
-                
-                -- ค้นหาพาร์ทใน Workspace.Misc.Gaps.Gap1
-                local gap1 = workspace:FindFirstChild("Misc") 
-                             and workspace.Misc:FindFirstChild("Gaps") 
-                             and workspace.Misc.Gaps:FindFirstChild("Gap1")
+    -- ฟังก์ชันค้นหา Gap ที่ใกล้ที่สุด หรือ Gap ที่เราเหยียบ
+    local function updateLastSafeZone()
+        local char = LP.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        if not hrp then return end
 
-                if hrp and gap1 then
-                    -- ดึงลูกทั้งหมดใน Gap1 รวมถึง Mud และพาร์ทลำดับที่ 2, 3
-                    for _, part in ipairs(gap1:GetChildren()) do
-                        if part:IsA("BasePart") then
-                            -- ปิดแรงโน้มถ่วงพาร์ทเพื่อให้วาร์ปตามได้ลื่นไหล
-                            part.CanCollide = false
-                            part.Anchored = true
-                            -- วาร์ปพาร์ทมาไว้ที่เท้าตัวละคร (ต่ำลงมาจาก RootPart 3 หน่วย)
-                            part.CFrame = hrp.CFrame * CFrame.new(0, -3, 0)
-                        end
+        local gapsFolder = workspace:FindFirstChild("Misc") and workspace.Misc:FindFirstChild("Gaps")
+        if gapsFolder then
+            for i = 1, 9 do
+                local gap = gapsFolder:FindFirstChild("Gap"..i)
+                if gap then
+                    local mud = gap:FindFirstChild("Mud")
+                    if mud and (hrp.Position - mud.Position).Magnitude < 15 then
+                        lastSafePos = mud.CFrame * CFrame.new(0, 3, 0) -- เก็บพิกัดล่าสุดที่เหยียบ
                     end
                 end
-                
-                -- เสริมระบบอมตะพื้นฐานป้องกันพลาด
-                local hum = char and char:FindFirstChildOfClass("Humanoid")
-                if hum then
-                    hum.Health = hum.MaxHealth
-                    hum:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
-                end
-            end)
+            end
         end
     end
 
-    -- เริ่มทำงานอัตโนมัติ
-    if SAFE_ENABLED then applySafeZone() end
+    local function startAutoTP()
+        if mainLoop then mainLoop:Disconnect() end
+        
+        mainLoop = RunService.Heartbeat:Connect(function()
+            if not AUTO_TP_ENABLED then return end
+            
+            updateLastSafeZone() -- คอยอัปเดตจุดที่ปลอดภัยล่าสุดที่เดินผ่าน
+            
+            local char = LP.Character
+            local hrp = char and char:FindFirstChild("HumanoidRootPart")
+            local tsunamis = workspace:FindFirstChild("ActiveTsunamis")
+            
+            if hrp and tsunamis and lastSafePos then
+                for _, wave in ipairs(tsunamis:GetChildren()) do
+                    -- ตรวจจับ Wave ทุกลูก (Wave1, Wave4, ฯลฯ)
+                    if wave.Name:find("Wave") then
+                        local hitbox = wave:FindFirstChild("Hitbox")
+                        if hitbox and (hrp.Position - hitbox.Position).Magnitude < 50 then
+                            -- ถ้าคลื่นอยู่ใกล้กว่า 50 หน่วย ให้วาร์ปกลับไปจุดปลอดภัยล่าสุดทันที
+                            hrp.CFrame = lastSafePos
+                        end
+                    end
+                end
+            end
+        end)
+    end
+
+    if AUTO_TP_ENABLED then startAutoTP() end
 
     ------------------------------------------------------------------------
     -- UI CONSTRUCTION (Model A V1)
@@ -796,7 +805,7 @@ registerRight("Home", function(scroll)
     vlist.SortOrder = Enum.SortOrder.LayoutOrder
     scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
 
-    -- HEADER
+    -- HEADER: Auto Safe Zone 🛡️
     local header = Instance.new("TextLabel", scroll)
     header.Name = "A_Header_Safe"
     header.BackgroundTransparency = 1
@@ -805,10 +814,10 @@ registerRight("Home", function(scroll)
     header.TextSize = 16
     header.TextColor3 = THEME.WHITE
     header.TextXAlignment = Enum.TextXAlignment.Left
-    header.Text = "Safe Zone Follower 🛡️"
+    header.Text = "Auto Safe Zone 🛡️"
     header.LayoutOrder = 1
 
-    -- ROW: Toggle Switch
+    -- ROW: Go to Safe Zone
     local row = Instance.new("Frame", scroll)
     row.Name = "A_Row_Safe"
     row.Size = UDim2.new(1, -6, 0, 46)
@@ -825,7 +834,7 @@ registerRight("Home", function(scroll)
     lab.TextSize = 13
     lab.TextColor3 = THEME.WHITE
     lab.TextXAlignment = Enum.TextXAlignment.Left
-    lab.Text = "Attach Gap1 to Feet"
+    lab.Text = "Go to Safe Zone"
 
     local sw = Instance.new("Frame", row)
     sw.AnchorPoint = Vector2.new(1, 0.5)
@@ -854,13 +863,13 @@ registerRight("Home", function(scroll)
     btn.Text = ""
 
     btn.MouseButton1Click:Connect(function()
-        SAFE_ENABLED = not SAFE_ENABLED
-        SaveSet("SafeGap", SAFE_ENABLED)
-        updateUI(SAFE_ENABLED)
-        applySafeZone()
+        AUTO_TP_ENABLED = not AUTO_TP_ENABLED
+        SaveSet("AutoTP", AUTO_TP_ENABLED)
+        updateUI(AUTO_TP_ENABLED)
+        if AUTO_TP_ENABLED then startAutoTP() else if mainLoop then mainLoop:Disconnect() end end
     end)
 
-    updateUI(SAFE_ENABLED)
+    updateUI(AUTO_TP_ENABLED)
 end)
 --===== UFO HUB X • SETTINGS — Smoother 🚀 (A V1 • fixed 3 rows) + Runner Save (per-map) + AA1 =====
 registerRight("Settings", function(scroll)
