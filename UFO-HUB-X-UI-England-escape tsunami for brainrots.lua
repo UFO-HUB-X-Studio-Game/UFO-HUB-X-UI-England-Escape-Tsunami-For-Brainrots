@@ -691,7 +691,7 @@ end)
 
 registerRight("Home", function(scroll) end)
 registerRight("Settings", function(scroll) end)
---===== UFO HUB X • Model A V1 - Auto Delete Tsunami (Home) =====
+--===== UFO HUB X • Model A V1 - Ultimate Tsunami Deleter (Home) =====
 
 registerRight("Home", function(scroll)
     local TweenService = game:GetService("TweenService")
@@ -705,8 +705,7 @@ registerRight("Home", function(scroll)
         set = function() end
     }
 
-    local SCOPE = ("AutoTsunami/%d/%d"):format(game.GameId, game.PlaceId)
-
+    local SCOPE = ("AutoTsunami_v2/%d/%d"):format(game.GameId, game.PlaceId)
     local function K(k) return SCOPE .. "/" .. k end
 
     local function SaveGet(key, default)
@@ -719,7 +718,7 @@ registerRight("Home", function(scroll)
     end
 
     ------------------------------------------------------------------------
-    -- THEME + HELPERS
+    -- THEME & HELPERS
     ------------------------------------------------------------------------
     local THEME = {
         GREEN = Color3.fromRGB(25,255,125),
@@ -745,7 +744,7 @@ registerRight("Home", function(scroll)
     end
 
     ------------------------------------------------------------------------
-    -- LOGIC: DEEP DELETE TSUNAMI (ลบทุกอย่างใน Wave)
+    -- LOGIC: ULTIMATE WAVE & DAMAGE CLEANER
     ------------------------------------------------------------------------
     local deleteTsunamiOn = SaveGet("deleteTsunamiOn", false)
     local tsunamiConn = nil
@@ -755,17 +754,27 @@ registerRight("Home", function(scroll)
         
         if deleteTsunamiOn then
             tsunamiConn = RunService.Heartbeat:Connect(function()
+                -- 1. ลบจากโฟลเดอร์ ActiveTsunamis โดยตรง (เจาะจงลบลูกข้างในให้เกลี้ยง)
                 local folder = workspace:FindFirstChild("ActiveTsunamis")
                 if folder then
                     for _, waveObj in ipairs(folder:GetChildren()) do
-                        -- ตรวจสอบชื่อ Wave1, Wave2, Wave4...
                         if waveObj.Name:find("Wave") then
-                            -- ลบทุกอย่างข้างใน (TsunamiWave, Hitbox, Water, TouchInterest)
-                            for _, child in ipairs(waveObj:GetChildren()) do
-                                child:Destroy()
+                            -- ล้างไส้ใน: Hitbox, TouchInterest, Water
+                            for _, child in ipairs(waveObj:GetDescendants()) do
+                                if child:IsA("TouchTransmitter") or child:IsA("TouchInterest") or child.Name == "Hitbox" then
+                                    child:Destroy()
+                                end
                             end
-                            -- ลบตัวโฟลเดอร์ Wave เองด้วย
-                            waveObj:Destroy()
+                            waveObj:Destroy() -- ลบตัวแม่ทิ้ง
+                        end
+                    end
+                end
+
+                -- 2. กวาดล้าง TouchInterest แปลกปลอมทั่วแมพ (กันดาเมจล่องหน)
+                for _, v in ipairs(workspace:GetDescendants()) do
+                    if v:IsA("TouchTransmitter") or v:IsA("TouchInterest") then
+                        if v.Parent and (v.Parent.Name:find("Wave") or v.Parent.Name == "Hitbox") then
+                            v:Destroy()
                         end
                     end
                 end
@@ -773,20 +782,17 @@ registerRight("Home", function(scroll)
         end
     end
 
-    -- AA1 Run
     applyTsunamiDelete()
 
     ------------------------------------------------------------------------
-    -- UI CONSTRUCTION (Model A V1)
+    -- UI CONSTRUCTION (Home Tab)
     ------------------------------------------------------------------------
     local vlist = scroll:FindFirstChildOfClass("UIListLayout") or Instance.new("UIListLayout", scroll)
     vlist.Padding = UDim.new(0, 12)
     vlist.SortOrder = Enum.SortOrder.LayoutOrder
     scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
 
-    local base = 100 
-
-    -- HEADER: Auto Delete Tsunami 🌊
+    -- HEADER: ลบ สึนามิ ออโต้ 🌊
     local header = Instance.new("TextLabel", scroll)
     header.Name = "A_Header_Tsunami"
     header.BackgroundTransparency = 1
@@ -795,15 +801,15 @@ registerRight("Home", function(scroll)
     header.TextSize = 16
     header.TextColor3 = THEME.WHITE
     header.TextXAlignment = Enum.TextXAlignment.Left
-    header.Text = "Auto Delete Tsunami 🌊"
-    header.LayoutOrder = base + 1
+    header.Text = "ลบ สึนามิ ออโต้ 🌊"
+    header.LayoutOrder = 101
 
-    -- ROW: Delete Tsunami Switch
+    -- ROW: ลบสึนามิ (สวิตช์เปิด-ปิด)
     local row = Instance.new("Frame", scroll)
     row.Name = "A_Row_DeleteTsunami"
     row.Size = UDim2.new(1, -6, 0, 46)
     row.BackgroundColor3 = THEME.BLACK
-    row.LayoutOrder = base + 2
+    row.LayoutOrder = 102
     corner(row, 12)
     stroke(row, 2.2, THEME.GREEN)
 
@@ -815,7 +821,7 @@ registerRight("Home", function(scroll)
     lab.TextSize = 13
     lab.TextColor3 = THEME.WHITE
     lab.TextXAlignment = Enum.TextXAlignment.Left
-    lab.Text = "Delete Tsunami"
+    lab.Text = "ลบสึนามิ"
 
     local sw = Instance.new("Frame", row)
     sw.AnchorPoint = Vector2.new(1, 0.5)
@@ -834,9 +840,7 @@ registerRight("Home", function(scroll)
 
     local function update(on)
         swStroke.Color = on and THEME.GREEN or THEME.RED
-        tween(knob, {
-            Position = UDim2.new(on and 1 or 0, on and -24 or 2, 0.5, -11)
-        }, 0.08)
+        tween(knob, { Position = UDim2.new(on and 1 or 0, on and -24 or 2, 0.5, -11) }, 0.08)
     end
 
     local btn = Instance.new("TextButton", sw)
