@@ -691,11 +691,13 @@ end)
 
 registerRight("Home", function(scroll) end)
 registerRight("Settings", function(scroll) end)
---===== UFO HUB X • Model A V1 - Ultimate Tsunami Deleter (Home) =====
+--===== UFO HUB X • Model A V1 - Ultimate Fast God Mode (Home) =====
 
 registerRight("Home", function(scroll)
     local TweenService = game:GetService("TweenService")
     local RunService = game:GetService("RunService")
+    local Players = game:GetService("Players")
+    local LP = Players.LocalPlayer
 
     ------------------------------------------------------------------------
     -- AA1 SAVE SYSTEM
@@ -705,7 +707,7 @@ registerRight("Home", function(scroll)
         set = function() end
     }
 
-    local SCOPE = ("AutoTsunami_v3/%d/%d"):format(game.GameId, game.PlaceId)
+    local SCOPE = ("FastGodMode/%d/%d"):format(game.GameId, game.PlaceId)
     local function K(k) return SCOPE .. "/" .. k end
 
     local function SaveGet(key, default)
@@ -744,88 +746,99 @@ registerRight("Home", function(scroll)
     end
 
     ------------------------------------------------------------------------
-    -- LOGIC: ULTIMATE WAVE & DAMAGE CLEANER
+    -- SHADOW GOD MODE LOGIC (ULTRA FAST LOOP)
     ------------------------------------------------------------------------
-    local deleteTsunamiOn = SaveGet("deleteTsunamiOn", false)
-    local tsunamiConn = nil
+    local GOD_ENABLED = SaveGet("GodMode", false)
+    local godLoop = nil
 
-    -- Bypass Ping System (หลอก Analytics ของเกม)
-    local function applyPingBypass()
-        local oldNamecall
-        oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
-            local method = getnamecallmethod()
-            local args = {...}
-            if not checkcaller() and method == "FireServer" and self.Name == "Ping" then
-                -- แก้ไขค่า Timestamp ให้ดูเหมือนเรายังวิ่งปกติ (ป้องกันโดนเตะ)
-                return oldNamecall(self, unpack(args))
-            end
-            return oldNamecall(self, ...)
-        end)
-    end
+    -- บล็อกการตายถาวร (Hook MetaTable)
+    local oldNamecall
+    oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
+        local method = getnamecallmethod()
+        if GOD_ENABLED and not checkcaller() then
+            if method == "BreakJoints" or method == "TakeDamage" then return nil end
+            if tostring(self) == "Died" or tostring(self) == "Death" then return nil end
+        end
+        return oldNamecall(self, ...)
+    end)
 
-    local function applyTsunamiDelete()
-        if tsunamiConn then tsunamiConn:Disconnect() tsunamiConn = nil end
+    local function applyGodMode(state)
+        GOD_ENABLED = state
+        if godLoop then godLoop:Disconnect() godLoop = nil end
         
-        if deleteTsunamiOn then
-            tsunamiConn = RunService.Heartbeat:Connect(function()
-                -- 1. ล้างไส้ในโฟลเดอร์ ActiveTsunamis
-                local folder = workspace:FindFirstChild("ActiveTsunamis")
-                if folder then
-                    for _, waveObj in ipairs(folder:GetChildren()) do
-                        if waveObj.Name:find("Wave") then
-                            -- ลบ Hitbox, TouchInterest, และ Water ทันที
-                            for _, child in ipairs(waveObj:GetDescendants()) do
-                                if child:IsA("TouchTransmitter") or child:IsA("TouchInterest") or child.Name == "Hitbox" then
-                                    child:Destroy()
-                                end
+        if state then
+            -- ใช้ RenderStepped เพื่อให้ลูปไวที่สุด (ไวกว่า Heartbeat)
+            godLoop = RunService.RenderStepped:Connect(function()
+                if not GOD_ENABLED then return end
+                local char = LP.Character
+                local hum = char and char:FindFirstChildOfClass("Humanoid")
+                
+                if char and hum then
+                    hum.Health = hum.MaxHealth
+                    hum:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
+                    
+                    for _, v in ipairs(char:GetChildren()) do
+                        if v:IsA("BasePart") then
+                            v.CanTouch = false -- ปิดการรับดาเมจจากพาร์ทสึนามิ
+                            if v.Name ~= "HumanoidRootPart" then
+                                v.CanCollide = false -- ทะลุคลื่น
                             end
-                            waveObj:Destroy() -- ลบโมเดลหลักทิ้ง
-                        end
-                    end
-                end
-
-                -- 2. กวาดล้างพาร์ทดาเมจที่อาจหลุดลอดไปอยู่จุดอื่นใน Workspace
-                for _, v in ipairs(workspace:GetDescendants()) do
-                    if v:IsA("TouchTransmitter") or v:IsA("TouchInterest") then
-                        if v.Parent and (v.Parent.Name:find("Wave") or v.Parent.Name == "Hitbox") then
-                            v:Destroy()
                         end
                     end
                 end
             end)
+        else
+            -- ปิดระบบ คืนค่าฟิสิกส์
+            if LP.Character then
+                local hum = LP.Character:FindFirstChildOfClass("Humanoid")
+                if hum then hum:SetStateEnabled(Enum.HumanoidStateType.Dead, true) end
+                for _, v in ipairs(LP.Character:GetChildren()) do
+                    if v:IsA("BasePart") then
+                        v.CanTouch = true
+                        v.CanCollide = true
+                    end
+                end
+            end
         end
     end
 
     -- AA1 Auto Start
-    applyTsunamiDelete()
-    pcall(applyPingBypass)
+    if GOD_ENABLED then task.spawn(function() applyGodMode(true) end) end
+
+    -- แก้ปัญหาตัวละครเกิดใหม่แล้วอมตะหาย
+    LP.CharacterAdded:Connect(function()
+        if GOD_ENABLED then
+            task.wait(0.5)
+            applyGodMode(true)
+        end
+    end)
 
     ------------------------------------------------------------------------
-    -- UI CONSTRUCTION (Home Tab)
+    -- UI CONSTRUCTION (Model A V1)
     ------------------------------------------------------------------------
     local vlist = scroll:FindFirstChildOfClass("UIListLayout") or Instance.new("UIListLayout", scroll)
     vlist.Padding = UDim.new(0, 12)
     vlist.SortOrder = Enum.SortOrder.LayoutOrder
     scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
 
-    -- HEADER: Auto Delete Tsunami 🌊
+    -- HEADER
     local header = Instance.new("TextLabel", scroll)
-    header.Name = "A_Header_Tsunami"
+    header.Name = "A_Header_God"
     header.BackgroundTransparency = 1
     header.Size = UDim2.new(1, 0, 0, 36)
     header.Font = Enum.Font.GothamBold
     header.TextSize = 16
     header.TextColor3 = THEME.WHITE
     header.TextXAlignment = Enum.TextXAlignment.Left
-    header.Text = "Auto Delete Tsunami 🌊"
-    header.LayoutOrder = 101
+    header.Text = "Shadow God Mode 🛡️"
+    header.LayoutOrder = 1
 
-    -- ROW: Delete Tsunami (Switch)
+    -- ROW: God mode Switch
     local row = Instance.new("Frame", scroll)
-    row.Name = "A_Row_DeleteTsunami"
+    row.Name = "A_Row_God"
     row.Size = UDim2.new(1, -6, 0, 46)
     row.BackgroundColor3 = THEME.BLACK
-    row.LayoutOrder = 102
+    row.LayoutOrder = 2
     corner(row, 12)
     stroke(row, 2.2, THEME.GREEN)
 
@@ -837,7 +850,7 @@ registerRight("Home", function(scroll)
     lab.TextSize = 13
     lab.TextColor3 = THEME.WHITE
     lab.TextXAlignment = Enum.TextXAlignment.Left
-    lab.Text = "Delete Tsunami"
+    lab.Text = "God mode"
 
     local sw = Instance.new("Frame", row)
     sw.AnchorPoint = Vector2.new(1, 0.5)
@@ -854,7 +867,7 @@ registerRight("Home", function(scroll)
     knob.BackgroundColor3 = THEME.WHITE
     corner(knob, 11)
 
-    local function update(on)
+    local function updateUI(on)
         swStroke.Color = on and THEME.GREEN or THEME.RED
         tween(knob, { Position = UDim2.new(on and 1 or 0, on and -24 or 2, 0.5, -11) }, 0.08)
     end
@@ -865,13 +878,13 @@ registerRight("Home", function(scroll)
     btn.Text = ""
 
     btn.MouseButton1Click:Connect(function()
-        deleteTsunamiOn = not deleteTsunamiOn
-        SaveSet("deleteTsunamiOn", deleteTsunamiOn)
-        update(deleteTsunamiOn)
-        applyTsunamiDelete()
+        local newState = not GOD_ENABLED
+        SaveSet("GodMode", newState)
+        updateUI(newState)
+        applyGodMode(newState)
     end)
 
-    update(deleteTsunamiOn)
+    updateUI(GOD_ENABLED)
 end)
 --===== UFO HUB X • SETTINGS — Smoother 🚀 (A V1 • fixed 3 rows) + Runner Save (per-map) + AA1 =====
 registerRight("Settings", function(scroll)
