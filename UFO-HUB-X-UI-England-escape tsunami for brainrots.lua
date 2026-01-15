@@ -705,7 +705,7 @@ registerRight("Home", function(scroll)
         set = function() end
     }
 
-    local SCOPE = ("AutoTsunami_v2/%d/%d"):format(game.GameId, game.PlaceId)
+    local SCOPE = ("AutoTsunami_v3/%d/%d"):format(game.GameId, game.PlaceId)
     local function K(k) return SCOPE .. "/" .. k end
 
     local function SaveGet(key, default)
@@ -749,28 +749,42 @@ registerRight("Home", function(scroll)
     local deleteTsunamiOn = SaveGet("deleteTsunamiOn", false)
     local tsunamiConn = nil
 
+    -- Bypass Ping System (หลอก Analytics ของเกม)
+    local function applyPingBypass()
+        local oldNamecall
+        oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
+            local method = getnamecallmethod()
+            local args = {...}
+            if not checkcaller() and method == "FireServer" and self.Name == "Ping" then
+                -- แก้ไขค่า Timestamp ให้ดูเหมือนเรายังวิ่งปกติ (ป้องกันโดนเตะ)
+                return oldNamecall(self, unpack(args))
+            end
+            return oldNamecall(self, ...)
+        end)
+    end
+
     local function applyTsunamiDelete()
         if tsunamiConn then tsunamiConn:Disconnect() tsunamiConn = nil end
         
         if deleteTsunamiOn then
             tsunamiConn = RunService.Heartbeat:Connect(function()
-                -- 1. ลบจากโฟลเดอร์ ActiveTsunamis โดยตรง (เจาะจงลบลูกข้างในให้เกลี้ยง)
+                -- 1. ล้างไส้ในโฟลเดอร์ ActiveTsunamis
                 local folder = workspace:FindFirstChild("ActiveTsunamis")
                 if folder then
                     for _, waveObj in ipairs(folder:GetChildren()) do
                         if waveObj.Name:find("Wave") then
-                            -- ล้างไส้ใน: Hitbox, TouchInterest, Water
+                            -- ลบ Hitbox, TouchInterest, และ Water ทันที
                             for _, child in ipairs(waveObj:GetDescendants()) do
                                 if child:IsA("TouchTransmitter") or child:IsA("TouchInterest") or child.Name == "Hitbox" then
                                     child:Destroy()
                                 end
                             end
-                            waveObj:Destroy() -- ลบตัวแม่ทิ้ง
+                            waveObj:Destroy() -- ลบโมเดลหลักทิ้ง
                         end
                     end
                 end
 
-                -- 2. กวาดล้าง TouchInterest แปลกปลอมทั่วแมพ (กันดาเมจล่องหน)
+                -- 2. กวาดล้างพาร์ทดาเมจที่อาจหลุดลอดไปอยู่จุดอื่นใน Workspace
                 for _, v in ipairs(workspace:GetDescendants()) do
                     if v:IsA("TouchTransmitter") or v:IsA("TouchInterest") then
                         if v.Parent and (v.Parent.Name:find("Wave") or v.Parent.Name == "Hitbox") then
@@ -782,7 +796,9 @@ registerRight("Home", function(scroll)
         end
     end
 
+    -- AA1 Auto Start
     applyTsunamiDelete()
+    pcall(applyPingBypass)
 
     ------------------------------------------------------------------------
     -- UI CONSTRUCTION (Home Tab)
@@ -792,7 +808,7 @@ registerRight("Home", function(scroll)
     vlist.SortOrder = Enum.SortOrder.LayoutOrder
     scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
 
-    -- HEADER: ลบ สึนามิ ออโต้ 🌊
+    -- HEADER: Auto Delete Tsunami 🌊
     local header = Instance.new("TextLabel", scroll)
     header.Name = "A_Header_Tsunami"
     header.BackgroundTransparency = 1
@@ -801,10 +817,10 @@ registerRight("Home", function(scroll)
     header.TextSize = 16
     header.TextColor3 = THEME.WHITE
     header.TextXAlignment = Enum.TextXAlignment.Left
-    header.Text = "ลบ สึนามิ ออโต้ 🌊"
+    header.Text = "Auto Delete Tsunami 🌊"
     header.LayoutOrder = 101
 
-    -- ROW: ลบสึนามิ (สวิตช์เปิด-ปิด)
+    -- ROW: Delete Tsunami (Switch)
     local row = Instance.new("Frame", scroll)
     row.Name = "A_Row_DeleteTsunami"
     row.Size = UDim2.new(1, -6, 0, 46)
@@ -821,7 +837,7 @@ registerRight("Home", function(scroll)
     lab.TextSize = 13
     lab.TextColor3 = THEME.WHITE
     lab.TextXAlignment = Enum.TextXAlignment.Left
-    lab.Text = "ลบสึนามิ"
+    lab.Text = "Delete Tsunami"
 
     local sw = Instance.new("Frame", row)
     sw.AnchorPoint = Vector2.new(1, 0.5)
