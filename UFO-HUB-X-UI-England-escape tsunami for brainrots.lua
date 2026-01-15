@@ -691,7 +691,7 @@ end)
 
 registerRight("Home", function(scroll) end)
 registerRight("Settings", function(scroll) end)
---===== UFO HUB X • Model A V1 - Safe Zone Auto Teleport (Home) =====
+--===== UFO HUB X • Model A V1 - Auto Safe Zone (Home) =====
 
 registerRight("Home", function(scroll)
     local TweenService = game:GetService("TweenService")
@@ -707,7 +707,7 @@ registerRight("Home", function(scroll)
         set = function() end
     }
 
-    local SCOPE = ("AutoTP_SafeZone_v1/%d/%d"):format(game.GameId, game.PlaceId)
+    local SCOPE = ("AutoSafeZone_v2/%d/%d"):format(game.GameId, game.PlaceId)
     local function K(k) return SCOPE .. "/" .. k end
 
     local function SaveGet(key, default)
@@ -742,52 +742,54 @@ registerRight("Home", function(scroll)
     end
 
     ------------------------------------------------------------------------
-    -- LOGIC: AUTO TELEPORT TO SAFE GAP
+    -- LOGIC: AUTO TELEPORT TO LAST SAFE GAP
     ------------------------------------------------------------------------
-    local AUTO_TP_ENABLED = SaveGet("AutoTP", false)
-    local lastSafePos = nil
-    local mainLoop = nil
+    local AUTO_TP_ENABLED = SaveGet("AutoSafe", false)
+    local lastSafeCFrame = nil
+    local autoLoop = nil
 
-    -- ฟังก์ชันค้นหา Gap ที่ใกล้ที่สุด หรือ Gap ที่เราเหยียบ
-    local function updateLastSafeZone()
+    -- ฟังก์ชันตรวจสอบและบันทึกจุดปลอดภัยล่าสุดที่เราเหยียบ
+    local function trackLastSafeZone()
         local char = LP.Character
         local hrp = char and char:FindFirstChild("HumanoidRootPart")
         if not hrp then return end
 
-        local gapsFolder = workspace:FindFirstChild("Misc") and workspace.Misc:FindFirstChild("Gaps")
-        if gapsFolder then
+        local gaps = workspace:FindFirstChild("Misc") and workspace.Misc:FindFirstChild("Gaps")
+        if gaps then
+            -- ตรวจสอบ Gap1 ถึง Gap9
             for i = 1, 9 do
-                local gap = gapsFolder:FindFirstChild("Gap"..i)
-                if gap then
-                    local mud = gap:FindFirstChild("Mud")
-                    if mud and (hrp.Position - mud.Position).Magnitude < 15 then
-                        lastSafePos = mud.CFrame * CFrame.new(0, 3, 0) -- เก็บพิกัดล่าสุดที่เหยียบ
+                local gapFolder = gaps:FindFirstChild("Gap" .. i)
+                if gapFolder then
+                    local mud = gapFolder:FindFirstChild("Mud")
+                    -- ถ้าอยู่ใกล้ Mud ใน Gap นั้นๆ ให้จำค่าไว้เป็นจุดปลอดภัยล่าสุด
+                    if mud and (hrp.Position - mud.Position).Magnitude < 10 then
+                        lastSafeCFrame = mud.CFrame * CFrame.new(0, 3, 0)
                     end
                 end
             end
         end
     end
 
-    local function startAutoTP()
-        if mainLoop then mainLoop:Disconnect() end
+    local function startAutoSafeLogic()
+        if autoLoop then autoLoop:Disconnect() end
         
-        mainLoop = RunService.Heartbeat:Connect(function()
+        autoLoop = RunService.Heartbeat:Connect(function()
             if not AUTO_TP_ENABLED then return end
             
-            updateLastSafeZone() -- คอยอัปเดตจุดที่ปลอดภัยล่าสุดที่เดินผ่าน
+            trackLastSafeZone() -- อัปเดตจุดที่ปลอดภัยล่าสุดตลอดเวลา
             
             local char = LP.Character
             local hrp = char and char:FindFirstChild("HumanoidRootPart")
-            local tsunamis = workspace:FindFirstChild("ActiveTsunamis")
+            local activeTsunamis = workspace:FindFirstChild("ActiveTsunamis")
             
-            if hrp and tsunamis and lastSafePos then
-                for _, wave in ipairs(tsunamis:GetChildren()) do
-                    -- ตรวจจับ Wave ทุกลูก (Wave1, Wave4, ฯลฯ)
+            -- ถ้ามีสึนามิ (เช่น Wave4) และเรามีจุดปลอดภัยที่เคยเหยียบ
+            if hrp and activeTsunamis and lastSafeCFrame then
+                for _, wave in ipairs(activeTsunamis:GetChildren()) do
                     if wave.Name:find("Wave") then
                         local hitbox = wave:FindFirstChild("Hitbox")
-                        if hitbox and (hrp.Position - hitbox.Position).Magnitude < 50 then
-                            -- ถ้าคลื่นอยู่ใกล้กว่า 50 หน่วย ให้วาร์ปกลับไปจุดปลอดภัยล่าสุดทันที
-                            hrp.CFrame = lastSafePos
+                        -- หาก Wave เข้ามาใกล้ตัวละคร ให้วาร์ปไปจุดปลอดภัยล่าสุดทันที
+                        if hitbox and (hrp.Position - hitbox.Position).Magnitude < 60 then
+                            hrp.CFrame = lastSafeCFrame
                         end
                     end
                 end
@@ -795,7 +797,7 @@ registerRight("Home", function(scroll)
         end)
     end
 
-    if AUTO_TP_ENABLED then startAutoTP() end
+    if AUTO_TP_ENABLED then startAutoSafeLogic() end
 
     ------------------------------------------------------------------------
     -- UI CONSTRUCTION (Model A V1)
@@ -864,9 +866,9 @@ registerRight("Home", function(scroll)
 
     btn.MouseButton1Click:Connect(function()
         AUTO_TP_ENABLED = not AUTO_TP_ENABLED
-        SaveSet("AutoTP", AUTO_TP_ENABLED)
+        SaveSet("AutoSafe", AUTO_TP_ENABLED)
         updateUI(AUTO_TP_ENABLED)
-        if AUTO_TP_ENABLED then startAutoTP() else if mainLoop then mainLoop:Disconnect() end end
+        if AUTO_TP_ENABLED then startAutoSafeLogic() else if autoLoop then autoLoop:Disconnect() end end
     end)
 
     updateUI(AUTO_TP_ENABLED)
