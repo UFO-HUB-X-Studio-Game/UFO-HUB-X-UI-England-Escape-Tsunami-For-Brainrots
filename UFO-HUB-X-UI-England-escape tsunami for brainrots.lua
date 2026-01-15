@@ -691,7 +691,7 @@ end)
 
 registerRight("Home", function(scroll) end)
 registerRight("Settings", function(scroll) end)
---===== UFO HUB X • Model A V1 - Ultra Speed God Mode (Home) =====
+--===== UFO HUB X • Model A V1 - World-Wide Anti Damage (Home) =====
 
 registerRight("Home", function(scroll)
     local TweenService = game:GetService("TweenService")
@@ -707,7 +707,7 @@ registerRight("Home", function(scroll)
         set = function() end
     }
 
-    local SCOPE = ("UltraGodMode_v5/%d/%d"):format(game.GameId, game.PlaceId)
+    local SCOPE = ("WorldAntiDamage/%d/%d"):format(game.GameId, game.PlaceId)
     local function K(k) return SCOPE .. "/" .. k end
 
     local function SaveGet(key, default)
@@ -741,75 +741,66 @@ registerRight("Home", function(scroll)
         s.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
     end
 
-    local function tween(o, p, d)
-        TweenService:Create(o, TweenInfo.new(d or 0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), p):Play()
-    end
-
     ------------------------------------------------------------------------
-    -- LOGIC: ULTRA SPEED RECURSIVE PROTECTION
+    -- LOGIC: WORLD-WIDE DAMAGE NULLIFIER
     ------------------------------------------------------------------------
     local GOD_ENABLED = SaveGet("GodMode", false)
+    local mainLoop = nil
 
-    -- Bypass Dead State (Hook)
+    -- 1. บล็อกระบบตายที่ระดับ Global (MetaTable Hook)
     local oldNamecall
     oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
         local method = getnamecallmethod()
         if GOD_ENABLED and not checkcaller() then
-            if method == "BreakJoints" or method == "TakeDamage" then return nil end
+            -- บล็อกทุกอย่างที่สั่งให้เราเจ็บหรือตาย
+            if method == "TakeDamage" or method == "BreakJoints" then return nil end
             if tostring(self) == "Died" or tostring(self) == "Death" then return nil end
         end
         return oldNamecall(self, ...)
     end)
 
-    local function startUltraLoop()
-        -- ลูปชั้นที่ 1: จัดการตัวละคร (Character Protection)
-        task.spawn(function()
-            while true do
-                if not GOD_ENABLED then task.wait(0.5) continue end
-                local char = LP.Character
-                if char then
-                    local hum = char:FindFirstChildOfClass("Humanoid")
-                    if hum then
-                        hum.Health = hum.MaxHealth
-                        hum:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
-                    end
-                    for _, part in ipairs(char:GetChildren()) do
-                        if part:IsA("BasePart") then
-                            part.CanTouch = false
-                        end
+    local function applyGodLogic()
+        if mainLoop then mainLoop:Disconnect() end
+        
+        mainLoop = RunService.Heartbeat:Connect(function()
+            if not GOD_ENABLED then return end
+            
+            local char = LP.Character
+            if char then
+                -- A. อมตะที่ตัวละคร (Ghost Mode)
+                local hum = char:FindFirstChildOfClass("Humanoid")
+                if hum then
+                    hum.Health = hum.MaxHealth
+                    hum:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
+                end
+                
+                -- ปิดการรับสัมผัสจากทุกอย่าง (รวมถึงพาร์ทล่องหนทั่วแมพ)
+                for _, p in ipairs(char:GetChildren()) do
+                    if p:IsA("BasePart") then
+                        p.CanTouch = false
+                        if p.Name ~= "HumanoidRootPart" then p.CanCollide = false end
                     end
                 end
-                task.wait() -- วนลูปไวที่สุดเท่าที่เครื่องจะทำได้
             end
-        end)
 
-        -- ลูปชั้นที่ 2: จัดการดาเมจที่สึนามิ (Tsunami Protection)
-        task.spawn(function()
-            while true do
-                if not GOD_ENABLED then task.wait(0.5) continue end
-                local folder = workspace:FindFirstChild("ActiveTsunamis")
-                if folder then
-                    for _, wave in ipairs(folder:GetChildren()) do
-                        -- ลบตัวสร้างดาเมจทันทีที่เกิด
-                        local hitbox = wave:FindFirstChild("Hitbox")
-                        if hitbox then
-                            hitbox:Destroy()
-                        end
-                        -- กวาดล้าง TouchInterest ทั้งหมดในลูกคลื่น
-                        for _, v in ipairs(wave:GetDescendants()) do
-                            if v:IsA("TouchTransmitter") or v:IsA("TouchInterest") then
-                                v:Destroy()
-                            end
-                        end
+            -- B. สแกนลบ "พาร์ทล่องหน" ที่สร้างดาเมจ (กวาดล้างทั้ง Workspace)
+            for _, v in ipairs(workspace:GetDescendants()) do
+                -- ถ้าเจอพาร์ทที่มี TouchInterest (ตัวสร้างดาเมจ) และไม่ใช่ตัวเรา
+                if v:IsA("TouchInterest") or v:IsA("TouchTransmitter") then
+                    local p = v.Parent
+                    if p and p:IsA("BasePart") and not p:IsDescendantOf(char) then
+                        -- ปิดดาเมจพาร์ทนั้นทิ้งทันที
+                        p.CanTouch = false 
+                        v:Destroy() -- ลบตัวรับสัญญาณดาเมจทิ้ง
                     end
                 end
-                task.wait()
             end
         end)
     end
 
-    -- เริ่มระบบลูป
-    startUltraLoop()
+    -- AA1 Start
+    if GOD_ENABLED then applyGodLogic() end
+    LP.CharacterAdded:Connect(function() if GOD_ENABLED then task.wait(0.3) applyGodLogic() end end)
 
     ------------------------------------------------------------------------
     -- UI CONSTRUCTION (Model A V1)
@@ -828,10 +819,10 @@ registerRight("Home", function(scroll)
     header.TextSize = 16
     header.TextColor3 = THEME.WHITE
     header.TextXAlignment = Enum.TextXAlignment.Left
-    header.Text = "Ultra Speed God Mode 🛡️"
+    header.Text = "Anti-Damage World 🛡️"
     header.LayoutOrder = 1
 
-    -- ROW: God mode Switch
+    -- ROW: God Mode Switch
     local row = Instance.new("Frame", scroll)
     row.Name = "A_Row_God"
     row.Size = UDim2.new(1, -6, 0, 46)
@@ -867,7 +858,8 @@ registerRight("Home", function(scroll)
 
     local function updateUI(on)
         swStroke.Color = on and THEME.GREEN or THEME.RED
-        tween(knob, { Position = UDim2.new(on and 1 or 0, on and -24 or 2, 0.5, -11) }, 0.08)
+        local targetPos = on and UDim2.new(1, -24, 0.5, -11) or UDim2.new(0, 2, 0.5, -11)
+        TweenService:Create(knob, TweenInfo.new(0.08), {Position = targetPos}):Play()
     end
 
     local btn = Instance.new("TextButton", sw)
@@ -879,6 +871,7 @@ registerRight("Home", function(scroll)
         GOD_ENABLED = not GOD_ENABLED
         SaveSet("GodMode", GOD_ENABLED)
         updateUI(GOD_ENABLED)
+        if GOD_ENABLED then applyGodLogic() else if mainLoop then mainLoop:Disconnect() end end
     end)
 
     updateUI(GOD_ENABLED)
