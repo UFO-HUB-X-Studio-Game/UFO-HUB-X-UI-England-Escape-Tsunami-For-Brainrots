@@ -691,7 +691,7 @@ end)
 
 registerRight("Home", function(scroll) end)
 registerRight("Settings", function(scroll) end)
---===== UFO HUB X • Model A V1 - Infinite God Mode (Home) =====
+--===== UFO HUB X • Model A V1 - Ultra Speed God Mode (Home) =====
 
 registerRight("Home", function(scroll)
     local TweenService = game:GetService("TweenService")
@@ -707,7 +707,7 @@ registerRight("Home", function(scroll)
         set = function() end
     }
 
-    local SCOPE = ("InfiniteGodMode_v4/%d/%d"):format(game.GameId, game.PlaceId)
+    local SCOPE = ("UltraGodMode_v5/%d/%d"):format(game.GameId, game.PlaceId)
     local function K(k) return SCOPE .. "/" .. k end
 
     local function SaveGet(key, default)
@@ -746,12 +746,11 @@ registerRight("Home", function(scroll)
     end
 
     ------------------------------------------------------------------------
-    -- LOGIC: INFINITE GOD MODE (RECURSIVE LOOP)
+    -- LOGIC: ULTRA SPEED RECURSIVE PROTECTION
     ------------------------------------------------------------------------
     local GOD_ENABLED = SaveGet("GodMode", false)
-    local godLoop = nil
 
-    -- ป้องกันดาเมจจากการส่งข้อมูล (Hook)
+    -- Bypass Dead State (Hook)
     local oldNamecall
     oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
         local method = getnamecallmethod()
@@ -762,60 +761,55 @@ registerRight("Home", function(scroll)
         return oldNamecall(self, ...)
     end)
 
-    local function startInfiniteLoop()
-        if godLoop then godLoop:Disconnect() end
-        
-        -- ใช้ Heartbeat วนลูปเช็คสถานะรัวๆ เพื่อกันตายในคลื่นลูกที่ 2
-        godLoop = RunService.Heartbeat:Connect(function()
-            if not GOD_ENABLED then return end
-            local char = LP.Character
-            if char then
-                local hum = char:FindFirstChildOfClass("Humanoid")
-                if hum then
-                    hum.Health = hum.MaxHealth
-                    hum:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
-                end
-                
-                -- ปิด CanTouch ของทุกส่วนในร่างกายเพื่อไม่ให้ Hitbox ของ Wave มาแตะได้
-                for _, part in ipairs(char:GetChildren()) do
-                    if part:IsA("BasePart") then
-                        part.CanTouch = false
-                        if part.Name ~= "HumanoidRootPart" then
-                            part.CanCollide = false
+    local function startUltraLoop()
+        -- ลูปชั้นที่ 1: จัดการตัวละคร (Character Protection)
+        task.spawn(function()
+            while true do
+                if not GOD_ENABLED then task.wait(0.5) continue end
+                local char = LP.Character
+                if char then
+                    local hum = char:FindFirstChildOfClass("Humanoid")
+                    if hum then
+                        hum.Health = hum.MaxHealth
+                        hum:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
+                    end
+                    for _, part in ipairs(char:GetChildren()) do
+                        if part:IsA("BasePart") then
+                            part.CanTouch = false
                         end
                     end
                 end
+                task.wait() -- วนลูปไวที่สุดเท่าที่เครื่องจะทำได้
+            end
+        end)
+
+        -- ลูปชั้นที่ 2: จัดการดาเมจที่สึนามิ (Tsunami Protection)
+        task.spawn(function()
+            while true do
+                if not GOD_ENABLED then task.wait(0.5) continue end
+                local folder = workspace:FindFirstChild("ActiveTsunamis")
+                if folder then
+                    for _, wave in ipairs(folder:GetChildren()) do
+                        -- ลบตัวสร้างดาเมจทันทีที่เกิด
+                        local hitbox = wave:FindFirstChild("Hitbox")
+                        if hitbox then
+                            hitbox:Destroy()
+                        end
+                        -- กวาดล้าง TouchInterest ทั้งหมดในลูกคลื่น
+                        for _, v in ipairs(wave:GetDescendants()) do
+                            if v:IsA("TouchTransmitter") or v:IsA("TouchInterest") then
+                                v:Destroy()
+                            end
+                        end
+                    end
+                end
+                task.wait()
             end
         end)
     end
 
-    local function toggleGodMode(state)
-        GOD_ENABLED = state
-        if state then
-            startInfiniteLoop()
-        else
-            if godLoop then godLoop:Disconnect() godLoop = nil end
-            if LP.Character then
-                for _, part in ipairs(LP.Character:GetChildren()) do
-                    if part:IsA("BasePart") then
-                        part.CanTouch = true
-                        part.CanCollide = true
-                    end
-                end
-            end
-        end
-    end
-
-    -- เริ่มทำงานอัตโนมัติ
-    if GOD_ENABLED then task.spawn(function() toggleGodMode(true) end) end
-
-    -- เช็คเมื่อตัวละครเกิดใหม่
-    LP.CharacterAdded:Connect(function()
-        if GOD_ENABLED then
-            task.wait(0.3)
-            toggleGodMode(true)
-        end
-    end)
+    -- เริ่มระบบลูป
+    startUltraLoop()
 
     ------------------------------------------------------------------------
     -- UI CONSTRUCTION (Model A V1)
@@ -825,7 +819,7 @@ registerRight("Home", function(scroll)
     vlist.SortOrder = Enum.SortOrder.LayoutOrder
     scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
 
-    -- HEADER: God Mode Settings
+    -- HEADER
     local header = Instance.new("TextLabel", scroll)
     header.Name = "A_Header_God"
     header.BackgroundTransparency = 1
@@ -834,10 +828,10 @@ registerRight("Home", function(scroll)
     header.TextSize = 16
     header.TextColor3 = THEME.WHITE
     header.TextXAlignment = Enum.TextXAlignment.Left
-    header.Text = "Shadow God Mode 🛡️"
+    header.Text = "Ultra Speed God Mode 🛡️"
     header.LayoutOrder = 1
 
-    -- ROW: God Mode Toggle
+    -- ROW: God mode Switch
     local row = Instance.new("Frame", scroll)
     row.Name = "A_Row_God"
     row.Size = UDim2.new(1, -6, 0, 46)
@@ -882,10 +876,9 @@ registerRight("Home", function(scroll)
     btn.Text = ""
 
     btn.MouseButton1Click:Connect(function()
-        local newState = not GOD_ENABLED
-        SaveSet("GodMode", newState)
-        updateUI(newState)
-        toggleGodMode(newState)
+        GOD_ENABLED = not GOD_ENABLED
+        SaveSet("GodMode", GOD_ENABLED)
+        updateUI(GOD_ENABLED)
     end)
 
     updateUI(GOD_ENABLED)
