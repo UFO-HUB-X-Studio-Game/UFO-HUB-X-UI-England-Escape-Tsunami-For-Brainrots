@@ -749,7 +749,7 @@ local gui
 local moving = false
 
 ------------------------------------------------------------------------
--- MOVE SYSTEM (FLY ONLY)
+-- MOVE SYSTEM
 ------------------------------------------------------------------------
 local function flyTo(index)
     if moving then return end
@@ -772,7 +772,7 @@ local function flyTo(index)
 end
 
 ------------------------------------------------------------------------
--- WORLD BUTTON UI (SCREEN GUI)
+-- WORLD BUTTON UI (RIGHT SIDE)
 ------------------------------------------------------------------------
 local function createWorldButtons()
     if gui then return end
@@ -784,14 +784,14 @@ local function createWorldButtons()
 
     local holder = Instance.new("Frame", gui)
     holder.Size = UDim2.fromOffset(72, 220)
-    holder.Position = UDim2.new(0, 20, 0.5, -110)
+    holder.Position = UDim2.new(1, -96, 0.5, -110)
     holder.BackgroundTransparency = 1
 
     local layout = Instance.new("UIListLayout", holder)
     layout.Padding = UDim.new(0, 12)
     layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 
-    -- 🔴 UP
+    -- ▲ UP
     local up = Instance.new("TextButton", holder)
     up.Size = UDim2.fromOffset(64,64)
     up.BackgroundColor3 = THEME.BLACK
@@ -799,7 +799,7 @@ local function createWorldButtons()
     up.TextSize = 28
     up.TextColor3 = THEME.RED
     corner(up,12)
-    stroke(up,2.2,THEME.GREEN)
+    stroke(up,2)
 
     up.MouseButton1Click:Connect(function()
         if currentIndex < #POSITIONS then
@@ -808,18 +808,19 @@ local function createWorldButtons()
         end
     end)
 
-    -- 🟩 INDEX
+    -- ■ INDEX
     local mid = Instance.new("TextLabel", holder)
     mid.Size = UDim2.fromOffset(64,64)
     mid.BackgroundColor3 = THEME.BLACK
-    mid.Text = tostring(currentIndex)
-    mid.TextSize = 22
     mid.Font = Enum.Font.GothamBold
+    mid.TextSize = 22
     mid.TextColor3 = THEME.GREEN
+    mid.TextXAlignment = Enum.TextXAlignment.Center
+    mid.TextYAlignment = Enum.TextYAlignment.Center
     corner(mid,12)
-    stroke(mid,2.2,THEME.GREEN)
+    stroke(mid,2)
 
-    -- 🔵 DOWN
+    -- ▼ DOWN
     local down = Instance.new("TextButton", holder)
     down.Size = UDim2.fromOffset(64,64)
     down.BackgroundColor3 = THEME.BLACK
@@ -827,7 +828,7 @@ local function createWorldButtons()
     down.TextSize = 28
     down.TextColor3 = THEME.BLUE
     corner(down,12)
-    stroke(down,2.2,THEME.GREEN)
+    stroke(down,2)
 
     down.MouseButton1Click:Connect(function()
         if currentIndex > 1 then
@@ -836,7 +837,6 @@ local function createWorldButtons()
         end
     end)
 
-    -- UPDATE INDEX
     RunService.Heartbeat:Connect(function()
         if mid then
             mid.Text = tostring(currentIndex)
@@ -853,7 +853,7 @@ local function destroyWorldButtons()
 end
 
 ------------------------------------------------------------------------
--- UI MODEL A V1
+-- UI MODEL A V1 (RIGHT PANEL)
 ------------------------------------------------------------------------
 local layout = scroll:FindFirstChildOfClass("UIListLayout") or Instance.new("UIListLayout",scroll)
 layout.Padding = UDim.new(0,12)
@@ -874,9 +874,16 @@ row.BackgroundColor3 = THEME.BLACK
 corner(row,12)
 stroke(row)
 
+-- LEFT BAR (STATE)
+local bar = Instance.new("Frame", row)
+bar.Size = UDim2.new(0,4,1,0)
+bar.BackgroundColor3 = THEME.GREEN
+bar.Visible = false
+corner(bar,2)
+
 local txt = Instance.new("TextLabel",row)
 txt.BackgroundTransparency = 1
-txt.Size = UDim2.new(1,-160,1,0)
+txt.Size = UDim2.new(1,-100,1,0)
 txt.Position = UDim2.new(0,16,0,0)
 txt.Font = Enum.Font.GothamBold
 txt.TextSize = 13
@@ -884,32 +891,20 @@ txt.TextColor3 = THEME.WHITE
 txt.TextXAlignment = Enum.TextXAlignment.Left
 txt.Text = "Enable Position Move"
 
-local sw = Instance.new("TextButton",row)
-sw.AnchorPoint = Vector2.new(1,0.5)
-sw.Position = UDim2.new(1,-12,0.5,0)
-sw.Size = UDim2.fromOffset(52,26)
-sw.BackgroundColor3 = THEME.BLACK
-sw.Text = ""
-corner(sw,13)
+-- ACTION BUTTON ▶ (Model A V1)
+local act = Instance.new("TextButton",row)
+act.AnchorPoint = Vector2.new(1,0.5)
+act.Position = UDim2.new(1,-12,0.5,0)
+act.Size = UDim2.fromOffset(26,26)
+act.BackgroundTransparency = 1
+act.Text = "▶"
+act.Font = Enum.Font.GothamBold
+act.TextSize = 18
+act.TextColor3 = THEME.GREEN
 
-local swStroke = Instance.new("UIStroke",sw)
-swStroke.Thickness = 1.8
-
-local knob = Instance.new("Frame",sw)
-knob.Size = UDim2.fromOffset(22,22)
-knob.BackgroundColor3 = THEME.WHITE
-corner(knob,11)
-
-local function refresh()
-    swStroke.Color = ENABLED and THEME.GREEN or THEME.RED
-    knob.Position = ENABLED
-        and UDim2.new(1,-24,0.5,-11)
-        or  UDim2.new(0,2,0.5,-11)
-end
-
-sw.MouseButton1Click:Connect(function()
+act.MouseButton1Click:Connect(function()
     ENABLED = not ENABLED
-    refresh()
+    bar.Visible = ENABLED
     if ENABLED then
         createWorldButtons()
     else
@@ -917,7 +912,6 @@ sw.MouseButton1Click:Connect(function()
     end
 end)
 
-refresh()
 end)
 --===== UFO HUB X • SETTINGS — Smoother 🚀 (A V1 • fixed 3 rows) + Runner Save (per-map) + AA1 =====
 registerRight("Settings", function(scroll)
