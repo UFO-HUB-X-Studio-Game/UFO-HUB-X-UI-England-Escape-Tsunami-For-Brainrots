@@ -691,10 +691,11 @@ end)
 
 registerRight("Home", function(scroll) end)
 registerRight("Settings", function(scroll) end)
---===== UFO HUB X • Immortal & Camera System (Model A V1 - LAYOUT ORDER 0 ALL) =====
+--===== UFO HUB X • Unlock System (Immortal + Camera + No Cooldown) – MODEL A V1 =====
 -- Feature 1: 999 Trillion Health + Real-time Re-fill + Damage Protection
 -- Feature 2: Unlock Camera Max Zoom (Infinite Zoom)
--- UI Model: A V1 (Green Glow Border / Dynamic Switch)
+-- Feature 3: No Cooldown Click (Remove Click Restrictions)
+-- UI Model: A V1 (Green Glow Border / Dynamic Switch / LayoutOrder 0)
 
 registerRight("Home", function(scroll)
     local TweenService = game:GetService("TweenService")
@@ -709,7 +710,7 @@ registerRight("Home", function(scroll)
         get = function(_, _, d) return d end,
         set = function() end
     }
-    local SCOPE = ("UFO_UnlockSystemV1/%d/%d"):format(tonumber(game.GameId) or 0, tonumber(game.PlaceId) or 0)
+    local SCOPE = ("UFO_UnlockSystemV2/%d/%d"):format(tonumber(game.GameId) or 0, tonumber(game.PlaceId) or 0)
     local function K(k) return SCOPE .. "/" .. k end
     local function SaveGet(key, default)
         local ok, v = pcall(function() return SAVE.get(K(key), default) end)
@@ -799,17 +800,45 @@ registerRight("Home", function(scroll)
         if camConn then camConn:Disconnect() camConn = nil end
         if camUnlockOn then
             camConn = RunService.RenderStepped:Connect(function()
-                LocalPlayer.CameraMaxZoomDistance = 100000 -- ปลดล็อคระยะไกลมาก
+                LocalPlayer.CameraMaxZoomDistance = 100000 
             end)
         else
-            LocalPlayer.CameraMaxZoomDistance = 128 -- ค่าเริ่มต้นปกติของ Roblox
+            LocalPlayer.CameraMaxZoomDistance = 128 
         end
     end
     applyCamUnlock()
 
     ------------------------------------------------------------------------
+    -- SYSTEM 3: NO COOLDOWN CLICK LOGIC
+    ------------------------------------------------------------------------
+    local noCooldownOn = SaveGet("noCooldownOn", false)
+    local cdConn = nil
+
+    local function applyNoCooldown()
+        if cdConn then cdConn:Disconnect() cdConn = nil end
+        if noCooldownOn then
+            cdConn = RunService.Heartbeat:Connect(function()
+                -- ค้นหาปุ่มกดทั้งหมดใน PlayerGui เพื่อบังคับให้สถานะพร้อมกดเสมอ
+                for _, v in pairs(LocalPlayer.PlayerGui:GetDescendants()) do
+                    if v:IsA("TextButton") or v:IsA("ImageButton") then
+                        -- บังคับให้ปุ่มมองเห็นและกดได้ (ในกรณีที่เกมใช้การซ่อนปุ่มเป็นคูลดาวน์)
+                        if v.Name:lower():find("cooldown") or v.Name:lower():find("wait") then
+                             v.Visible = true
+                             v.Active = true
+                        end
+                        -- บังคับคุณสมบัติพื้นฐานที่อาจถูกปิดกั้น
+                        v.Interactable = true
+                    end
+                end
+            end)
+        end
+    end
+    applyNoCooldown()
+
+    ------------------------------------------------------------------------
     -- UI CONSTRUCTION (Model A V1 - LAYOUT ORDER 0 ALL)
     ------------------------------------------------------------------------
+    
     -- ส่วนหัว (Header)
     local header = Instance.new("TextLabel", scroll)
     header.Name = "Unlock_Header"
@@ -820,38 +849,28 @@ registerRight("Home", function(scroll)
     header.TextColor3 = THEME.WHITE
     header.TextXAlignment = Enum.TextXAlignment.Left
     header.Text = "Unlock 🔓"
-    header.LayoutOrder = 0 -- บังคับเป็น 0 [cite: 2026-01-31]
+    header.LayoutOrder = 0
 
     -- รายการที่ 1: Immortal 1 time
     local row1 = Instance.new("Frame", scroll)
     row1.Name = "Immortal_Row"
     row1.Size = UDim2.new(1, -6, 0, 46)
     row1.BackgroundColor3 = THEME.BLACK
-    row1.LayoutOrder = 0 -- บังคับเป็น 0 [cite: 2026-01-31]
+    row1.LayoutOrder = 0
     corner(row1, 12)
     stroke(row1, 2.2, THEME.GREEN)
 
     local lab1 = Instance.new("TextLabel", row1)
-    lab1.BackgroundTransparency = 1
-    lab1.Size = UDim2.new(1, -160, 1, 0)
-    lab1.Position = UDim2.new(0, 16, 0, 0)
-    lab1.Font = Enum.Font.GothamBold
-    lab1.TextSize = 13
-    lab1.TextColor3 = THEME.WHITE
-    lab1.TextXAlignment = Enum.TextXAlignment.Left
-    lab1.Text = "Immortal 1 time"
+    lab1.BackgroundTransparency = 1; lab1.Size = UDim2.new(1, -160, 1, 0); lab1.Position = UDim2.new(0, 16, 0, 0)
+    lab1.Font = Enum.Font.GothamBold; lab1.TextSize = 13; lab1.TextColor3 = THEME.WHITE
+    lab1.TextXAlignment = Enum.TextXAlignment.Left; lab1.Text = "Immortal 1 time"
 
     local sw1 = Instance.new("Frame", row1)
-    sw1.AnchorPoint = Vector2.new(1, 0.5)
-    sw1.Position = UDim2.new(1, -12, 0.5, 0)
-    sw1.Size = UDim2.fromOffset(52, 26)
-    sw1.BackgroundColor3 = THEME.BLACK
+    sw1.AnchorPoint = Vector2.new(1, 0.5); sw1.Position = UDim2.new(1, -12, 0.5, 0); sw1.Size = UDim2.fromOffset(52, 26); sw1.BackgroundColor3 = THEME.BLACK
     corner(sw1, 13)
     local swStroke1 = stroke(sw1, 1.8, THEME.RED)
     local knob1 = Instance.new("Frame", sw1)
-    knob1.Size = UDim2.fromOffset(22, 22)
-    knob1.BackgroundColor3 = THEME.WHITE
-    knob1.Position = UDim2.new(0, 2, 0.5, -11)
+    knob1.Size = UDim2.fromOffset(22, 22); knob1.BackgroundColor3 = THEME.WHITE; knob1.Position = UDim2.new(0, 2, 0.5, -11)
     corner(knob1, 11)
 
     local function updateUI1(on)
@@ -874,31 +893,21 @@ registerRight("Home", function(scroll)
     row2.Name = "Camera_Row"
     row2.Size = UDim2.new(1, -6, 0, 46)
     row2.BackgroundColor3 = THEME.BLACK
-    row2.LayoutOrder = 0 -- บังคับเป็น 0 [cite: 2026-01-31]
+    row2.LayoutOrder = 0
     corner(row2, 12)
     stroke(row2, 2.2, THEME.GREEN)
 
     local lab2 = Instance.new("TextLabel", row2)
-    lab2.BackgroundTransparency = 1
-    lab2.Size = UDim2.new(1, -160, 1, 0)
-    lab2.Position = UDim2.new(0, 16, 0, 0)
-    lab2.Font = Enum.Font.GothamBold
-    lab2.TextSize = 13
-    lab2.TextColor3 = THEME.WHITE
-    lab2.TextXAlignment = Enum.TextXAlignment.Left
-    lab2.Text = "Unlock Camera Max Zoom" -- ชื่อภาษาอังกฤษ ไม่มี emoji ตามสั่ง
+    lab2.BackgroundTransparency = 1; lab2.Size = UDim2.new(1, -160, 1, 0); lab2.Position = UDim2.new(0, 16, 0, 0)
+    lab2.Font = Enum.Font.GothamBold; lab2.TextSize = 13; lab2.TextColor3 = THEME.WHITE
+    lab2.TextXAlignment = Enum.TextXAlignment.Left; lab2.Text = "Unlock Camera Max Zoom"
 
     local sw2 = Instance.new("Frame", row2)
-    sw2.AnchorPoint = Vector2.new(1, 0.5)
-    sw2.Position = UDim2.new(1, -12, 0.5, 0)
-    sw2.Size = UDim2.fromOffset(52, 26)
-    sw2.BackgroundColor3 = THEME.BLACK
+    sw2.AnchorPoint = Vector2.new(1, 0.5); sw2.Position = UDim2.new(1, -12, 0.5, 0); sw2.Size = UDim2.fromOffset(52, 26); sw2.BackgroundColor3 = THEME.BLACK
     corner(sw2, 13)
     local swStroke2 = stroke(sw2, 1.8, THEME.RED)
     local knob2 = Instance.new("Frame", sw2)
-    knob2.Size = UDim2.fromOffset(22, 22)
-    knob2.BackgroundColor3 = THEME.WHITE
-    knob2.Position = UDim2.new(0, 2, 0.5, -11)
+    knob2.Size = UDim2.fromOffset(22, 22); knob2.BackgroundColor3 = THEME.WHITE; knob2.Position = UDim2.new(0, 2, 0.5, -11)
     corner(knob2, 11)
 
     local function updateUI2(on)
@@ -915,6 +924,43 @@ registerRight("Home", function(scroll)
         updateUI2(camUnlockOn)
     end)
     updateUI2(camUnlockOn)
+
+    -- รายการที่ 3: No Cooldown Click
+    local row3 = Instance.new("Frame", scroll)
+    row3.Name = "NoCooldown_Row"
+    row3.Size = UDim2.new(1, -6, 0, 46)
+    row3.BackgroundColor3 = THEME.BLACK
+    row3.LayoutOrder = 0
+    corner(row3, 12)
+    stroke(row3, 2.2, THEME.GREEN)
+
+    local lab3 = Instance.new("TextLabel", row3)
+    lab3.BackgroundTransparency = 1; lab3.Size = UDim2.new(1, -160, 1, 0); lab3.Position = UDim2.new(0, 16, 0, 0)
+    lab3.Font = Enum.Font.GothamBold; lab3.TextSize = 13; lab3.TextColor3 = THEME.WHITE
+    lab3.TextXAlignment = Enum.TextXAlignment.Left; lab3.Text = "No Cooldown Click"
+
+    local sw3 = Instance.new("Frame", row3)
+    sw3.AnchorPoint = Vector2.new(1, 0.5); sw3.Position = UDim2.new(1, -12, 0.5, 0); sw3.Size = UDim2.fromOffset(52, 26); sw3.BackgroundColor3 = THEME.BLACK
+    corner(sw3, 13)
+    local swStroke3 = stroke(sw3, 1.8, THEME.RED)
+    local knob3 = Instance.new("Frame", sw3)
+    knob3.Size = UDim2.fromOffset(22, 22); knob3.BackgroundColor3 = THEME.WHITE; knob3.Position = UDim2.new(0, 2, 0.5, -11)
+    corner(knob3, 11)
+
+    local function updateUI3(on)
+        swStroke3.Color = on and THEME.GREEN or THEME.RED
+        tween(knob3, { Position = UDim2.new(on and 1 or 0, on and -24 or 2, 0.5, -11) }, 0.08)
+    end
+
+    local btn3 = Instance.new("TextButton", sw3)
+    btn3.BackgroundTransparency = 1; btn3.Size = UDim2.fromScale(1, 1); btn3.Text = ""; btn3.AutoButtonColor = false
+    btn3.MouseButton1Click:Connect(function()
+        noCooldownOn = not noCooldownOn
+        SaveSet("noCooldownOn", noCooldownOn)
+        applyNoCooldown()
+        updateUI3(noCooldownOn)
+    end)
+    updateUI3(noCooldownOn)
 
 end)
 --===== UFO HUB X • Move System (AAA1 + AA1 + AAA2 COMBO) – FULL NEON EDITION =====
