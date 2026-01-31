@@ -512,7 +512,7 @@ local function makeTabButton(parent, label, iconId)
     return b, setActive
 end
 
-local btnHome,    setHomeActive     = makeTabButton(LeftScroll, "Event",    ICON_HOME)
+local btnHome,setHomeActive = makeTabButton(LeftScroll, "Home",ICON_HOME)
 local btnSettings,setSettingsActive = makeTabButton(LeftScroll, "Settings",ICON_SETTINGS)
 
 -- ========== RIGHT ==========
