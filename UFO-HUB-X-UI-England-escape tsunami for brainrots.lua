@@ -1323,6 +1323,150 @@ registerRight("Home", function(scroll)
 
     updateSwitch(config.Enabled); refreshUI()
 end)
+--===== UFO HUB X • Upgrade System (Auto Rebirth) – MODEL A V1 =====
+-- Feature 1: Auto Rebirth (Continuous InvokeServer)
+-- UI Model: A V1 (Green Glow Border / Dynamic Switch / LayoutOrder 0)
+
+registerRight("Home", function(scroll)
+    local TweenService = game:GetService("TweenService")
+    local RunService = game:GetService("RunService")
+    local ReplicatedStorage = game:GetService("ReplicatedStorage")
+    local Players = game:GetService("Players")
+    local LocalPlayer = Players.LocalPlayer
+
+    ------------------------------------------------------------------------
+    -- AA1 SAVE SYSTEM
+    ------------------------------------------------------------------------
+    local SAVE = (getgenv and getgenv().UFOX_SAVE) or {
+        get = function(_, _, d) return d end,
+        set = function() end
+    }
+    local SCOPE = ("UFO_UpgradeSystem/%d/%d"):format(tonumber(game.GameId) or 0, tonumber(game.PlaceId) or 0)
+    local function K(k) return SCOPE .. "/" .. k end
+    local function SaveGet(key, default)
+        local ok, v = pcall(function() return SAVE.get(K(key), default) end)
+        return ok and v or default
+    end
+    local function SaveSet(key, value) pcall(function() SAVE.set(K(key), value) end) end
+
+    ------------------------------------------------------------------------
+    -- THEME & HELPERS (Model A V1)
+    ------------------------------------------------------------------------
+    local THEME = {
+        GREEN = Color3.fromRGB(25, 255, 125),
+        RED   = Color3.fromRGB(255, 40, 40),
+        WHITE = Color3.fromRGB(255, 255, 255),
+        BLACK = Color3.fromRGB(0, 0, 0),
+    }
+
+    local function corner(ui, r)
+        local c = Instance.new("UICorner")
+        c.CornerRadius = UDim.new(0, r or 12)
+        c.Parent = ui
+    end
+
+    local function stroke(ui, th, col)
+        local s = Instance.new("UIStroke")
+        s.Thickness = th or 2.2
+        s.Color = col or THEME.GREEN
+        s.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+        s.Parent = ui
+        return s
+    end
+
+    local function tween(o, p, d)
+        TweenService:Create(o, TweenInfo.new(d or 0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), p):Play()
+    end
+
+    ------------------------------------------------------------------------
+    -- SYSTEM 1: AUTO REBIRTH LOGIC
+    ------------------------------------------------------------------------
+    local autoRebirthOn = SaveGet("autoRebirthOn", false)
+    
+    -- ใช้ Task Spawn เพื่อไม่ให้ขัดขวางการทำงานของ UI
+    task.spawn(function()
+        while true do
+            if autoRebirthOn then
+                pcall(function()
+                    local remote = ReplicatedStorage:WaitForChild("RemoteFunctions", 5):WaitForChild("Rebirth", 5)
+                    if remote then
+                        remote:InvokeServer()
+                    end
+                end)
+            end
+            task.wait(0.5) -- ปรับเวลาหน่วงได้ตามต้องการ (0.5 วินาทีต่อครั้ง)
+        end
+    end)
+
+    ------------------------------------------------------------------------
+    -- UI CONSTRUCTION (Model A V1 - LAYOUT ORDER 0 ALL)
+    ------------------------------------------------------------------------
+    
+    -- ส่วนหัว (Header): Upgrade Auto ⚡
+    local header = Instance.new("TextLabel", scroll)
+    header.Name = "Upgrade_Header"
+    header.BackgroundTransparency = 1
+    header.Size = UDim2.new(1, 0, 0, 36)
+    header.Font = Enum.Font.GothamBold
+    header.TextSize = 16
+    header.TextColor3 = THEME.WHITE
+    header.TextXAlignment = Enum.TextXAlignment.Left
+    header.Text = "Upgrade Auto ⚡"
+    header.LayoutOrder = 0
+
+    -- รายการที่ 1: rebirth auto
+    local row1 = Instance.new("Frame", scroll)
+    row1.Name = "Rebirth_Row"
+    row1.Size = UDim2.new(1, -6, 0, 46)
+    row1.BackgroundColor3 = THEME.BLACK
+    row1.LayoutOrder = 0
+    corner(row1, 12)
+    stroke(row1, 2.2, THEME.GREEN)
+
+    local lab1 = Instance.new("TextLabel", row1)
+    lab1.BackgroundTransparency = 1
+    lab1.Size = UDim2.new(1, -160, 1, 0)
+    lab1.Position = UDim2.new(0, 16, 0, 0)
+    lab1.Font = Enum.Font.GothamBold
+    lab1.TextSize = 13
+    lab1.TextColor3 = THEME.WHITE
+    lab1.TextXAlignment = Enum.TextXAlignment.Left
+    lab1.Text = "rebirth auto"
+
+    local sw1 = Instance.new("Frame", row1)
+    sw1.AnchorPoint = Vector2.new(1, 0.5)
+    sw1.Position = UDim2.new(1, -12, 0.5, 0)
+    sw1.Size = UDim2.fromOffset(52, 26)
+    sw1.BackgroundColor3 = THEME.BLACK
+    corner(sw1, 13)
+    local swStroke1 = stroke(sw1, 1.8, THEME.RED)
+    
+    local knob1 = Instance.new("Frame", sw1)
+    knob1.Size = UDim2.fromOffset(22, 22)
+    knob1.BackgroundColor3 = THEME.WHITE
+    knob1.Position = UDim2.new(0, 2, 0.5, -11)
+    corner(knob1, 11)
+
+    local function updateUI1(on)
+        swStroke1.Color = on and THEME.GREEN or THEME.RED
+        tween(knob1, { Position = UDim2.new(on and 1 or 0, on and -24 or 2, 0.5, -11) }, 0.08)
+    end
+    
+    local btn1 = Instance.new("TextButton", sw1)
+    btn1.BackgroundTransparency = 1
+    btn1.Size = UDim2.fromScale(1, 1)
+    btn1.Text = ""
+    btn1.AutoButtonColor = false
+    btn1.MouseButton1Click:Connect(function()
+        autoRebirthOn = not autoRebirthOn
+        SaveSet("autoRebirthOn", autoRebirthOn)
+        updateUI1(autoRebirthOn)
+    end)
+
+    -- โหลดค่าเริ่มต้น
+    updateUI1(autoRebirthOn)
+
+end)
 --===== UFO HUB X • SETTINGS — Smoother 🚀 (A V1 • fixed 3 rows) + Runner Save (per-map) + AA1 =====
 registerRight("Settings", function(scroll)
     local TweenService = game:GetService("TweenService")
