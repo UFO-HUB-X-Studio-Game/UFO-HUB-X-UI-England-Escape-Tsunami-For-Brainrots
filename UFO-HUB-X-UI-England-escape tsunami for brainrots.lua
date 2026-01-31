@@ -691,150 +691,229 @@ end)
 
 registerRight("Home", function(scroll) end)
 registerRight("Settings", function(scroll) end)
---[[
-    UFO HUB X • Model A V1
-    Feature: Auto Safe Zone (Teleport to Last Touched Mud in Gaps)
-    Description: วาร์ปไปจุดปลอดภัยล่าสุดเมื่อสึนามิ (Wave) เข้าใกล้ระยะอันตราย
-]]
-
+--===== UFO HUB X • Home • Position Mover 🚀 (Model A V1 | FIXED POINTS) =====
 registerRight("Home", function(scroll)
-    local RunService = game:GetService("RunService")
-    local Players = game:GetService("Players")
-    local LP = Players.LocalPlayer
 
-    -- ระบบบันทึกค่า (Save System)
-    local SAVE = (getgenv and getgenv().UFOX_SAVE) or { get = function(_, _, d) return d end, set = function() end }
-    local SCOPE = ("AutoSafeZone_V1/%d/%d"):format(game.GameId, game.PlaceId)
-    local function SaveGet(k, d) return SAVE.get(SCOPE.."/"..k, d) end
-    local function SaveSet(k, v) SAVE.set(SCOPE.."/"..k, v) end
+------------------------------------------------------------------------
+-- SERVICES
+------------------------------------------------------------------------
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+local LP = Players.LocalPlayer
 
-    -- สีและสไตล์ UI
-    local THEME = {
-        GREEN = Color3.fromRGB(25, 255, 125),
-        RED = Color3.fromRGB(255, 40, 40),
-        WHITE = Color3.fromRGB(255, 255, 255),
-        BLACK = Color3.fromRGB(15, 15, 15)
-    }
+------------------------------------------------------------------------
+-- THEME (Model A V1)
+------------------------------------------------------------------------
+local THEME = {
+    GREEN = Color3.fromRGB(25,255,125),
+    RED   = Color3.fromRGB(255,70,70),
+    WHITE = Color3.fromRGB(255,255,255),
+    BLACK = Color3.fromRGB(0,0,0),
+}
 
-    ------------------------------------------------------------------------
-    -- LOGIC: ตรวจสอบและวาร์ปไปจุดปลอดภัย
-    ------------------------------------------------------------------------
-    local IS_ACTIVE = SaveGet("AutoSafe", false)
-    local lastSafePoint = nil
-    local logicConnection = nil
+local function corner(ui,r)
+    local c = Instance.new("UICorner",ui)
+    c.CornerRadius = UDim.new(0,r or 12)
+end
 
-    -- ฟังก์ชันติดตามจุดปลอดภัยล่าสุด (Gaps 1-9)
-    local function updateLastSafePoint()
-        local char = LP.Character
-        local hrp = char and char:FindFirstChild("HumanoidRootPart")
-        if not hrp then return end
+local function stroke(ui,t,col)
+    local s = Instance.new("UIStroke",ui)
+    s.Thickness = t or 2
+    s.Color = col or THEME.GREEN
+    s.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+end
 
-        local misc = workspace:FindFirstChild("Misc")
-        local gaps = misc and misc:FindFirstChild("Gaps")
-        
-        if gaps then
-            -- วนลูปเช็ค Gap1 ถึง Gap9 ตามในไฟล์ Explorer
-            for i = 1, 9 do
-                local gap = gaps:FindFirstChild("Gap"..i)
-                if gap then
-                    local mud = gap:FindFirstChild("Mud")
-                    -- ถ้าผู้เล่นเหยียบหรืออยู่ใกล้ Mud ให้จำตำแหน่งนี้ไว้
-                    if mud and (hrp.Position - mud.Position).Magnitude < 12 then
-                        lastSafePoint = mud.CFrame * CFrame.new(0, 3, 0)
-                    end
-                end
-            end
+local function tween(o,p,d)
+    TweenService:Create(
+        o,
+        TweenInfo.new(d or 0.12, Enum.EasingStyle.Linear),
+        p
+    ):Play()
+end
+
+------------------------------------------------------------------------
+-- FIXED POSITIONS (HRP)
+------------------------------------------------------------------------
+local POSITIONS = {
+    Vector3.new(200.000, -2.742,  0.000), -- 1
+    Vector3.new(284.000, -2.742,  0.000), -- 2
+    Vector3.new(398.000, -2.742,  0.000), -- 3
+    Vector3.new(542.000, -2.742,  0.000), -- 4
+    Vector3.new(756.000, -2.742,  0.000), -- 5
+    Vector3.new(1074.004,-2.742,  0.002), -- 6
+    Vector3.new(1546.773,-2.742,  0.812), -- 7
+    Vector3.new(2247.060,-2.734,  2.466), -- 8
+    Vector3.new(2602.500,-2.742, -2.176), -- 9
+}
+
+------------------------------------------------------------------------
+-- STATE
+------------------------------------------------------------------------
+local ENABLED = false
+local INDEX = 1
+local FLY_SPEED = 65
+local flyConn
+
+------------------------------------------------------------------------
+-- FLY SYSTEM (NO WARP)
+------------------------------------------------------------------------
+local function flyTo(index)
+    if flyConn then flyConn:Disconnect() end
+    if not POSITIONS[index] then return end
+
+    local char = LP.Character
+    if not char then return end
+
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    if not hrp or not hum then return end
+
+    hum:ChangeState(Enum.HumanoidStateType.Physics)
+    hum.PlatformStand = true
+
+    local target = POSITIONS[index]
+
+    flyConn = RunService.Heartbeat:Connect(function(dt)
+        local dir = target - hrp.Position
+        if dir.Magnitude < 0.8 then
+            hrp.Velocity = Vector3.zero
+            hum.PlatformStand = false
+            flyConn:Disconnect()
+            flyConn = nil
+            INDEX = index
+            return
         end
-    end
 
-    -- ฟังก์ชันหลัก: ตรวจจับสึนามิและวาร์ป
-    local function startSafetyLogic()
-        if logicConnection then logicConnection:Disconnect() end
-        
-        logicConnection = RunService.Heartbeat:Connect(function()
-            if not IS_ACTIVE then return end
-            
-            updateLastSafePoint()
-            
-            local char = LP.Character
-            local hrp = char and char:FindFirstChild("HumanoidRootPart")
-            local activeWaves = workspace:FindFirstChild("ActiveTsunamis")
-            
-            if hrp and activeWaves and lastSafePoint then
-                -- ตรวจสอบ Wave ทุกอันที่กำลังทำงาน (เช่น Wave1, Wave2, Wave4)
-                for _, wave in ipairs(activeWaves:GetChildren()) do
-                    local hitbox = wave:FindFirstChild("Hitbox")
-                    -- ถ้า Hitbox ของคลื่นอยู่ใกล้ผู้เล่น (ระยะ 55 หน่วย) ให้วาร์ปหนีทันที
-                    if hitbox and (hrp.Position - hitbox.Position).Magnitude < 55 then
-                        hrp.CFrame = lastSafePoint
-                    end
-                end
-            end
-        end)
-    end
-
-    if IS_ACTIVE then startSafetyLogic() end
-
-    ------------------------------------------------------------------------
-    -- UI: ส่วนของหน้าเมนู Home
-    ------------------------------------------------------------------------
-    local vlist = scroll:FindFirstChildOfClass("UIListLayout") or Instance.new("UIListLayout", scroll)
-    vlist.Padding = UDim.new(0, 10)
-    scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
-
-    -- หัวข้อ
-    local title = Instance.new("TextLabel", scroll)
-    title.Size = UDim2.new(1, 0, 0, 30)
-    title.BackgroundTransparency = 1
-    title.Font = Enum.Font.GothamBold
-    title.TextColor3 = THEME.WHITE
-    title.TextSize = 15
-    title.Text = "Safety Features 🛡️"
-    title.TextXAlignment = Enum.TextXAlignment.Left
-
-    -- แถบเมนู Auto Safe Zone
-    local row = Instance.new("Frame", scroll)
-    row.Size = UDim2.new(1, -10, 0, 45)
-    row.BackgroundColor3 = THEME.BLACK
-    local rc = Instance.new("UICorner", row); rc.CornerRadius = UDim.new(0, 10)
-    local rs = Instance.new("UIStroke", row); rs.Thickness = 2; rs.ApplyStrokeMode = "Border"
-
-    local label = Instance.new("TextLabel", row)
-    label.Size = UDim2.new(1, -60, 1, 0)
-    label.Position = UDim2.new(0, 15, 0, 0)
-    label.BackgroundTransparency = 1
-    label.Font = Enum.Font.GothamBold
-    label.TextColor3 = THEME.WHITE
-    label.TextSize = 13
-    label.Text = "Auto Teleport to Safe Zone"
-    label.TextXAlignment = Enum.TextXAlignment.Left
-
-    -- ปุ่มสวิตช์ (Toggle)
-    local switch = Instance.new("TextButton", row)
-    switch.Size = UDim2.new(0, 45, 0, 22)
-    switch.Position = UDim2.new(1, -55, 0.5, -11)
-    switch.BackgroundColor3 = IS_ACTIVE and THEME.GREEN or THEME.RED
-    switch.Text = ""
-    local sc = Instance.new("UICorner", switch); sc.CornerRadius = UDim.new(1, 0)
-
-    local knob = Instance.new("Frame", switch)
-    knob.Size = UDim2.new(0, 18, 0, 18)
-    knob.Position = IS_ACTIVE and UDim2.new(1, -21, 0.5, -9) or UDim2.new(0, 3, 0.5, -9)
-    knob.BackgroundColor3 = THEME.WHITE
-    local kc = Instance.new("UICorner", knob); kc.CornerRadius = UDim.new(1, 0)
-
-    switch.MouseButton1Click:Connect(function()
-        IS_ACTIVE = not IS_ACTIVE
-        SaveSet("AutoSafe", IS_ACTIVE)
-        
-        -- อัปเดต UI
-        switch.BackgroundColor3 = IS_ACTIVE and THEME.GREEN or THEME.RED
-        knob:TweenPosition(IS_ACTIVE and UDim2.new(1, -21, 0.5, -9) or UDim2.new(0, 3, 0.5, -9), "Out", "Quad", 0.1, true)
-        
-        if IS_ACTIVE then startSafetyLogic() else if logicConnection then logicConnection:Disconnect() end end
+        hrp.CFrame = CFrame.new(
+            hrp.Position + dir.Unit * FLY_SPEED * dt,
+            hrp.Position + dir
+        )
     end)
+end
 
-    rs.Color = IS_ACTIVE and THEME.GREEN or THEME.RED
+------------------------------------------------------------------------
+-- UI MODEL A V1
+------------------------------------------------------------------------
+local layout = scroll:FindFirstChildOfClass("UIListLayout") or Instance.new("UIListLayout",scroll)
+layout.Padding = UDim.new(0,12)
+scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+
+-- Header
+local header = Instance.new("TextLabel",scroll)
+header.Size = UDim2.new(1,0,0,36)
+header.BackgroundTransparency = 1
+header.Font = Enum.Font.GothamBold
+header.TextSize = 16
+header.TextColor3 = THEME.WHITE
+header.TextXAlignment = Enum.TextXAlignment.Left
+header.Text = "Position Mover 🚀"
+
+-- Row
+local row = Instance.new("Frame",scroll)
+row.Size = UDim2.new(1,-6,0,56)
+row.BackgroundColor3 = THEME.BLACK
+corner(row,12)
+stroke(row)
+
+local label = Instance.new("TextLabel",row)
+label.BackgroundTransparency = 1
+label.Size = UDim2.new(1,-220,1,0)
+label.Position = UDim2.new(0,16,0,0)
+label.Font = Enum.Font.GothamBold
+label.TextSize = 13
+label.TextColor3 = THEME.WHITE
+label.TextXAlignment = Enum.TextXAlignment.Left
+label.Text = "Enable Position Move"
+
+------------------------------------------------------------------------
+-- BUTTONS
+------------------------------------------------------------------------
+local function createBtn(text, x)
+    local b = Instance.new("TextButton",row)
+    b.Size = UDim2.fromOffset(44,44)
+    b.Position = UDim2.new(1,x,0.5,-22)
+    b.BackgroundColor3 = THEME.BLACK
+    b.Text = text
+    b.Font = Enum.Font.GothamBold
+    b.TextSize = 18
+    b.TextColor3 = THEME.WHITE
+    corner(b,10)
+    stroke(b,2,THEME.GREEN)
+    return b
+end
+
+local btnNext = createBtn("⬆️",-164)
+local btnBack = createBtn("⬇️",-60)
+
+local indexBox = Instance.new("TextLabel",row)
+indexBox.Size = UDim2.fromOffset(44,44)
+indexBox.Position = UDim2.new(1,-112,0.5,-22)
+indexBox.BackgroundColor3 = THEME.BLACK
+indexBox.Text = tostring(INDEX)
+indexBox.Font = Enum.Font.GothamBold
+indexBox.TextSize = 16
+indexBox.TextColor3 = THEME.GREEN
+corner(indexBox,10)
+stroke(indexBox,2,THEME.GREEN)
+
+------------------------------------------------------------------------
+-- BUTTON LOGIC
+------------------------------------------------------------------------
+btnNext.MouseButton1Click:Connect(function()
+    if not ENABLED then return end
+    if INDEX < #POSITIONS then
+        flyTo(INDEX + 1)
+        indexBox.Text = tostring(INDEX + 1)
+    end
+end)
+
+btnBack.MouseButton1Click:Connect(function()
+    if not ENABLED then return end
+    if INDEX > 1 then
+        flyTo(INDEX - 1)
+        indexBox.Text = tostring(INDEX - 1)
+    end
+end)
+
+------------------------------------------------------------------------
+-- SWITCH
+------------------------------------------------------------------------
+local sw = Instance.new("Frame",row)
+sw.AnchorPoint = Vector2.new(1,0.5)
+sw.Position = UDim2.new(1,-12,0.5,0)
+sw.Size = UDim2.fromOffset(52,26)
+sw.BackgroundColor3 = THEME.BLACK
+corner(sw,13)
+
+local swStroke = Instance.new("UIStroke",sw)
+swStroke.Thickness = 1.8
+
+local knob = Instance.new("Frame",sw)
+knob.Size = UDim2.fromOffset(22,22)
+knob.BackgroundColor3 = THEME.WHITE
+corner(knob,11)
+
+local function refresh()
+    swStroke.Color = ENABLED and THEME.GREEN or THEME.RED
+    tween(knob,{
+        Position = ENABLED
+            and UDim2.new(1,-24,0.5,-11)
+            or  UDim2.new(0,2,0.5,-11)
+    })
+end
+
+local btn = Instance.new("TextButton",sw)
+btn.Size = UDim2.fromScale(1,1)
+btn.BackgroundTransparency = 1
+btn.Text = ""
+
+btn.MouseButton1Click:Connect(function()
+    ENABLED = not ENABLED
+    refresh()
+end)
+
+refresh()
 end)
 --===== UFO HUB X • SETTINGS — Smoother 🚀 (A V1 • fixed 3 rows) + Runner Save (per-map) + AA1 =====
 registerRight("Settings", function(scroll)
