@@ -691,15 +691,15 @@ end)
 
 registerRight("Home", function(scroll) end)
 registerRight("Settings", function(scroll) end)
---===== UFO HUB X • Home • Position Mover 🚀 (Model A V1 | FIXED POINTS) =====
+--===== UFO HUB X • Home • Position Mover 🚀 (Model A V1) =====
 registerRight("Home", function(scroll)
 
 ------------------------------------------------------------------------
 -- SERVICES
 ------------------------------------------------------------------------
 local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
 local LP = Players.LocalPlayer
 
 ------------------------------------------------------------------------
@@ -707,7 +707,8 @@ local LP = Players.LocalPlayer
 ------------------------------------------------------------------------
 local THEME = {
     GREEN = Color3.fromRGB(25,255,125),
-    RED   = Color3.fromRGB(255,70,70),
+    RED   = Color3.fromRGB(255,80,80),
+    BLUE  = Color3.fromRGB(80,170,255),
     WHITE = Color3.fromRGB(255,255,255),
     BLACK = Color3.fromRGB(0,0,0),
 }
@@ -724,72 +725,131 @@ local function stroke(ui,t,col)
     s.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 end
 
-local function tween(o,p,d)
-    TweenService:Create(
-        o,
-        TweenInfo.new(d or 0.12, Enum.EasingStyle.Linear),
-        p
-    ):Play()
-end
-
 ------------------------------------------------------------------------
--- FIXED POSITIONS (HRP)
+-- POSITIONS DATA (1–9)
 ------------------------------------------------------------------------
 local POSITIONS = {
-    Vector3.new(200.000, -2.742,  0.000), -- 1
-    Vector3.new(284.000, -2.742,  0.000), -- 2
-    Vector3.new(398.000, -2.742,  0.000), -- 3
-    Vector3.new(542.000, -2.742,  0.000), -- 4
-    Vector3.new(756.000, -2.742,  0.000), -- 5
-    Vector3.new(1074.004,-2.742,  0.002), -- 6
-    Vector3.new(1546.773,-2.742,  0.812), -- 7
-    Vector3.new(2247.060,-2.734,  2.466), -- 8
-    Vector3.new(2602.500,-2.742, -2.176), -- 9
+    Vector3.new(200.000, -2.742, 0.000),
+    Vector3.new(284.000, -2.742, 0.000),
+    Vector3.new(398.000, -2.742, 0.000),
+    Vector3.new(542.000, -2.742, 0.000),
+    Vector3.new(756.000, -2.742, 0.000),
+    Vector3.new(1074.004, -2.742, 0.002),
+    Vector3.new(1546.773, -2.742, 0.812),
+    Vector3.new(2247.060, -2.734, 2.466),
+    Vector3.new(2602.500, -2.742, -2.176),
 }
 
 ------------------------------------------------------------------------
 -- STATE
 ------------------------------------------------------------------------
 local ENABLED = false
-local INDEX = 1
-local FLY_SPEED = 65
-local flyConn
+local currentIndex = 0
+local gui
+local moving = false
 
 ------------------------------------------------------------------------
--- FLY SYSTEM (NO WARP)
+-- MOVE SYSTEM (FLY ONLY)
 ------------------------------------------------------------------------
 local function flyTo(index)
-    if flyConn then flyConn:Disconnect() end
-    if not POSITIONS[index] then return end
-
+    if moving then return end
     local char = LP.Character
-    if not char then return end
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
 
-    local hrp = char:FindFirstChild("HumanoidRootPart")
-    local hum = char:FindFirstChildOfClass("Humanoid")
-    if not hrp or not hum then return end
+    local targetPos = POSITIONS[index]
+    if not targetPos then return end
 
-    hum:ChangeState(Enum.HumanoidStateType.Physics)
-    hum.PlatformStand = true
+    moving = true
+    local tween = TweenService:Create(
+        hrp,
+        TweenInfo.new(0.6, Enum.EasingStyle.Linear),
+        {CFrame = CFrame.new(targetPos)}
+    )
+    tween:Play()
+    tween.Completed:Wait()
+    moving = false
+end
 
-    local target = POSITIONS[index]
+------------------------------------------------------------------------
+-- WORLD BUTTON UI (SCREEN GUI)
+------------------------------------------------------------------------
+local function createWorldButtons()
+    if gui then return end
 
-    flyConn = RunService.Heartbeat:Connect(function(dt)
-        local dir = target - hrp.Position
-        if dir.Magnitude < 0.8 then
-            hrp.Velocity = Vector3.zero
-            hum.PlatformStand = false
-            flyConn:Disconnect()
-            flyConn = nil
-            INDEX = index
-            return
+    gui = Instance.new("ScreenGui")
+    gui.Name = "UFOX_PositionMover"
+    gui.ResetOnSpawn = false
+    gui.Parent = LP:WaitForChild("PlayerGui")
+
+    local holder = Instance.new("Frame", gui)
+    holder.Size = UDim2.fromOffset(72, 220)
+    holder.Position = UDim2.new(0, 20, 0.5, -110)
+    holder.BackgroundTransparency = 1
+
+    local layout = Instance.new("UIListLayout", holder)
+    layout.Padding = UDim.new(0, 12)
+    layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+
+    -- 🔴 UP
+    local up = Instance.new("TextButton", holder)
+    up.Size = UDim2.fromOffset(64,64)
+    up.BackgroundColor3 = THEME.BLACK
+    up.Text = "⬆️"
+    up.TextSize = 28
+    up.TextColor3 = THEME.RED
+    corner(up,12)
+    stroke(up,2.2,THEME.GREEN)
+
+    up.MouseButton1Click:Connect(function()
+        if currentIndex < #POSITIONS then
+            currentIndex += 1
+            flyTo(currentIndex)
         end
-
-        hrp.CFrame = CFrame.new(
-            hrp.Position + dir.Unit * FLY_SPEED * dt,
-            hrp.Position + dir
-        )
     end)
+
+    -- 🟩 INDEX
+    local mid = Instance.new("TextLabel", holder)
+    mid.Size = UDim2.fromOffset(64,64)
+    mid.BackgroundColor3 = THEME.BLACK
+    mid.Text = tostring(currentIndex)
+    mid.TextSize = 22
+    mid.Font = Enum.Font.GothamBold
+    mid.TextColor3 = THEME.GREEN
+    corner(mid,12)
+    stroke(mid,2.2,THEME.GREEN)
+
+    -- 🔵 DOWN
+    local down = Instance.new("TextButton", holder)
+    down.Size = UDim2.fromOffset(64,64)
+    down.BackgroundColor3 = THEME.BLACK
+    down.Text = "⬇️"
+    down.TextSize = 28
+    down.TextColor3 = THEME.BLUE
+    corner(down,12)
+    stroke(down,2.2,THEME.GREEN)
+
+    down.MouseButton1Click:Connect(function()
+        if currentIndex > 1 then
+            currentIndex -= 1
+            flyTo(currentIndex)
+        end
+    end)
+
+    -- UPDATE INDEX
+    RunService.Heartbeat:Connect(function()
+        if mid then
+            mid.Text = tostring(currentIndex)
+        end
+    end)
+end
+
+local function destroyWorldButtons()
+    if gui then
+        gui:Destroy()
+        gui = nil
+    end
+    currentIndex = 0
 end
 
 ------------------------------------------------------------------------
@@ -799,7 +859,6 @@ local layout = scroll:FindFirstChildOfClass("UIListLayout") or Instance.new("UIL
 layout.Padding = UDim.new(0,12)
 scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
 
--- Header
 local header = Instance.new("TextLabel",scroll)
 header.Size = UDim2.new(1,0,0,36)
 header.BackgroundTransparency = 1
@@ -809,81 +868,28 @@ header.TextColor3 = THEME.WHITE
 header.TextXAlignment = Enum.TextXAlignment.Left
 header.Text = "Position Mover 🚀"
 
--- Row
 local row = Instance.new("Frame",scroll)
-row.Size = UDim2.new(1,-6,0,56)
+row.Size = UDim2.new(1,-6,0,46)
 row.BackgroundColor3 = THEME.BLACK
 corner(row,12)
 stroke(row)
 
-local label = Instance.new("TextLabel",row)
-label.BackgroundTransparency = 1
-label.Size = UDim2.new(1,-220,1,0)
-label.Position = UDim2.new(0,16,0,0)
-label.Font = Enum.Font.GothamBold
-label.TextSize = 13
-label.TextColor3 = THEME.WHITE
-label.TextXAlignment = Enum.TextXAlignment.Left
-label.Text = "Enable Position Move"
+local txt = Instance.new("TextLabel",row)
+txt.BackgroundTransparency = 1
+txt.Size = UDim2.new(1,-160,1,0)
+txt.Position = UDim2.new(0,16,0,0)
+txt.Font = Enum.Font.GothamBold
+txt.TextSize = 13
+txt.TextColor3 = THEME.WHITE
+txt.TextXAlignment = Enum.TextXAlignment.Left
+txt.Text = "Enable Position Move"
 
-------------------------------------------------------------------------
--- BUTTONS
-------------------------------------------------------------------------
-local function createBtn(text, x)
-    local b = Instance.new("TextButton",row)
-    b.Size = UDim2.fromOffset(44,44)
-    b.Position = UDim2.new(1,x,0.5,-22)
-    b.BackgroundColor3 = THEME.BLACK
-    b.Text = text
-    b.Font = Enum.Font.GothamBold
-    b.TextSize = 18
-    b.TextColor3 = THEME.WHITE
-    corner(b,10)
-    stroke(b,2,THEME.GREEN)
-    return b
-end
-
-local btnNext = createBtn("⬆️",-164)
-local btnBack = createBtn("⬇️",-60)
-
-local indexBox = Instance.new("TextLabel",row)
-indexBox.Size = UDim2.fromOffset(44,44)
-indexBox.Position = UDim2.new(1,-112,0.5,-22)
-indexBox.BackgroundColor3 = THEME.BLACK
-indexBox.Text = tostring(INDEX)
-indexBox.Font = Enum.Font.GothamBold
-indexBox.TextSize = 16
-indexBox.TextColor3 = THEME.GREEN
-corner(indexBox,10)
-stroke(indexBox,2,THEME.GREEN)
-
-------------------------------------------------------------------------
--- BUTTON LOGIC
-------------------------------------------------------------------------
-btnNext.MouseButton1Click:Connect(function()
-    if not ENABLED then return end
-    if INDEX < #POSITIONS then
-        flyTo(INDEX + 1)
-        indexBox.Text = tostring(INDEX + 1)
-    end
-end)
-
-btnBack.MouseButton1Click:Connect(function()
-    if not ENABLED then return end
-    if INDEX > 1 then
-        flyTo(INDEX - 1)
-        indexBox.Text = tostring(INDEX - 1)
-    end
-end)
-
-------------------------------------------------------------------------
--- SWITCH
-------------------------------------------------------------------------
-local sw = Instance.new("Frame",row)
+local sw = Instance.new("TextButton",row)
 sw.AnchorPoint = Vector2.new(1,0.5)
 sw.Position = UDim2.new(1,-12,0.5,0)
 sw.Size = UDim2.fromOffset(52,26)
 sw.BackgroundColor3 = THEME.BLACK
+sw.Text = ""
 corner(sw,13)
 
 local swStroke = Instance.new("UIStroke",sw)
@@ -896,21 +902,19 @@ corner(knob,11)
 
 local function refresh()
     swStroke.Color = ENABLED and THEME.GREEN or THEME.RED
-    tween(knob,{
-        Position = ENABLED
-            and UDim2.new(1,-24,0.5,-11)
-            or  UDim2.new(0,2,0.5,-11)
-    })
+    knob.Position = ENABLED
+        and UDim2.new(1,-24,0.5,-11)
+        or  UDim2.new(0,2,0.5,-11)
 end
 
-local btn = Instance.new("TextButton",sw)
-btn.Size = UDim2.fromScale(1,1)
-btn.BackgroundTransparency = 1
-btn.Text = ""
-
-btn.MouseButton1Click:Connect(function()
+sw.MouseButton1Click:Connect(function()
     ENABLED = not ENABLED
     refresh()
+    if ENABLED then
+        createWorldButtons()
+    else
+        destroyWorldButtons()
+    end
 end)
 
 refresh()
