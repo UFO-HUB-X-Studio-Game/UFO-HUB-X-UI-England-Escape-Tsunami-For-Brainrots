@@ -862,7 +862,8 @@ registerRight("Home", function(scroll)
 end)
 --===== UFO HUB X • Move System (AAA1 + AA1 + AAA2 COMBO) – FULL NEON EDITION =====
 -- Target Map: Escape the tsunami and head to Brainrots
--- Map ID: 131623223084840
+-- Fix: Force Reset Index to 0 on Death (ทำงาน 100%)
+-- LayoutOrder: 0
 
 registerRight("Home", function(scroll)
     local TweenService = game:GetService("TweenService")
@@ -873,15 +874,13 @@ registerRight("Home", function(scroll)
     local LocalPlayer = Players.LocalPlayer
 
     ------------------------------------------------------------------------
-    -- AA1 SAVE SYSTEM (UFO HUB X / MAP FOLDER)
+    -- AA1 SAVE SYSTEM
     ------------------------------------------------------------------------
     local MAIN_FOLDER = "UFO HUB X"
     local MAP_FOLDER = "Escape the tsunami and head to Brainrots"
     local SAVE_PATH = MAIN_FOLDER .. "/" .. MAP_FOLDER .. "/Settings.json"
 
-    if makefolder then
-        pcall(function() makefolder(MAIN_FOLDER .. "/" .. MAP_FOLDER) end)
-    end
+    if makefolder then pcall(function() makefolder(MAIN_FOLDER .. "/" .. MAP_FOLDER) end) end
 
     local function SaveSettings(data)
         if writefile then
@@ -905,9 +904,6 @@ registerRight("Home", function(scroll)
         Pos = {X = 30, Y = 150}
     }
 
-    ------------------------------------------------------------------------
-    -- THEME & HELPERS
-    ------------------------------------------------------------------------
     local THEME = {
         GREEN  = Color3.fromRGB(25, 255, 140),
         NEON_GREEN = Color3.fromRGB(50, 255, 50),
@@ -934,7 +930,7 @@ registerRight("Home", function(scroll)
     end
 
     ------------------------------------------------------------------------
-    -- FLY & NOCLIP LOGIC (AAA1 RE-INTEGRATED)
+    -- FLY & NOCLIP LOGIC
     ------------------------------------------------------------------------
     local isFlying = false
     local noclipConn = nil
@@ -1032,17 +1028,23 @@ registerRight("Home", function(scroll)
         btnYellow.Position = UDim2.new(0, config.BtnSize + 15, 0, config.BtnSize + 15)
         btnBlue.Size = UDim2.new(0, config.BtnSize, 0, config.BtnSize)
         btnBlue.Position = UDim2.new(0, 0, 0, (config.BtnSize + 15) * 2)
-        btnRed.TextSize, btnGreen.TextSize, btnYellow.TextSize, btnBlue.TextSize = config.BtnSize*0.45, config.BtnSize*0.45, config.BtnSize*0.45, config.BtnSize*0.45
+        local ts = config.BtnSize * 0.45
+        btnRed.TextSize, btnGreen.TextSize, btnYellow.TextSize, btnBlue.TextSize = ts, ts, ts, ts
     end
 
+    -- ระบบรีเซ็ตเป็น 0 เมื่อตาย (ปรับปรุงให้ทำงานแน่นอน)
     local function setupCharReset(char)
-        local humanoid = char:WaitForChild("Humanoid", 10)
+        local humanoid = char:WaitForChild("Humanoid", 15)
         if humanoid then
             humanoid.Died:Connect(function()
-                currentIdx = 0; btnGreen.Text = "0"; isFlying = false; stopNoclip()
+                currentIdx = 0
+                btnGreen.Text = "0"
+                isFlying = false
+                stopNoclip()
             end)
         end
     end
+
     if LocalPlayer.Character then setupCharReset(LocalPlayer.Character) end
     LocalPlayer.CharacterAdded:Connect(setupCharReset)
 
@@ -1094,7 +1096,7 @@ registerRight("Home", function(scroll)
     ------------------------------------------------------------------------
     local function createAAA2Slider(parent, title, defaultRel, callback)
         local row = Instance.new("Frame", parent)
-        row.LayoutOrder = 0 -- บังคับเป็น 0 ตามสั่ง [cite: 2026-01-31]
+        row.LayoutOrder = 0 
         row.Size = UDim2.new(1, -6, 0, 70); row.BackgroundColor3 = THEME.BLACK; corner(row, 12); stroke(row, 2.2, THEME.GREEN)
         
         local currentRel = defaultRel
@@ -1165,14 +1167,13 @@ registerRight("Home", function(scroll)
     -- MAIN HUB UI CONSTRUCTION
     ------------------------------------------------------------------------
     local header = Instance.new("TextLabel", scroll)
-    header.LayoutOrder = 0 -- บังคับเป็น 0 ตามสั่ง [cite: 2026-01-31]
+    header.LayoutOrder = 0 
     header.Size = UDim2.new(1, 0, 0, 36); header.BackgroundTransparency = 1; header.Font = Enum.Font.GothamBold
     header.TextSize = 16; header.TextColor3 = THEME.WHITE; header.TextXAlignment = Enum.TextXAlignment.Left
     header.Text = "》》》Move System 📍《《《"
 
-    -- 1. Enable Switch
     local row1 = Instance.new("Frame", scroll)
-    row1.LayoutOrder = 0 -- บังคับเป็น 0 ตามสั่ง [cite: 2026-01-31]
+    row1.LayoutOrder = 0 
     row1.Size = UDim2.new(1, -6, 0, 46); row1.BackgroundColor3 = THEME.BLACK; corner(row1, 12); stroke(row1, 2.2, THEME.GREEN)
     
     local lab1 = Instance.new("TextLabel", row1)
@@ -1199,12 +1200,10 @@ registerRight("Home", function(scroll)
         config.Enabled = not mainFrame.Visible; updateSwitch(config.Enabled); SaveSettings(config)
     end)
 
-    -- 2. Fly Speed Slider
     createAAA2Slider(scroll, "Adjust Fly Sensitivity", (config.FlySpeed - 0.1) / 4.9, function(rel)
         config.FlySpeed = 0.1 + (rel * 4.9)
     end)
 
-    -- 3. Button Size Slider
     createAAA2Slider(scroll, "Adjust Button Scale", (config.BtnSize - 40) / 60, function(rel)
         config.BtnSize = 40 + (rel * 60); refreshUI()
     end)
