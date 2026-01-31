@@ -1511,7 +1511,7 @@ registerRight("Home", function(scroll)
     local lab1 = Instance.new("TextLabel", row1)
     lab1.BackgroundTransparency = 1; lab1.Size = UDim2.new(1, -160, 1, 0); lab1.Position = UDim2.new(0, 16, 0, 0)
     lab1.Font = Enum.Font.GothamBold; lab1.TextSize = 13; lab1.TextColor3 = THEME.WHITE
-    lab1.TextXAlignment = Enum.TextXAlignment.Left; lab1.Text = "rebirth auto"
+    lab1.TextXAlignment = Enum.TextXAlignment.Left; lab1.Text = "Rebirth Auto"
 
     local sw1 = Instance.new("Frame", row1)
     sw1.AnchorPoint = Vector2.new(1, 0.5); sw1.Position = UDim2.new(1, -12, 0.5, 0); sw1.Size = UDim2.fromOffset(52, 26); sw1.BackgroundColor3 = THEME.BLACK
@@ -1532,7 +1532,7 @@ registerRight("Home", function(scroll)
     updateUI1(autoRebirthOn)
 
     -- รายการที่ 2: Adjust Rebirth Speed
-    createAAA2Slider(scroll, "Adjust Rebirth Speed (Cooldown)", 0.1, 5.0, rebirthSpeed, function(val)
+    createAAA2Slider(scroll, "Adjust Rebirth Speed", 0.1, 5.0, rebirthSpeed, function(val)
         rebirthSpeed = val; SaveSet("rebirthSpeed", val)
     end)
 
@@ -1544,7 +1544,7 @@ registerRight("Home", function(scroll)
     local lab3 = Instance.new("TextLabel", row3)
     lab3.BackgroundTransparency = 1; lab3.Size = UDim2.new(1, -160, 1, 0); lab3.Position = UDim2.new(0, 16, 0, 0)
     lab3.Font = Enum.Font.GothamBold; lab3.TextSize = 13; lab3.TextColor3 = THEME.WHITE
-    lab3.TextXAlignment = Enum.TextXAlignment.Left; lab3.Text = "upgrade base auto"
+    lab3.TextXAlignment = Enum.TextXAlignment.Left; lab3.Text = "Upgrade Base Auto"
 
     local sw3 = Instance.new("Frame", row3)
     sw3.AnchorPoint = Vector2.new(1, 0.5); sw3.Position = UDim2.new(1, -12, 0.5, 0); sw3.Size = UDim2.fromOffset(52, 26); sw3.BackgroundColor3 = THEME.BLACK
