@@ -691,8 +691,8 @@ end)
 
 registerRight("Home", function(scroll) end)
 registerRight("Settings", function(scroll) end)
---===== UFO HUB X • God Mode System (Model A V1 - SUPREME IMMORTAL) =====
--- Feature: 100% God Mode (999 Trillion Health + Anti-Red Screen)
+--===== UFO HUB X • Supreme God Mode V2 (Model A V1 - FULL PROTECTION) =====
+-- Feature: 999 Trillion Health + Real-time Auto Re-fill + Damage Cancel
 -- UI Model: A V1 (Green Glow Border / Dynamic Switch)
 
 registerRight("Home", function(scroll)
@@ -708,7 +708,7 @@ registerRight("Home", function(scroll)
         get = function(_, _, d) return d end,
         set = function() end
     }
-    local SCOPE = ("UFO_GodMode/%d/%d"):format(tonumber(game.GameId) or 0, tonumber(game.PlaceId) or 0)
+    local SCOPE = ("UFO_GodModeV2/%d/%d"):format(tonumber(game.GameId) or 0, tonumber(game.PlaceId) or 0)
     local function K(k) return SCOPE .. "/" .. k end
     local function SaveGet(key, default)
         local ok, v = pcall(function() return SAVE.get(K(key), default) end)
@@ -746,33 +746,55 @@ registerRight("Home", function(scroll)
     end
 
     ------------------------------------------------------------------------
-    -- SUPREME GOD MODE LOGIC (ล็อคเลือดสูงสุด + กันหน้าจอแดง)
+    -- SUPREME GOD MODE V2 LOGIC (Real-time Re-fill & Anti-Damage)
     ------------------------------------------------------------------------
     local godModeOn = SaveGet("godModeOn", false)
     local godConn = nil
-    local SUPREME_HEALTH = 999999999999999 -- 999 ล้านล้าน
+    local SUPREME_HEALTH = 9.9e14 -- 999 ล้านล้าน (ค่าสูงสุดที่เสถียร) [cite: 2026-01-31]
 
     local function applyGodMode()
         if godConn then godConn:Disconnect() godConn = nil end
         
         if godModeOn then
-            godConn = RunService.PreRender:Connect(function() -- ใช้ PreRender เพื่อล็อคเลือดก่อนดาเมจจะเข้า
+            -- ใช้ PreRender เพื่อเติมเลือดให้เต็ม "ก่อน" ที่ดาเมจสึนามิจะหักเลือด [cite: 2026-01-31]
+            godConn = RunService.PreRender:Connect(function()
                 local char = LocalPlayer.Character
                 if char then
                     local hum = char:FindFirstChildOfClass("Humanoid")
                     if hum then
-                        -- บังคับปิดระบบการตายและล็อคเลือดขั้นสูงสุด
-                        hum.MaxHealth = SUPREME_HEALTH
-                        hum.Health = SUPREME_HEALTH
+                        -- 1. ล็อคเลือดมหาศาลและเติมให้เต็มตลอดเวลา (Re-fill Instant) [cite: 2026-01-31]
+                        if hum.MaxHealth ~= SUPREME_HEALTH then
+                            hum.MaxHealth = SUPREME_HEALTH
+                        end
+                        if hum.Health < SUPREME_HEALTH then
+                            hum.Health = SUPREME_HEALTH -- เติมเลือดให้เต็มทันทีเหมือนมีคนฮีลตลอด [cite: 2026-01-31]
+                        end
+                        
+                        -- 2. ปิดสถานะการตาย (Anti-Kill Script) [cite: 2026-01-31]
                         hum:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
                         
-                        -- ระบบป้องกันหน้าจอแดง (ปิดการแจ้งเตือนดาเมจ)
-                        local gui = LocalPlayer:FindFirstChild("PlayerGui")
-                        if gui then
-                            local bloodEffect = gui:FindFirstChild("BloodGui") or gui:FindFirstChild("HealthGui")
-                            if bloodEffect then bloodEffect.Enabled = false end
+                        -- 3. ป้องกันดาเมจทุกอย่าง (ForceField ล่องหน) [cite: 2026-01-31]
+                        if not char:FindFirstChildOfClass("ForceField") then
+                            local ff = Instance.new("ForceField", char)
+                            ff.Visible = false
                         end
                     end
+                    
+                    -- 4. ลบดาเมจจากพาร์ทที่สัมผัสตัว (Touch Damage Cancel) [cite: 2026-01-31]
+                    for _, v in ipairs(char:GetChildren()) do
+                        if v:IsA("BasePart") then
+                            v.CanTouch = true -- ยังสัมผัสได้แต่เราจะล็อคเลือดไว้
+                        end
+                    end
+                end
+                
+                -- 5. ปิดหน้าจอแดง (Anti-Red Screen) [cite: 2026-01-31]
+                local gui = LocalPlayer:FindFirstChild("PlayerGui")
+                if gui then
+                    local b1 = gui:FindFirstChild("BloodGui")
+                    local b2 = gui:FindFirstChild("HealthGui")
+                    if b1 then b1.Enabled = false end
+                    if b2 then b2.Enabled = false end
                 end
             end)
         else
@@ -785,16 +807,17 @@ registerRight("Home", function(scroll)
                     hum.Health = 100
                     hum:SetStateEnabled(Enum.HumanoidStateType.Dead, true)
                 end
+                local ff = char:FindFirstChildOfClass("ForceField")
+                if ff then ff:Destroy() end
             end
         end
     end
     applyGodMode()
 
     ------------------------------------------------------------------------
-    -- UI CONSTRUCTION (Model A V1 - PERFECT ORDER)
+    -- UI CONSTRUCTION (Model A V1 - TOP ORDER)
     ------------------------------------------------------------------------
-    -- ปรับ LayoutOrder ให้ต่อจาก Header พอดี
-    local ORDER_NUM = -40 
+    local ORDER_RANK = -40 
 
     local header = Instance.new("TextLabel", scroll)
     header.Name = "God_Header"
@@ -805,15 +828,15 @@ registerRight("Home", function(scroll)
     header.TextColor3 = THEME.WHITE
     header.TextXAlignment = Enum.TextXAlignment.Left
     header.Text = "Unlock 🔓"
-    header.LayoutOrder = ORDER_NUM
+    header.LayoutOrder = ORDER_RANK
 
     local row = Instance.new("Frame", scroll)
     row.Name = "God_Row"
     row.Size = UDim2.new(1, -6, 0, 46)
     row.BackgroundColor3 = THEME.BLACK
-    row.LayoutOrder = ORDER_NUM + 1
+    row.LayoutOrder = ORDER_RANK + 1
     corner(row, 12)
-    stroke(row, 2.2, THEME.GREEN) -- ขอบเขียว Model A V1
+    stroke(row, 2.2, THEME.GREEN) -- ขอบเขียว Model A V1 เป๊ะๆ [cite: 2026-01-31]
 
     local lab = Instance.new("TextLabel", row)
     lab.BackgroundTransparency = 1
