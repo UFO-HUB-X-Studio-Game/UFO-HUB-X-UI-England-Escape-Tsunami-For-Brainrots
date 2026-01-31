@@ -884,7 +884,7 @@ registerRight("Home", function(scroll)
     header.Name = "Unlock_Header"
     header.BackgroundTransparency = 1; header.Size = UDim2.new(1, 0, 0, 36)
     header.Font = Enum.Font.GothamBold; header.TextSize = 16; header.TextColor3 = THEME.WHITE
-    header.TextXAlignment = Enum.TextXAlignment.Left; header.Text = "Unlock 🔓"
+    header.TextXAlignment = Enum.TextXAlignment.Left; header.Text = "》》》  Unlock 🔓 《《《"
     header.LayoutOrder = 0
 
     -- รายการที่ 1: Immortal 1 time
@@ -1292,7 +1292,7 @@ registerRight("Home", function(scroll)
     header.LayoutOrder = 0 
     header.Size = UDim2.new(1, 0, 0, 36); header.BackgroundTransparency = 1; header.Font = Enum.Font.GothamBold
     header.TextSize = 16; header.TextColor3 = THEME.WHITE; header.TextXAlignment = Enum.TextXAlignment.Left
-    header.Text = "》》》Move System 📍《《《"
+    header.Text = "》》》 Move System 📍《《《"
 
     local row1 = Instance.new("Frame", scroll)
     row1.LayoutOrder = 0 
@@ -1510,7 +1510,7 @@ registerRight("Home", function(scroll)
     local header = Instance.new("TextLabel", scroll)
     header.LayoutOrder = 0; header.BackgroundTransparency = 1; header.Size = UDim2.new(1, 0, 0, 36)
     header.Font = Enum.Font.GothamBold; header.TextSize = 16; header.TextColor3 = THEME.WHITE
-    header.TextXAlignment = Enum.TextXAlignment.Left; header.Text = "Upgrade Auto ⚡"
+    header.TextXAlignment = Enum.TextXAlignment.Left; header.Text = "》》》  Upgrade Auto ⚡《《《"
 
     -- รายการที่ 1: rebirth auto
     local row1 = Instance.new("Frame", scroll)
