@@ -769,6 +769,7 @@ registerRight("Home", function(scroll)
     ------------------------------------------------------------------------
     local isFlying = false
     local noclipConn = nil
+    local currentIdx = 0 -- ย้ายตัวแปรออกมาด้านนอกเพื่อให้จัดการได้ง่ายขึ้น
 
     local function stopNoclip()
         if noclipConn then noclipConn:Disconnect(); noclipConn = nil end
@@ -797,25 +798,24 @@ registerRight("Home", function(scroll)
         [7] = Vector3.new(1546, -2.742, 0), [8] = Vector3.new(2247, -2.742, 0),
         [9] = Vector3.new(2602, -2.742, 0)
     }
-    local currentIdx = 0
 
     local function flyTo(pos)
-        if not pos or isFlying then return end -- ระบบหยุดกดซ้ำขณะบิน
+        if not pos or isFlying then return end 
         local char = LocalPlayer.Character
         local hrp = char and char:FindFirstChild("HumanoidRootPart")
         if hrp then
             isFlying = true
             startNoclip()
             
-            -- ปรับความไวสูง (Base 1200)
-            local baseSpeed = 1200 * math.max(0.1, config.FlySpeed)
+            -- ปรับความไวปานกลาง (Base 400) ตามคำสั่ง
+            local baseSpeed = 400 * math.max(0.1, config.FlySpeed)
             local duration = (hrp.Position - pos).Magnitude / baseSpeed
             
             local tw = TweenService:Create(hrp, TweenInfo.new(duration, Enum.EasingStyle.Linear), {CFrame = CFrame.new(pos)})
             tw:Play()
             tw.Completed:Connect(function()
                 isFlying = false
-                stopNoclip() -- เมื่อถึงจุดหมาย ตัวละครจะหยุดทะลุทุกอย่าง
+                stopNoclip() 
             end)
         end
     end
@@ -823,11 +823,11 @@ registerRight("Home", function(scroll)
     ------------------------------------------------------------------------
     -- EXTERNAL UI (Neon Border Buttons)
     ------------------------------------------------------------------------
-    local oldControl = LocalPlayer.PlayerGui:FindFirstChild("UFO_Move_Control_V8")
+    local oldControl = LocalPlayer.PlayerGui:FindFirstChild("UFO_Move_Control_V9")
     if oldControl then oldControl:Destroy() end
 
     local sg = Instance.new("ScreenGui", LocalPlayer.PlayerGui)
-    sg.Name = "UFO_Move_Control_V8"
+    sg.Name = "UFO_Move_Control_V9"
     sg.ResetOnSpawn = false
 
     local mainFrame = Instance.new("Frame", sg)
@@ -849,7 +849,6 @@ registerRight("Home", function(scroll)
         b.Text = text
         b.AutoButtonColor = false
         corner(b, 15)
-        -- ขอบสีเขียวเรืองแสงทั้งหมดตามคำสั่ง
         stroke(b, 3.5, THEME.NEON_GREEN)
         return b
     end
@@ -869,6 +868,23 @@ registerRight("Home", function(scroll)
         btnBlue.Position = UDim2.new(0, 0, 0, (config.BtnSize + 15) * 2)
         btnRed.TextSize, btnGreen.TextSize, btnYellow.TextSize, btnBlue.TextSize = config.BtnSize*0.45, config.BtnSize*0.45, config.BtnSize*0.45, config.BtnSize*0.45
     end
+
+    ------------------------------------------------------------------------
+    -- CHARACTER DIED RESET (ระบบ Reset เป็นเลข 0 เมื่อตาย)
+    ------------------------------------------------------------------------
+    local function setupCharReset(char)
+        local humanoid = char:WaitForChild("Humanoid", 10)
+        if humanoid then
+            humanoid.Died:Connect(function()
+                currentIdx = 0
+                btnGreen.Text = "0"
+                isFlying = false
+                stopNoclip()
+            end)
+        end
+    end
+    if LocalPlayer.Character then setupCharReset(LocalPlayer.Character) end
+    LocalPlayer.CharacterAdded:Connect(setupCharReset)
 
     ------------------------------------------------------------------------
     -- DRAG & SAVE POSITION
@@ -983,7 +999,7 @@ registerRight("Home", function(scroll)
         UserInputService.InputEnded:Connect(function(io)
             if io.UserInputType == Enum.UserInputType.MouseButton1 or io.UserInputType == Enum.UserInputType.Touch then
                 sDragging = false; sMaybeDrag = false; scroll.ScrollingEnabled = true
-                SaveSettings(config) -- บันทึกค่าลง AA1 ทันทีที่ปล่อยมือ
+                SaveSettings(config) 
             end
         end)
         RunService.RenderStepped:Connect(function() sync(false) end)
