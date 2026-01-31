@@ -1323,9 +1323,11 @@ registerRight("Home", function(scroll)
 
     updateSwitch(config.Enabled); refreshUI()
 end)
---===== UFO HUB X • Upgrade System (Auto Rebirth + Speed Slider) – MODEL A V1 + AAA2 =====
--- Feature 1: Auto Rebirth (Continuous InvokeServer)
--- Feature 2: Rebirth Speed Slider (AAA2 Model)
+--===== UFO HUB X • Upgrade System (Full Auto: Rebirth & Base) – MODEL A V1 + AAA2 =====
+-- Feature 1: Auto Rebirth (InvokeServer)
+-- Feature 2: Rebirth Speed Slider (AAA2)
+-- Feature 3: Auto Upgrade Base (FireServer)
+-- Feature 4: Adjust Base Upgrade Speed (AAA2)
 -- UI Model: A V1 (Green Glow Border) / AAA2 (Smooth Slider)
 -- LayoutOrder: 0
 
@@ -1344,7 +1346,7 @@ registerRight("Home", function(scroll)
         get = function(_, _, d) return d end,
         set = function() end
     }
-    local SCOPE = ("UFO_UpgradeSystemV2/%d/%d"):format(tonumber(game.GameId) or 0, tonumber(game.PlaceId) or 0)
+    local SCOPE = ("UFO_UpgradeSystemV4/%d/%d"):format(tonumber(game.GameId) or 0, tonumber(game.PlaceId) or 0)
     local function K(k) return SCOPE .. "/" .. k end
     local function SaveGet(key, default)
         local ok, v = pcall(function() return SAVE.get(K(key), default) end)
@@ -1382,22 +1384,36 @@ registerRight("Home", function(scroll)
     end
 
     ------------------------------------------------------------------------
-    -- LOGIC: AUTO REBIRTH & SPEED
+    -- LOGIC: AUTO SYSTEMS
     ------------------------------------------------------------------------
     local autoRebirthOn = SaveGet("autoRebirthOn", false)
-    local rebirthSpeed = SaveGet("rebirthSpeed", 0.5) -- ค่าเริ่มต้น 0.5 วินาที
+    local rebirthSpeed = SaveGet("rebirthSpeed", 0.5)
+    local autoBaseOn = SaveGet("autoBaseOn", false)
+    local baseSpeed = SaveGet("baseSpeed", 0.5)
 
+    -- Loop for Rebirth
     task.spawn(function()
         while true do
             if autoRebirthOn then
                 pcall(function()
                     local remote = ReplicatedStorage:WaitForChild("RemoteFunctions", 5):WaitForChild("Rebirth", 5)
-                    if remote then
-                        remote:InvokeServer()
-                    end
+                    if remote then remote:InvokeServer() end
                 end)
             end
-            task.wait(rebirthSpeed) -- ใช้ค่าจาก Slider
+            task.wait(rebirthSpeed)
+        end
+    end)
+
+    -- Loop for Base Upgrade
+    task.spawn(function()
+        while true do
+            if autoBaseOn then
+                pcall(function()
+                    local remote = ReplicatedStorage:WaitForChild("Packages", 5):WaitForChild("Net", 5):WaitForChild("RE/Plot.UpgradeBase", 5)
+                    if remote then remote:FireServer() end
+                end)
+            end
+            task.wait(baseSpeed)
         end
     end)
 
@@ -1482,16 +1498,12 @@ registerRight("Home", function(scroll)
     -- UI CONSTRUCTION
     ------------------------------------------------------------------------
     
-    -- ส่วนหัว (Header): Upgrade Auto ⚡
     local header = Instance.new("TextLabel", scroll)
-    header.LayoutOrder = 0
-    header.BackgroundTransparency = 1
-    header.Size = UDim2.new(1, 0, 0, 36)
-    header.Font = Enum.Font.GothamBold
-    header.TextSize = 16; header.TextColor3 = THEME.WHITE
+    header.LayoutOrder = 0; header.BackgroundTransparency = 1; header.Size = UDim2.new(1, 0, 0, 36)
+    header.Font = Enum.Font.GothamBold; header.TextSize = 16; header.TextColor3 = THEME.WHITE
     header.TextXAlignment = Enum.TextXAlignment.Left; header.Text = "Upgrade Auto ⚡"
 
-    -- รายการที่ 1: rebirth auto (Model A V1)
+    -- รายการที่ 1: rebirth auto
     local row1 = Instance.new("Frame", scroll)
     row1.LayoutOrder = 0; row1.Size = UDim2.new(1, -6, 0, 46); row1.BackgroundColor3 = THEME.BLACK
     corner(row1, 12); stroke(row1, 2.2, THEME.GREEN)
@@ -1504,10 +1516,8 @@ registerRight("Home", function(scroll)
     local sw1 = Instance.new("Frame", row1)
     sw1.AnchorPoint = Vector2.new(1, 0.5); sw1.Position = UDim2.new(1, -12, 0.5, 0); sw1.Size = UDim2.fromOffset(52, 26); sw1.BackgroundColor3 = THEME.BLACK
     corner(sw1, 13); local swStroke1 = stroke(sw1, 1.8, THEME.RED)
-    
     local knob1 = Instance.new("Frame", sw1)
-    knob1.Size = UDim2.fromOffset(22, 22); knob1.BackgroundColor3 = THEME.WHITE; knob1.Position = UDim2.new(0, 2, 0.5, -11)
-    corner(knob1, 11)
+    knob1.Size = UDim2.fromOffset(22, 22); knob1.BackgroundColor3 = THEME.WHITE; knob1.Position = UDim2.new(0, 2, 0.5, -11); corner(knob1, 11)
 
     local function updateUI1(on)
         swStroke1.Color = on and THEME.GREEN or THEME.RED
@@ -1517,16 +1527,46 @@ registerRight("Home", function(scroll)
     local btn1 = Instance.new("TextButton", sw1)
     btn1.BackgroundTransparency = 1; btn1.Size = UDim2.fromScale(1, 1); btn1.Text = ""
     btn1.MouseButton1Click:Connect(function()
-        autoRebirthOn = not autoRebirthOn
-        SaveSet("autoRebirthOn", autoRebirthOn)
-        updateUI1(autoRebirthOn)
+        autoRebirthOn = not autoRebirthOn; SaveSet("autoRebirthOn", autoRebirthOn); updateUI1(autoRebirthOn)
     end)
     updateUI1(autoRebirthOn)
 
-    -- รายการที่ 2: Adjust Rebirth Speed (Model AAA2 Slider)
+    -- รายการที่ 2: Adjust Rebirth Speed
     createAAA2Slider(scroll, "Adjust Rebirth Speed (Cooldown)", 0.1, 5.0, rebirthSpeed, function(val)
-        rebirthSpeed = val
-        SaveSet("rebirthSpeed", val)
+        rebirthSpeed = val; SaveSet("rebirthSpeed", val)
+    end)
+
+    -- รายการที่ 3: upgrade base auto
+    local row3 = Instance.new("Frame", scroll)
+    row3.LayoutOrder = 0; row3.Size = UDim2.new(1, -6, 0, 46); row3.BackgroundColor3 = THEME.BLACK
+    corner(row3, 12); stroke(row3, 2.2, THEME.GREEN)
+
+    local lab3 = Instance.new("TextLabel", row3)
+    lab3.BackgroundTransparency = 1; lab3.Size = UDim2.new(1, -160, 1, 0); lab3.Position = UDim2.new(0, 16, 0, 0)
+    lab3.Font = Enum.Font.GothamBold; lab3.TextSize = 13; lab3.TextColor3 = THEME.WHITE
+    lab3.TextXAlignment = Enum.TextXAlignment.Left; lab3.Text = "upgrade base auto"
+
+    local sw3 = Instance.new("Frame", row3)
+    sw3.AnchorPoint = Vector2.new(1, 0.5); sw3.Position = UDim2.new(1, -12, 0.5, 0); sw3.Size = UDim2.fromOffset(52, 26); sw3.BackgroundColor3 = THEME.BLACK
+    corner(sw3, 13); local swStroke3 = stroke(sw3, 1.8, THEME.RED)
+    local knob3 = Instance.new("Frame", sw3)
+    knob3.Size = UDim2.fromOffset(22, 22); knob3.BackgroundColor3 = THEME.WHITE; knob3.Position = UDim2.new(0, 2, 0.5, -11); corner(knob3, 11)
+
+    local function updateUI3(on)
+        swStroke3.Color = on and THEME.GREEN or THEME.RED
+        tween(knob3, { Position = UDim2.new(on and 1 or 0, on and -24 or 2, 0.5, -11) }, 0.08)
+    end
+    
+    local btn3 = Instance.new("TextButton", sw3)
+    btn3.BackgroundTransparency = 1; btn3.Size = UDim2.fromScale(1, 1); btn3.Text = ""
+    btn3.MouseButton1Click:Connect(function()
+        autoBaseOn = not autoBaseOn; SaveSet("autoBaseOn", autoBaseOn); updateUI3(autoBaseOn)
+    end)
+    updateUI3(autoBaseOn)
+
+    -- รายการที่ 4: Adjust Base Upgrade Speed
+    createAAA2Slider(scroll, "Adjust Base Upgrade Speed", 0.1, 5.0, baseSpeed, function(val)
+        baseSpeed = val; SaveSet("baseSpeed", val)
     end)
 
 end)
