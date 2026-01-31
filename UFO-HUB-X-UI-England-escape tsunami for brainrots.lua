@@ -691,25 +691,37 @@ end)
 
 registerRight("Home", function(scroll) end)
 registerRight("Settings", function(scroll) end)
---===== UFO HUB X • Camera System (Model A V1 - AUTHENTIC EDITION) =====
+--===== UFO HUB X • Camera System (Model A V1 - 100% MATCH) =====
 -- Feature: Unlock Camera Zoom Distance
--- UI Model: A V1 (Green Glow Border / Dynamic Switch)
 
 registerRight("Home", function(scroll)
+    local TweenService = game:GetService("TweenService")
     local Players = game:GetService("Players")
-    local RunService = game:GetService("RunService")
     local LocalPlayer = Players.LocalPlayer
-    local Camera = workspace.CurrentCamera
+
+    ------------------------------------------------------------------------
+    -- AA1 SAVE SYSTEM (Matching Model A V1)
+    ------------------------------------------------------------------------
+    local SAVE = (getgenv and getgenv().UFOX_SAVE) or {
+        get = function(_, _, d) return d end,
+        set = function() end
+    }
+    local SCOPE = ("UFO_Camera/%d/%d"):format(tonumber(game.GameId) or 0, tonumber(game.PlaceId) or 0)
+    local function K(k) return SCOPE .. "/" .. k end
+    local function SaveGet(key, default)
+        local ok, v = pcall(function() return SAVE.get(K(key), default) end)
+        return ok and v or default
+    end
+    local function SaveSet(key, value) pcall(function() SAVE.set(K(key), value) end) end
 
     ------------------------------------------------------------------------
     -- THEME & HELPERS (Model A V1 Standard)
     ------------------------------------------------------------------------
     local THEME = {
-        GREEN  = Color3.fromRGB(25, 255, 140),
-        NEON_GREEN = Color3.fromRGB(50, 255, 50),
-        RED    = Color3.fromRGB(255, 40, 40),
-        WHITE  = Color3.fromRGB(255, 255, 255),
-        BLACK  = Color3.fromRGB(0, 0, 0),
+        GREEN = Color3.fromRGB(25, 255, 125),
+        RED   = Color3.fromRGB(255, 40, 40),
+        WHITE = Color3.fromRGB(255, 255, 255),
+        BLACK = Color3.fromRGB(0, 0, 0),
     }
 
     local function corner(ui, r)
@@ -727,84 +739,101 @@ registerRight("Home", function(scroll)
         return s
     end
 
-    ------------------------------------------------------------------------
-    -- CAMERA LOGIC
-    ------------------------------------------------------------------------
-    local cameraUnlocked = false
-    local DEFAULT_MAX_ZOOM = LocalPlayer.CameraMaxZoomDistance
-    local UNLOCK_MAX_ZOOM = 10000 
-
-    local function toggleCamera(state)
-        cameraUnlocked = state
-        if cameraUnlocked then
-            LocalPlayer.CameraMaxZoomDistance = UNLOCK_MAX_ZOOM
-        else
-            LocalPlayer.CameraMaxZoomDistance = DEFAULT_MAX_ZOOM
-        end
+    local function tween(o, p, d)
+        TweenService:Create(o, TweenInfo.new(d or 0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), p):Play()
     end
 
     ------------------------------------------------------------------------
-    -- UI CONSTRUCTION (Model A V1 - EXACT SYSTEM)
+    -- CAMERA LOGIC
     ------------------------------------------------------------------------
+    local camUnlocked = SaveGet("camUnlocked", false)
+    local function applyCamera()
+        if camUnlocked then
+            LocalPlayer.CameraMaxZoomDistance = 10000
+        else
+            LocalPlayer.CameraMaxZoomDistance = 128
+        end
+    end
+    applyCamera()
+
+    ------------------------------------------------------------------------
+    -- UI CONSTRUCTION (Following Model A V1 Rules)
+    ------------------------------------------------------------------------
+    -- จัดการ LayoutOrder ให้ต่อท้าย
+    local base = 0
+    for _, ch in ipairs(scroll:GetChildren()) do
+        if ch:IsA("GuiObject") then base = math.max(base, ch.LayoutOrder or 0) end
+    end
+
+    -- HEADER (Model A V1 Style)
     local header = Instance.new("TextLabel", scroll)
-    header.Size = UDim2.new(1, 0, 0, 36)
+    header.Name = "Cam_Header"
     header.BackgroundTransparency = 1
+    header.Size = UDim2.new(1, 0, 0, 36)
     header.Font = Enum.Font.GothamBold
     header.TextSize = 16
     header.TextColor3 = THEME.WHITE
     header.TextXAlignment = Enum.TextXAlignment.Left
-    header.Text = "》》》Unlock Camera Distance 🎥《《《"
+    header.Text = "Unlock Camera Distance 🎥"
+    header.LayoutOrder = base + 1
 
-    -- รายการที่ 1: Unlock Camera Distance (Model A V1)
-    local row1 = Instance.new("Frame", scroll)
-    row1.Size = UDim2.new(1, -6, 0, 46)
-    row1.BackgroundColor3 = THEME.BLACK
-    corner(row1)
-    -- สีขอบของโมเดล A V1: ต้องเป็นสีเขียวเรืองแสงเสมอ 
-    stroke(row1, 2.2, THEME.NEON_GREEN) 
+    -- ROW SWITCH (Model A V1 Style)
+    local row = Instance.new("Frame", scroll)
+    row.Name = "Cam_Row"
+    row.Size = UDim2.new(1, -6, 0, 46)
+    row.BackgroundColor3 = THEME.BLACK
+    row.LayoutOrder = base + 2
+    corner(row, 12)
+    stroke(row, 2.2, THEME.GREEN) -- ขอบเขียวถาวรตาม Model A V1
 
-    local lab1 = Instance.new("TextLabel", row1)
-    lab1.Size = UDim2.new(1, -160, 1, 0)
-    lab1.Position = UDim2.new(0, 16, 0, 0)
-    lab1.BackgroundTransparency = 1
-    lab1.Font = Enum.Font.GothamBold
-    lab1.TextSize = 13
-    lab1.TextColor3 = THEME.WHITE
-    lab1.Text = "Unlock Camera Distance" 
-    lab1.TextXAlignment = Enum.TextXAlignment.Left
+    local lab = Instance.new("TextLabel", row)
+    lab.BackgroundTransparency = 1
+    lab.Size = UDim2.new(1, -160, 1, 0)
+    lab.Position = UDim2.new(0, 16, 0, 0)
+    lab.Font = Enum.Font.GothamBold
+    lab.TextSize = 13
+    lab.TextColor3 = THEME.WHITE
+    lab.TextXAlignment = Enum.TextXAlignment.Left
+    lab.Text = "Unlock Camera Distance"
 
-    -- Switch UI (ระบบสวิตซ์ของ Model A V1)
-    local sw = Instance.new("Frame", row1)
-    sw.Size = UDim2.fromOffset(52, 26)
-    sw.Position = UDim2.new(1, -12, 0.5, 0)
+    -- Switch Box
+    local sw = Instance.new("Frame", row)
     sw.AnchorPoint = Vector2.new(1, 0.5)
-    sw.BackgroundColor3 = THEME.BLACK -- พื้นหลังสวิตซ์สีดำ
+    sw.Position = UDim2.new(1, -12, 0.5, 0)
+    sw.Size = UDim2.fromOffset(52, 26)
+    sw.BackgroundColor3 = THEME.BLACK
     corner(sw, 13)
-    -- ขอบสวิตซ์จะเปลี่ยนตามสถานะ (Model A V1)
-    local swStroke = stroke(sw, 1.8, THEME.RED) 
+
+    local swStroke = Instance.new("UIStroke", sw)
+    swStroke.Thickness = 1.8
 
     local knob = Instance.new("Frame", sw)
     knob.Size = UDim2.fromOffset(22, 22)
-    knob.Position = UDim2.new(0, 2, 0.5, -11)
     knob.BackgroundColor3 = THEME.WHITE
+    knob.Position = UDim2.new(0, 2, 0.5, -11)
     corner(knob, 11)
 
-    local swBtn = Instance.new("TextButton", sw)
-    swBtn.Size = UDim2.fromScale(1, 1)
-    swBtn.BackgroundTransparency = 1
-    swBtn.Text = ""
+    local function updateUI(on)
+        swStroke.Color = on and THEME.GREEN or THEME.RED
+        tween(knob, {
+            Position = UDim2.new(on and 1 or 0, on and -24 or 2, 0.5, -11)
+        }, 0.08)
+    end
 
-    swBtn.MouseButton1Click:Connect(function()
-        cameraUnlocked = not cameraUnlocked
-        toggleCamera(cameraUnlocked)
-        
-        -- การทำงานของ Model A V1: อัปเดตเฉพาะสีขอบสวิตซ์และตำแหน่งลูกบิด
-        local targetColor = cameraUnlocked and THEME.NEON_GREEN or THEME.RED
-        local targetPos = cameraUnlocked and UDim2.new(1, -24, 0.5, -11) or UDim2.new(0, 2, 0.5, -11)
-        
-        swStroke.Color = targetColor
-        game:GetService("TweenService"):Create(knob, TweenInfo.new(0.15), {Position = targetPos}):Play()
+    local btn = Instance.new("TextButton", sw)
+    btn.BackgroundTransparency = 1
+    btn.Size = UDim2.fromScale(1, 1)
+    btn.Text = ""
+    btn.AutoButtonColor = false
+
+    btn.MouseButton1Click:Connect(function()
+        camUnlocked = not camUnlocked
+        SaveSet("camUnlocked", camUnlocked)
+        applyCamera()
+        updateUI(camUnlocked)
     end)
+
+    updateUI(camUnlocked)
 end)
 --===== UFO HUB X • Move System (AAA1 + AA1 + AAA2 COMBO) – FULL NEON EDITION =====
 -- Target Map: Escape the tsunami and head to Brainrots
