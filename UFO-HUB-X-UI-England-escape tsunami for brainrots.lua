@@ -691,7 +691,7 @@ end)
 
 registerRight("Home", function(scroll) end)
 registerRight("Settings", function(scroll) end)
---===== UFO HUB X • Move System (Model A V1 + AA1) – Big Buttons + Noclip While Flying =====
+--===== UFO HUB X • Move System (Model A V1 + AA1) – Complete & Final (100% No Missing) =====
 
 registerRight("Home", function(scroll)
     local TweenService = game:GetService("TweenService")
@@ -731,7 +731,7 @@ registerRight("Home", function(scroll)
 
     local function stroke(ui, th, col)
         local s = Instance.new("UIStroke")
-        s.Thickness = th or 2.8
+        s.Thickness = th or 3.2
         s.Color = col or THEME.GREEN
         s.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
         s.Parent = ui
@@ -739,7 +739,7 @@ registerRight("Home", function(scroll)
     end
 
     ------------------------------------------------------------------------
-    -- NOCLIP LOGIC (ทะลุทุกอย่างตอนบินเท่านั้น)
+    -- NOCLIP LOGIC (ทะลุทุกอย่างรวมถึง Map ตอนบินเท่านั้น)
     ------------------------------------------------------------------------
     local isFlying = false
     local noclipConn = nil
@@ -762,7 +762,6 @@ registerRight("Home", function(scroll)
             noclipConn:Disconnect() 
             noclipConn = nil 
         end
-        -- คืนค่า CanCollide ให้ตัวละคร
         if LocalPlayer.Character then
             for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
                 if part:IsA("BasePart") then
@@ -773,7 +772,7 @@ registerRight("Home", function(scroll)
     end
 
     ------------------------------------------------------------------------
-    -- POSITIONS (9 Points)
+    -- POSITIONS (9 Points - HRP Position)
     ------------------------------------------------------------------------
     local Positions = {
         [1] = Vector3.new(200.000, -2.742, -0.000),
@@ -786,7 +785,7 @@ registerRight("Home", function(scroll)
         [8] = Vector3.new(2247.060, -2.734, 2.466),
         [9] = Vector3.new(2602.500, -2.742, -2.176)
     }
-    local currentIdx = 0
+    local currentIdx = 0 -- เริ่มที่ 0 ตามสั่ง
 
     local function flyTo(pos)
         if not pos then return end
@@ -794,36 +793,33 @@ registerRight("Home", function(scroll)
         local hrp = char and char:FindFirstChild("HumanoidRootPart")
         if hrp then
             isFlying = true
-            startNoclip() -- เปิดทะลุ
-
+            startNoclip() -- เริ่มทะลุ Map
             local dist = (hrp.Position - pos).Magnitude
-            local duration = dist / 100
-            local tw = TweenService:Create(hrp, TweenInfo.new(duration, Enum.EasingStyle.Linear), {CFrame = CFrame.new(pos)})
-            
+            local tw = TweenService:Create(hrp, TweenInfo.new(dist / 100, Enum.EasingStyle.Linear), {CFrame = CFrame.new(pos)})
             tw:Play()
             tw.Completed:Connect(function()
                 isFlying = false
-                stopNoclip() -- ปิดทะลุเมื่อถึงที่หมาย
+                stopNoclip() -- ถึงที่หมายแล้วหยุดทะลุ
             end)
         end
     end
 
     ------------------------------------------------------------------------
-    -- EXTERNAL UI (Vertical Left - 60px)
+    -- EXTERNAL UI (Vertical Left - 60px - เป๊ะตามรูปที่ 2)
     ------------------------------------------------------------------------
-    local oldControl = LocalPlayer.PlayerGui:FindFirstChild("UFO_Move_Control_Final_V4")
+    local oldControl = LocalPlayer.PlayerGui:FindFirstChild("UFO_Move_Control_Final_v100")
     if oldControl then oldControl:Destroy() end
 
     local sg = Instance.new("ScreenGui")
-    sg.Name = "UFO_Move_Control_Final_V4"
+    sg.Name = "UFO_Move_Control_Final_v100"
     sg.Parent = LocalPlayer.PlayerGui
     sg.ResetOnSpawn = false
 
     local sideFrame = Instance.new("Frame")
     sideFrame.Name = "VerticalControl"
     sideFrame.Parent = sg
-    sideFrame.Size = UDim2.new(0, 75, 0, 230)
-    sideFrame.Position = UDim2.new(0, 30, 0.5, -115) -- ฝั่งซ้ายตามรูปเป๊ะๆ
+    sideFrame.Size = UDim2.new(0, 80, 0, 240)
+    sideFrame.Position = UDim2.new(0, 30, 0.5, -120) -- วางฝั่งซ้ายของหน้าจอ
     sideFrame.BackgroundTransparency = 1
     sideFrame.Visible = false
 
@@ -835,7 +831,7 @@ registerRight("Home", function(scroll)
 
     local function makeBtn(text, color)
         local b = Instance.new("TextButton")
-        b.Size = UDim2.new(0, 60, 0, 60) -- ขนาดปุ่มใหญ่ 60px
+        b.Size = UDim2.new(0, 60, 0, 60) -- ขนาดใหญ่ 60px กดถนัด
         b.BackgroundColor3 = THEME.BLACK
         b.TextColor3 = THEME.WHITE
         b.Font = Enum.Font.GothamBold
@@ -847,6 +843,7 @@ registerRight("Home", function(scroll)
         return b
     end
 
+    -- แดง (บน) | เขียว (กลาง) | ฟ้า (ล่าง)
     local btnRed   = makeBtn("⬆️", THEME.RED)
     local btnGreen = makeBtn("0", THEME.GREEN)
     local btnBlue  = makeBtn("⬇️", THEME.BLUE)
@@ -877,7 +874,7 @@ registerRight("Home", function(scroll)
     end)
 
     ------------------------------------------------------------------------
-    -- DEATH RESET
+    -- DEATH RESET (ตายแล้วรีเซ็ตเป็น 0)
     ------------------------------------------------------------------------
     local function onDeath(char)
         local hum = char:WaitForChild("Humanoid", 5)
@@ -894,8 +891,21 @@ registerRight("Home", function(scroll)
     if LocalPlayer.Character then onDeath(LocalPlayer.Character) end
 
     ------------------------------------------------------------------------
-    -- UI MAIN SWITCH (Model A V1)
+    -- UI MAIN SWITCH & "ชื่อบัง" (Model A V1 - 100% Match)
     ------------------------------------------------------------------------
+    -- "ชื่อบัง" ที่หายไป เพิ่มให้ครบแล้วครับ
+    local header = Instance.new("TextLabel")
+    header.Name = "Move_Section_Header"
+    header.Parent = scroll
+    header.BackgroundTransparency = 1
+    header.Size = UDim2.new(1, 0, 0, 36)
+    header.Font = Enum.Font.GothamBold
+    header.TextSize = 16
+    header.TextColor3 = THEME.WHITE
+    header.TextXAlignment = Enum.TextXAlignment.Left
+    header.Text = "》》》Move System 📍《《《"
+    header.LayoutOrder = 1
+
     local moveEnabled = SaveGet("MoveEnabled", false)
 
     local row = Instance.new("Frame")
@@ -903,6 +913,7 @@ registerRight("Home", function(scroll)
     row.Parent = scroll
     row.Size = UDim2.new(1, -6, 0, 46)
     row.BackgroundColor3 = THEME.BLACK
+    row.LayoutOrder = 2
     corner(row, 12)
     stroke(row, 2.2, THEME.GREEN)
 
