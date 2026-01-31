@@ -691,10 +691,10 @@ end)
 
 registerRight("Home", function(scroll) end)
 registerRight("Settings", function(scroll) end)
---===== UFO HUB X • Unlock System (Immortal + Camera + No Cooldown) – MODEL A V1 =====
+--===== UFO HUB X • Unlock System (Immortal + Camera + No Cooldown V2) – MODEL A V1 =====
 -- Feature 1: 999 Trillion Health + Real-time Re-fill + Damage Protection
 -- Feature 2: Unlock Camera Max Zoom (Infinite Zoom)
--- Feature 3: No Cooldown Click (Remove Click Restrictions)
+-- Feature 3: No Cooldown Click (Instant Proximity + UI Unblock + TakePrompt Fix)
 -- UI Model: A V1 (Green Glow Border / Dynamic Switch / LayoutOrder 0)
 
 registerRight("Home", function(scroll)
@@ -809,7 +809,7 @@ registerRight("Home", function(scroll)
     applyCamUnlock()
 
     ------------------------------------------------------------------------
-    -- SYSTEM 3: NO COOLDOWN CLICK LOGIC
+    -- SYSTEM 3: NO COOLDOWN CLICK V2 (SUPREME UNLOCK)
     ------------------------------------------------------------------------
     local noCooldownOn = SaveGet("noCooldownOn", false)
     local cdConn = nil
@@ -818,15 +818,28 @@ registerRight("Home", function(scroll)
         if cdConn then cdConn:Disconnect() cdConn = nil end
         if noCooldownOn then
             cdConn = RunService.Heartbeat:Connect(function()
-                -- ค้นหาปุ่มกดทั้งหมดใน PlayerGui เพื่อบังคับให้สถานะพร้อมกดเสมอ
+                -- 1. จัดการ ProximityPrompt ทั่วทั้งเกม (รวมถึง TakePrompt ที่เป็น Prompt)
+                for _, prompt in pairs(game:GetDescendants()) do
+                    if prompt:IsA("ProximityPrompt") then
+                        prompt.HoldDuration = 0 -- กดแล้วติดทันที ไม่ต้องโหลด
+                        prompt.Enabled = true -- เปิดไว้ตลอด
+                    end
+                end
+
+                -- 2. จัดการปุ่ม UI ในหน้าจอ
                 for _, v in pairs(LocalPlayer.PlayerGui:GetDescendants()) do
                     if v:IsA("TextButton") or v:IsA("ImageButton") then
-                        -- บังคับให้ปุ่มมองเห็นและกดได้ (ในกรณีที่เกมใช้การซ่อนปุ่มเป็นคูลดาวน์)
-                        if v.Name:lower():find("cooldown") or v.Name:lower():find("wait") then
+                        -- ถ้าชื่อปุ่มมีคำว่า Cooldown, Wait, หรือ TakePrompt ให้ปลดล็อค
+                        local n = v.Name:lower()
+                        if n:find("cooldown") or n:find("wait") or n:find("takeprompt") or n:find("prompt") then
                              v.Visible = true
                              v.Active = true
+                             v.Interactable = true
+                             -- ถ้ามี Script ปิดปุ่มไว้ ให้พยายามเปิดคืน
+                             if v:FindFirstChildOfClass("Frame") and v:FindFirstChildOfClass("Frame").Name:lower():find("overlay") then
+                                 v:FindFirstChildOfClass("Frame").Visible = false
+                             end
                         end
-                        -- บังคับคุณสมบัติพื้นฐานที่อาจถูกปิดกั้น
                         v.Interactable = true
                     end
                 end
