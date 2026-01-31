@@ -691,10 +691,9 @@ end)
 
 registerRight("Home", function(scroll) end)
 registerRight("Settings", function(scroll) end)
---===== UFO HUB X • Immortal System (Model A V1 - AUTO ORDER) =====
--- Feature: 999 Trillion Health + Real-time Re-fill
+--===== UFO HUB X • Immortal System (Model A V1 - ORDER 0) =====
+-- Feature: 999 Trillion Health + Real-time Re-fill + Damage Protection
 -- UI Model: A V1 (Green Glow Border / Dynamic Switch)
--- Position: Automatic (Follows script placement 100%)
 
 registerRight("Home", function(scroll)
     local TweenService = game:GetService("TweenService")
@@ -709,7 +708,7 @@ registerRight("Home", function(scroll)
         get = function(_, _, d) return d end,
         set = function() end
     }
-    local SCOPE = ("UFO_Immortal/%d/%d"):format(tonumber(game.GameId) or 0, tonumber(game.PlaceId) or 0)
+    local SCOPE = ("UFO_GodModeV2/%d/%d"):format(tonumber(game.GameId) or 0, tonumber(game.PlaceId) or 0)
     local function K(k) return SCOPE .. "/" .. k end
     local function SaveGet(key, default)
         local ok, v = pcall(function() return SAVE.get(K(key), default) end)
@@ -718,7 +717,7 @@ registerRight("Home", function(scroll)
     local function SaveSet(key, value) pcall(function() SAVE.set(K(key), value) end) end
 
     ------------------------------------------------------------------------
-    -- THEME & HELPERS
+    -- THEME & HELPERS (Model A V1)
     ------------------------------------------------------------------------
     local THEME = {
         GREEN = Color3.fromRGB(25, 255, 125),
@@ -747,18 +746,7 @@ registerRight("Home", function(scroll)
     end
 
     ------------------------------------------------------------------------
-    -- AUTO LAYOUT LOGIC (เลียนแบบระบบเดิมเพื่อให้เรียงสวยตามสคริปต์)
-    ------------------------------------------------------------------------
-    local currentLayout = 0
-    for _, child in ipairs(scroll:GetChildren()) do
-        if child:IsA("GuiObject") and child.LayoutOrder > currentLayout then
-            currentLayout = child.LayoutOrder
-        end
-    end
-    local NEXT_ORDER = currentLayout + 1 -- บวกต่อจากอันล่าสุด [cite: 2026-01-31]
-
-    ------------------------------------------------------------------------
-    -- IMMORTAL LOGIC
+    -- IMMORTAL LOGIC (Supreme Protection)
     ------------------------------------------------------------------------
     local godModeOn = SaveGet("godModeOn", false)
     local godConn = nil
@@ -771,12 +759,23 @@ registerRight("Home", function(scroll)
                 local char = LocalPlayer.Character
                 local hum = char and char:FindFirstChildOfClass("Humanoid")
                 if hum then
+                    -- ล็อคเลือดมหาศาลและเติมให้เต็มตลอดเวลา [cite: 2026-01-31]
                     hum.MaxHealth = SUPREME_HEALTH
                     hum.Health = SUPREME_HEALTH
+                    -- ปิดสถานะการตายเพื่อกันระบบลบตัวละคร [cite: 2026-01-31]
                     hum:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
+                    -- ป้องกันดาเมจทุกอย่างด้วยเกราะล่องหน [cite: 2026-01-31]
                     if not char:FindFirstChildOfClass("ForceField") then
                         Instance.new("ForceField", char).Visible = false
                     end
+                end
+                
+                -- ปิดหน้าจอแดงกระพริบ [cite: 2026-01-31]
+                local gui = LocalPlayer:FindFirstChild("PlayerGui")
+                if gui then
+                    local b1, b2 = gui:FindFirstChild("BloodGui"), gui:FindFirstChild("HealthGui")
+                    if b1 then b1.Enabled = false end
+                    if b2 then b2.Enabled = false end
                 end
             end)
         else
@@ -786,15 +785,21 @@ registerRight("Home", function(scroll)
                 hum.MaxHealth = 100 hum.Health = 100
                 hum:SetStateEnabled(Enum.HumanoidStateType.Dead, true)
             end
+            if char and char:FindFirstChildOfClass("ForceField") then
+                char:FindFirstChildOfClass("ForceField"):Destroy()
+            end
         end
     end
     applyGodMode()
 
     ------------------------------------------------------------------------
-    -- UI CONSTRUCTION (Model A V1 - AUTO POSITION)
+    -- UI CONSTRUCTION (Model A V1 - LAYOUT ORDER 0)
     ------------------------------------------------------------------------
+    -- ปรับ LayoutOrder เป็น 0 ตามที่สั่ง [cite: 2026-01-31]
+    local FIXED_ORDER = 0 
+
     local header = Instance.new("TextLabel", scroll)
-    header.Name = "Unlock_Header"
+    header.Name = "Immortal_Header"
     header.BackgroundTransparency = 1
     header.Size = UDim2.new(1, 0, 0, 36)
     header.Font = Enum.Font.GothamBold
@@ -802,15 +807,15 @@ registerRight("Home", function(scroll)
     header.TextColor3 = THEME.WHITE
     header.TextXAlignment = Enum.TextXAlignment.Left
     header.Text = "Unlock 🔓"
-    header.LayoutOrder = NEXT_ORDER -- เรียงตามลำดับในสคริปต์ [cite: 2026-01-31]
+    header.LayoutOrder = FIXED_ORDER
 
     local row = Instance.new("Frame", scroll)
     row.Name = "Immortal_Row"
     row.Size = UDim2.new(1, -6, 0, 46)
     row.BackgroundColor3 = THEME.BLACK
-    row.LayoutOrder = NEXT_ORDER + 1
+    row.LayoutOrder = FIXED_ORDER + 1
     corner(row, 12)
-    stroke(row, 2.2, THEME.GREEN)
+    stroke(row, 2.2, THEME.GREEN) -- ขอบเขียว Model A V1
 
     local lab = Instance.new("TextLabel", row)
     lab.BackgroundTransparency = 1
@@ -820,7 +825,7 @@ registerRight("Home", function(scroll)
     lab.TextSize = 13
     lab.TextColor3 = THEME.WHITE
     lab.TextXAlignment = Enum.TextXAlignment.Left
-    lab.Text = "Immortal 1 time"
+    lab.Text = "Immortal 1 time" -- ชื่อภาษาอังกฤษ ไม่มีอีโมจิ [cite: 2026-01-31]
 
     local sw = Instance.new("Frame", row)
     sw.AnchorPoint = Vector2.new(1, 0.5)
