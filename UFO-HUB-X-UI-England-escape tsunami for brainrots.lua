@@ -691,7 +691,7 @@ end)
 
 registerRight("Home", function(scroll) end)
 registerRight("Settings", function(scroll) end)
---===== UFO HUB X • Move System (Model A V1 + AA1) – Standalone Control =====
+--===== UFO HUB X • Move System (Model A V1 + AA1) – Final Layout (Ref: Image 2) =====
 
 registerRight("Home", function(scroll)
     local TweenService = game:GetService("TweenService")
@@ -738,18 +738,7 @@ registerRight("Home", function(scroll)
     end
 
     ------------------------------------------------------------------------
-    -- CLEANUP
-    ------------------------------------------------------------------------
-    for _, name in ipairs({"Move_Header", "Move_Row1"}) do
-        local o = scroll:FindFirstChild(name)
-        if o then o:Destroy() end
-    end
-    -- ลบปุ่มเก่าที่อาจค้างอยู่ในหน้าจอ
-    local oldControl = LocalPlayer.PlayerGui:FindFirstChild("UFO_Move_Controller")
-    if oldControl then oldControl:Destroy() end
-
-    ------------------------------------------------------------------------
-    -- POSITIONS DATA (9 Points - HRP Position)
+    -- POSITIONS (9 Points - HRP Position)
     ------------------------------------------------------------------------
     local Positions = {
         [1] = Vector3.new(200.000, -2.742, -0.000),
@@ -762,7 +751,6 @@ registerRight("Home", function(scroll)
         [8] = Vector3.new(2247.060, -2.734, 2.466),
         [9] = Vector3.new(2602.500, -2.742, -2.176)
     }
-    local maxPos = 9
     local currentIdx = 1
 
     local function flyTo(pos)
@@ -770,64 +758,71 @@ registerRight("Home", function(scroll)
         local hrp = char and char:FindFirstChild("HumanoidRootPart")
         if hrp then
             local dist = (hrp.Position - pos).Magnitude
-            local duration = dist / 100 -- ความเร็ว 100 (บินไป 100%)
+            local duration = dist / 100 
             TweenService:Create(hrp, TweenInfo.new(duration, Enum.EasingStyle.Linear), {CFrame = CFrame.new(pos)}):Play()
         end
     end
 
     ------------------------------------------------------------------------
-    -- CREATE EXTERNAL BUTTONS (รูปที่ 2 - จัดวางแยกอิสระ)
+    -- CLEANUP OLD UI
     ------------------------------------------------------------------------
-    local screenGui = Instance.new("ScreenGui")
-    screenGui.Name = "UFO_Move_Controller"
-    screenGui.Parent = LocalPlayer.PlayerGui
-    screenGui.ResetOnSpawn = false
+    local oldControl = LocalPlayer.PlayerGui:FindFirstChild("UFO_Move_Control_V2")
+    if oldControl then oldControl:Destroy() end
 
-    -- Container สำหรับจัดวางปุ่ม (วางกลางล่างตามรูปที่ 2)
-    local container = Instance.new("Frame")
-    container.Name = "Main"
-    container.Parent = screenGui
-    container.Size = UDim2.new(0, 180, 0, 60)
-    container.Position = UDim2.new(0.5, -90, 0.85, 0) -- ปรับตำแหน่งได้ตรงนี้
-    container.BackgroundTransparency = 1
-    container.Visible = false
+    ------------------------------------------------------------------------
+    -- EXTERNAL CONTROL (รูปที่ 2 - ตำแหน่งเป๊ะ 100%)
+    ------------------------------------------------------------------------
+    local sg = Instance.new("ScreenGui")
+    sg.Name = "UFO_Move_Control_V2"
+    sg.Parent = LocalPlayer.PlayerGui
+    sg.ResetOnSpawn = false
 
+    -- Panel หลักที่คุมปุ่มทั้ง 3
+    local mainFrame = Instance.new("Frame")
+    mainFrame.Name = "ControlGroup"
+    mainFrame.Parent = sg
+    mainFrame.Size = UDim2.new(0, 150, 0, 50)
+    -- ปรับตำแหน่งให้อยู่ตามรูปที่ 2 (จัดวางให้ลอยอยู่เหนือเมนูด้านล่าง)
+    mainFrame.Position = UDim2.new(0.5, -75, 0.8, 0) 
+    mainFrame.BackgroundTransparency = 1
+    mainFrame.Visible = false
+
+    -- จัดเรียงแบบแนวนอนเป๊ะๆ
     local layout = Instance.new("UIListLayout")
-    layout.Parent = container
+    layout.Parent = mainFrame
     layout.FillDirection = Enum.FillDirection.Horizontal
     layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-    layout.VerticalAlignment = Enum.VerticalAlignment.Center
-    layout.Padding = UDim.new(0, 15)
+    layout.Padding = UDim.new(0, 8)
 
     local function makeBtn(text, color)
         local b = Instance.new("TextButton")
-        b.Size = UDim2.new(0, 48, 0, 48)
+        b.Size = UDim2.new(0, 44, 0, 44)
         b.BackgroundColor3 = THEME.BLACK
+        b.TextColor3 = THEME.WHITE
         b.Font = Enum.Font.GothamBold
         b.TextSize = 20
-        b.TextColor3 = THEME.WHITE
         b.Text = text
         b.AutoButtonColor = false
-        corner(b, 12)
-        stroke(b, 2.5, color)
+        corner(b, 10)
+        stroke(b, 2.2, color)
         return b
     end
 
-    -- 1. ปุ่มแดง (ไปข้างหน้า ⬆️)
+    -- 1. ปุ่มแดง (ไปหน้า ⬆️) - สี่เหลี่ยมสีแดงตามรูป
     local btnRed = makeBtn("⬆️", THEME.RED)
-    btnRed.Parent = container
+    btnRed.Parent = mainFrame
 
-    -- 2. ปุ่มเขียว (ตัวเลขตำแหน่ง 0-9)
+    -- 2. ปุ่มเขียว (ตัวเลข 1-9) - สี่เหลี่ยมสีเขียวตามรูป
     local btnGreen = makeBtn("1", THEME.GREEN)
-    btnGreen.Parent = container
+    btnGreen.Parent = mainFrame
 
-    -- 3. ปุ่มฟ้า (ถอยหลัง ⬇️)
+    -- 3. ปุ่มฟ้า (ถอยหลัง ⬇️) - สี่เหลี่ยมสีฟ้าตามรูป
     local btnBlue = makeBtn("⬇️", THEME.BLUE)
-    btnBlue.Parent = container
+    btnBlue.Parent = mainFrame
 
-    -- LOGIC การทำงาน
+    -- Logic
     btnRed.MouseButton1Click:Connect(function()
-        if currentIdx < maxPos then
+        if currentIdx < 9 then
             currentIdx = currentIdx + 1
             btnGreen.Text = tostring(currentIdx)
             flyTo(Positions[currentIdx])
@@ -843,10 +838,16 @@ registerRight("Home", function(scroll)
     end)
 
     ------------------------------------------------------------------------
-    -- MAIN UI SWITCH (Model A V1)
+    -- UI SWITCH (Model A V1)
     ------------------------------------------------------------------------
+    local moveEnabled = SaveGet("MoveEnabled", false)
+
+    local function updateUI(on)
+        mainFrame.Visible = on
+    end
+
+    -- (ส่วนนี้คือโค้ด registerRight เดิมที่สร้าง Header และ Row Switch)
     local header = Instance.new("TextLabel")
-    header.Name = "Move_Header"
     header.Parent = scroll
     header.BackgroundTransparency = 1
     header.Size = UDim2.new(1, 0, 0, 36)
@@ -855,18 +856,13 @@ registerRight("Home", function(scroll)
     header.TextColor3 = THEME.WHITE
     header.TextXAlignment = Enum.TextXAlignment.Left
     header.Text = "Move Location 📍"
-    header.LayoutOrder = 1
-
-    local moveEnabled = SaveGet("MoveEnabled", false)
 
     local row = Instance.new("Frame")
-    row.Name = "Move_Row1"
     row.Parent = scroll
     row.Size = UDim2.new(1, -6, 0, 46)
     row.BackgroundColor3 = THEME.BLACK
     corner(row, 12)
     stroke(row, 2.2, THEME.GREEN)
-    row.LayoutOrder = 2
 
     local lab = Instance.new("TextLabel")
     lab.Parent = row
@@ -876,8 +872,8 @@ registerRight("Home", function(scroll)
     lab.Font = Enum.Font.GothamBold
     lab.TextSize = 13
     lab.TextColor3 = THEME.WHITE
-    lab.TextXAlignment = Enum.TextXAlignment.Left
     lab.Text = "Enable Move Position"
+    lab.TextXAlignment = Enum.TextXAlignment.Left
 
     local sw = Instance.new("Frame")
     sw.Parent = row
@@ -886,33 +882,29 @@ registerRight("Home", function(scroll)
     sw.Size = UDim2.fromOffset(52, 26)
     sw.BackgroundColor3 = THEME.BLACK
     corner(sw, 13)
-    local swStroke = stroke(sw, 1.8, THEME.RED)
+    local swStroke = stroke(sw, 1.8, moveEnabled and THEME.GREEN or THEME.RED)
     
     local knob = Instance.new("Frame")
     knob.Parent = sw
     knob.Size = UDim2.fromOffset(22, 22)
     knob.BackgroundColor3 = THEME.WHITE
-    knob.Position = UDim2.new(0, 2, 0.5, -11)
+    knob.Position = UDim2.new(moveEnabled and 1 or 0, moveEnabled and -24 or 2, 0.5, -11)
     corner(knob, 11)
 
-    local function updateMove(on)
-        swStroke.Color = on and THEME.GREEN or THEME.RED
-        TweenService:Create(knob, TweenInfo.new(0.08), {Position = UDim2.new(on and 1 or 0, on and -24 or 2, 0.5, -11)}):Play()
-        container.Visible = on
-    end
-
-    local btnToggle = Instance.new("TextButton")
-    btnToggle.Parent = sw
-    btnToggle.BackgroundTransparency = 1
-    btnToggle.Size = UDim2.fromScale(1, 1)
-    btnToggle.Text = ""
-    btnToggle.MouseButton1Click:Connect(function()
+    local btn = Instance.new("TextButton")
+    btn.Parent = sw
+    btn.BackgroundTransparency = 1
+    btn.Size = UDim2.fromScale(1, 1)
+    btn.Text = ""
+    btn.MouseButton1Click:Connect(function()
         moveEnabled = not moveEnabled
         SaveSet("MoveEnabled", moveEnabled)
-        updateMove(moveEnabled)
+        swStroke.Color = moveEnabled and THEME.GREEN or THEME.RED
+        TweenService:Create(knob, TweenInfo.new(0.08), {Position = UDim2.new(moveEnabled and 1 or 0, moveEnabled and -24 or 2, 0.5, -11)}):Play()
+        updateUI(moveEnabled)
     end)
 
-    updateMove(moveEnabled)
+    updateUI(moveEnabled)
 end)
 --===== UFO HUB X • SETTINGS — Smoother 🚀 (A V1 • fixed 3 rows) + Runner Save (per-map) + AA1 =====
 registerRight("Settings", function(scroll)
