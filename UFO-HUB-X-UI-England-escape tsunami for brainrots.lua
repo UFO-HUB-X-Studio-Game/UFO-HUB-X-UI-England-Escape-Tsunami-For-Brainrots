@@ -691,8 +691,8 @@ end)
 
 registerRight("Home", function(scroll) end)
 registerRight("Settings", function(scroll) end)
---===== UFO HUB X • God Mode System (Model A V1 - INFINITE HEALTH) =====
--- Feature: 100% God Mode (1 Billion Health + Instant Lock)
+--===== UFO HUB X • God Mode System (Model A V1 - SUPREME IMMORTAL) =====
+-- Feature: 100% God Mode (999 Trillion Health + Anti-Red Screen)
 -- UI Model: A V1 (Green Glow Border / Dynamic Switch)
 
 registerRight("Home", function(scroll)
@@ -746,33 +746,37 @@ registerRight("Home", function(scroll)
     end
 
     ------------------------------------------------------------------------
-    -- 1 BILLION HEALTH GOD MODE LOGIC
+    -- SUPREME GOD MODE LOGIC (ล็อคเลือดสูงสุด + กันหน้าจอแดง)
     ------------------------------------------------------------------------
     local godModeOn = SaveGet("godModeOn", false)
     local godConn = nil
-    local HEALTH_VALUE = 1000000000 -- 1,000 ล้าน
+    local SUPREME_HEALTH = 999999999999999 -- 999 ล้านล้าน
 
     local function applyGodMode()
         if godConn then godConn:Disconnect() godConn = nil end
+        
         if godModeOn then
-            godConn = RunService.RenderStepped:Connect(function() -- ใช้ RenderStepped เพื่อความไวสูงสุด
+            godConn = RunService.PreRender:Connect(function() -- ใช้ PreRender เพื่อล็อคเลือดก่อนดาเมจจะเข้า
                 local char = LocalPlayer.Character
                 if char then
                     local hum = char:FindFirstChildOfClass("Humanoid")
                     if hum then
-                        -- เซ็ตเลือดหนึ่งพันล้านและล็อคค่าไว้
-                        if hum.MaxHealth ~= HEALTH_VALUE then
-                            hum.MaxHealth = HEALTH_VALUE
-                        end
-                        if hum.Health < HEALTH_VALUE then
-                            hum.Health = HEALTH_VALUE
-                        end
-                        -- ป้องกันการตายจากการตกแมพหรือสึนามิบางประเภท
+                        -- บังคับปิดระบบการตายและล็อคเลือดขั้นสูงสุด
+                        hum.MaxHealth = SUPREME_HEALTH
+                        hum.Health = SUPREME_HEALTH
                         hum:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
+                        
+                        -- ระบบป้องกันหน้าจอแดง (ปิดการแจ้งเตือนดาเมจ)
+                        local gui = LocalPlayer:FindFirstChild("PlayerGui")
+                        if gui then
+                            local bloodEffect = gui:FindFirstChild("BloodGui") or gui:FindFirstChild("HealthGui")
+                            if bloodEffect then bloodEffect.Enabled = false end
+                        end
                     end
                 end
             end)
         else
+            -- คืนค่าปกติ
             local char = LocalPlayer.Character
             if char then
                 local hum = char:FindFirstChildOfClass("Humanoid")
@@ -787,10 +791,10 @@ registerRight("Home", function(scroll)
     applyGodMode()
 
     ------------------------------------------------------------------------
-    -- UI CONSTRUCTION (Model A V1 - BALANCED POSITION)
+    -- UI CONSTRUCTION (Model A V1 - PERFECT ORDER)
     ------------------------------------------------------------------------
-    -- ปรับให้ตำแหน่งพอดี ไม่บนสุดเกินไป (ใช้ค่าลบที่น้อยลง)
-    local START_ORDER = -50 
+    -- ปรับ LayoutOrder ให้ต่อจาก Header พอดี
+    local ORDER_NUM = -40 
 
     local header = Instance.new("TextLabel", scroll)
     header.Name = "God_Header"
@@ -801,15 +805,15 @@ registerRight("Home", function(scroll)
     header.TextColor3 = THEME.WHITE
     header.TextXAlignment = Enum.TextXAlignment.Left
     header.Text = "Unlock 🔓"
-    header.LayoutOrder = START_ORDER
+    header.LayoutOrder = ORDER_NUM
 
     local row = Instance.new("Frame", scroll)
     row.Name = "God_Row"
     row.Size = UDim2.new(1, -6, 0, 46)
     row.BackgroundColor3 = THEME.BLACK
-    row.LayoutOrder = START_ORDER + 1 
+    row.LayoutOrder = ORDER_NUM + 1
     corner(row, 12)
-    stroke(row, 2.2, THEME.GREEN)
+    stroke(row, 2.2, THEME.GREEN) -- ขอบเขียว Model A V1
 
     local lab = Instance.new("TextLabel", row)
     lab.BackgroundTransparency = 1
