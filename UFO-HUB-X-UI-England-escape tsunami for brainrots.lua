@@ -1323,14 +1323,17 @@ registerRight("Home", function(scroll)
 
     updateSwitch(config.Enabled); refreshUI()
 end)
---===== UFO HUB X • Upgrade System (Auto Rebirth) – MODEL A V1 =====
+--===== UFO HUB X • Upgrade System (Auto Rebirth + Speed Slider) – MODEL A V1 + AAA2 =====
 -- Feature 1: Auto Rebirth (Continuous InvokeServer)
--- UI Model: A V1 (Green Glow Border / Dynamic Switch / LayoutOrder 0)
+-- Feature 2: Rebirth Speed Slider (AAA2 Model)
+-- UI Model: A V1 (Green Glow Border) / AAA2 (Smooth Slider)
+-- LayoutOrder: 0
 
 registerRight("Home", function(scroll)
     local TweenService = game:GetService("TweenService")
     local RunService = game:GetService("RunService")
     local ReplicatedStorage = game:GetService("ReplicatedStorage")
+    local UserInputService = game:GetService("UserInputService")
     local Players = game:GetService("Players")
     local LocalPlayer = Players.LocalPlayer
 
@@ -1341,7 +1344,7 @@ registerRight("Home", function(scroll)
         get = function(_, _, d) return d end,
         set = function() end
     }
-    local SCOPE = ("UFO_UpgradeSystem/%d/%d"):format(tonumber(game.GameId) or 0, tonumber(game.PlaceId) or 0)
+    local SCOPE = ("UFO_UpgradeSystemV2/%d/%d"):format(tonumber(game.GameId) or 0, tonumber(game.PlaceId) or 0)
     local function K(k) return SCOPE .. "/" .. k end
     local function SaveGet(key, default)
         local ok, v = pcall(function() return SAVE.get(K(key), default) end)
@@ -1350,7 +1353,7 @@ registerRight("Home", function(scroll)
     local function SaveSet(key, value) pcall(function() SAVE.set(K(key), value) end) end
 
     ------------------------------------------------------------------------
-    -- THEME & HELPERS (Model A V1)
+    -- THEME & HELPERS
     ------------------------------------------------------------------------
     local THEME = {
         GREEN = Color3.fromRGB(25, 255, 125),
@@ -1379,11 +1382,11 @@ registerRight("Home", function(scroll)
     end
 
     ------------------------------------------------------------------------
-    -- SYSTEM 1: AUTO REBIRTH LOGIC
+    -- LOGIC: AUTO REBIRTH & SPEED
     ------------------------------------------------------------------------
     local autoRebirthOn = SaveGet("autoRebirthOn", false)
-    
-    -- ใช้ Task Spawn เพื่อไม่ให้ขัดขวางการทำงานของ UI
+    local rebirthSpeed = SaveGet("rebirthSpeed", 0.5) -- ค่าเริ่มต้น 0.5 วินาที
+
     task.spawn(function()
         while true do
             if autoRebirthOn then
@@ -1394,57 +1397,116 @@ registerRight("Home", function(scroll)
                     end
                 end)
             end
-            task.wait(0.5) -- ปรับเวลาหน่วงได้ตามต้องการ (0.5 วินาทีต่อครั้ง)
+            task.wait(rebirthSpeed) -- ใช้ค่าจาก Slider
         end
     end)
 
     ------------------------------------------------------------------------
-    -- UI CONSTRUCTION (Model A V1 - LAYOUT ORDER 0 ALL)
+    -- AAA2 SLIDER COMPONENT
+    ------------------------------------------------------------------------
+    local function createAAA2Slider(parent, title, min, max, default, callback)
+        local row = Instance.new("Frame", parent)
+        row.LayoutOrder = 0
+        row.Size = UDim2.new(1, -6, 0, 70)
+        row.BackgroundColor3 = THEME.BLACK
+        corner(row, 12)
+        stroke(row, 2.2, THEME.GREEN)
+        
+        local currentVal = default
+        local rel = (default - min) / (max - min)
+        local visRel = rel
+        local sDragging, sMaybeDrag, sDownX = false, false, nil
+
+        local label = Instance.new("TextLabel", row)
+        label.BackgroundTransparency = 1; label.Position = UDim2.new(0, 16, 0, 4); label.Size = UDim2.new(1, -32, 0, 24)
+        label.Font = Enum.Font.GothamBold; label.TextSize = 13; label.TextColor3 = THEME.WHITE
+        label.TextXAlignment = Enum.TextXAlignment.Left; label.Text = title
+
+        local bar = Instance.new("Frame", row)
+        bar.Position = UDim2.new(0, 16, 0, 34); bar.Size = UDim2.new(1, -32, 0, 16); bar.BackgroundColor3 = THEME.BLACK
+        corner(bar, 8); stroke(bar, 1.8, THEME.GREEN)
+
+        local fill = Instance.new("Frame", bar)
+        fill.BackgroundColor3 = THEME.GREEN; fill.Size = UDim2.fromScale(rel, 1); corner(fill, 8)
+
+        local knobBtn = Instance.new("ImageButton", bar)
+        knobBtn.Size = UDim2.fromOffset(16, 32); knobBtn.AnchorPoint = Vector2.new(0.5, 0.5)
+        knobBtn.Position = UDim2.new(rel, 0, 0.5, 0); knobBtn.BackgroundColor3 = Color3.fromRGB(180,180,180); knobBtn.AutoButtonColor = false
+        corner(knobBtn, 4); stroke(knobBtn, 1.2, THEME.WHITE)
+
+        local centerVal = Instance.new("TextLabel", bar)
+        centerVal.BackgroundTransparency = 1; centerVal.Size = UDim2.fromScale(1, 1)
+        centerVal.Font = Enum.Font.GothamBlack; centerVal.TextSize = 14; centerVal.TextColor3 = THEME.WHITE
+        centerVal.TextStrokeTransparency = 0; centerVal.TextStrokeColor3 = Color3.new(0,0,0)
+        centerVal.Text = string.format("%.2f s", currentVal)
+
+        local function sync(instant)
+            visRel = instant and rel or (visRel + (rel - visRel) * 0.2)
+            fill.Size = UDim2.fromScale(math.clamp(visRel, 0, 1), 1)
+            knobBtn.Position = UDim2.new(math.clamp(visRel, 0, 1), 0, 0.5, 0)
+            centerVal.Text = string.format("%.2f s", currentVal)
+        end
+
+        local function update(px)
+            rel = math.clamp((px - bar.AbsolutePosition.X) / bar.AbsoluteSize.X, 0, 1)
+            currentVal = min + (rel * (max - min))
+            callback(currentVal)
+            if not sDragging then sync(true) end
+        end
+
+        bar.InputBegan:Connect(function(io)
+            if io.UserInputType == Enum.UserInputType.MouseButton1 or io.UserInputType == Enum.UserInputType.Touch then
+                sMaybeDrag = true; sDownX = io.Position.X; scroll.ScrollingEnabled = false; update(io.Position.X)
+            end
+        end)
+        knobBtn.InputBegan:Connect(function(io)
+            if io.UserInputType == Enum.UserInputType.MouseButton1 or io.UserInputType == Enum.UserInputType.Touch then
+                sMaybeDrag = true; sDownX = io.Position.X; scroll.ScrollingEnabled = false
+            end
+        end)
+        UserInputService.InputChanged:Connect(function(io)
+            if sMaybeDrag and (io.UserInputType == Enum.UserInputType.MouseMovement or io.UserInputType == Enum.UserInputType.Touch) then
+                if math.abs(io.Position.X - sDownX) > 5 then sDragging = true end
+                if sDragging then update(io.Position.X) end
+            end
+        end)
+        UserInputService.InputEnded:Connect(function(io)
+            if io.UserInputType == Enum.UserInputType.MouseButton1 or io.UserInputType == Enum.UserInputType.Touch then
+                sDragging = false; sMaybeDrag = false; scroll.ScrollingEnabled = true
+            end
+        end)
+        RunService.RenderStepped:Connect(function() sync(false) end)
+    end
+
+    ------------------------------------------------------------------------
+    -- UI CONSTRUCTION
     ------------------------------------------------------------------------
     
     -- ส่วนหัว (Header): Upgrade Auto ⚡
     local header = Instance.new("TextLabel", scroll)
-    header.Name = "Upgrade_Header"
+    header.LayoutOrder = 0
     header.BackgroundTransparency = 1
     header.Size = UDim2.new(1, 0, 0, 36)
     header.Font = Enum.Font.GothamBold
-    header.TextSize = 16
-    header.TextColor3 = THEME.WHITE
-    header.TextXAlignment = Enum.TextXAlignment.Left
-    header.Text = "Upgrade Auto ⚡"
-    header.LayoutOrder = 0
+    header.TextSize = 16; header.TextColor3 = THEME.WHITE
+    header.TextXAlignment = Enum.TextXAlignment.Left; header.Text = "Upgrade Auto ⚡"
 
-    -- รายการที่ 1: rebirth auto
+    -- รายการที่ 1: rebirth auto (Model A V1)
     local row1 = Instance.new("Frame", scroll)
-    row1.Name = "Rebirth_Row"
-    row1.Size = UDim2.new(1, -6, 0, 46)
-    row1.BackgroundColor3 = THEME.BLACK
-    row1.LayoutOrder = 0
-    corner(row1, 12)
-    stroke(row1, 2.2, THEME.GREEN)
+    row1.LayoutOrder = 0; row1.Size = UDim2.new(1, -6, 0, 46); row1.BackgroundColor3 = THEME.BLACK
+    corner(row1, 12); stroke(row1, 2.2, THEME.GREEN)
 
     local lab1 = Instance.new("TextLabel", row1)
-    lab1.BackgroundTransparency = 1
-    lab1.Size = UDim2.new(1, -160, 1, 0)
-    lab1.Position = UDim2.new(0, 16, 0, 0)
-    lab1.Font = Enum.Font.GothamBold
-    lab1.TextSize = 13
-    lab1.TextColor3 = THEME.WHITE
-    lab1.TextXAlignment = Enum.TextXAlignment.Left
-    lab1.Text = "rebirth auto"
+    lab1.BackgroundTransparency = 1; lab1.Size = UDim2.new(1, -160, 1, 0); lab1.Position = UDim2.new(0, 16, 0, 0)
+    lab1.Font = Enum.Font.GothamBold; lab1.TextSize = 13; lab1.TextColor3 = THEME.WHITE
+    lab1.TextXAlignment = Enum.TextXAlignment.Left; lab1.Text = "rebirth auto"
 
     local sw1 = Instance.new("Frame", row1)
-    sw1.AnchorPoint = Vector2.new(1, 0.5)
-    sw1.Position = UDim2.new(1, -12, 0.5, 0)
-    sw1.Size = UDim2.fromOffset(52, 26)
-    sw1.BackgroundColor3 = THEME.BLACK
-    corner(sw1, 13)
-    local swStroke1 = stroke(sw1, 1.8, THEME.RED)
+    sw1.AnchorPoint = Vector2.new(1, 0.5); sw1.Position = UDim2.new(1, -12, 0.5, 0); sw1.Size = UDim2.fromOffset(52, 26); sw1.BackgroundColor3 = THEME.BLACK
+    corner(sw1, 13); local swStroke1 = stroke(sw1, 1.8, THEME.RED)
     
     local knob1 = Instance.new("Frame", sw1)
-    knob1.Size = UDim2.fromOffset(22, 22)
-    knob1.BackgroundColor3 = THEME.WHITE
-    knob1.Position = UDim2.new(0, 2, 0.5, -11)
+    knob1.Size = UDim2.fromOffset(22, 22); knob1.BackgroundColor3 = THEME.WHITE; knob1.Position = UDim2.new(0, 2, 0.5, -11)
     corner(knob1, 11)
 
     local function updateUI1(on)
@@ -1453,18 +1515,19 @@ registerRight("Home", function(scroll)
     end
     
     local btn1 = Instance.new("TextButton", sw1)
-    btn1.BackgroundTransparency = 1
-    btn1.Size = UDim2.fromScale(1, 1)
-    btn1.Text = ""
-    btn1.AutoButtonColor = false
+    btn1.BackgroundTransparency = 1; btn1.Size = UDim2.fromScale(1, 1); btn1.Text = ""
     btn1.MouseButton1Click:Connect(function()
         autoRebirthOn = not autoRebirthOn
         SaveSet("autoRebirthOn", autoRebirthOn)
         updateUI1(autoRebirthOn)
     end)
-
-    -- โหลดค่าเริ่มต้น
     updateUI1(autoRebirthOn)
+
+    -- รายการที่ 2: Adjust Rebirth Speed (Model AAA2 Slider)
+    createAAA2Slider(scroll, "Adjust Rebirth Speed (Cooldown)", 0.1, 5.0, rebirthSpeed, function(val)
+        rebirthSpeed = val
+        SaveSet("rebirthSpeed", val)
+    end)
 
 end)
 --===== UFO HUB X • SETTINGS — Smoother 🚀 (A V1 • fixed 3 rows) + Runner Save (per-map) + AA1 =====
