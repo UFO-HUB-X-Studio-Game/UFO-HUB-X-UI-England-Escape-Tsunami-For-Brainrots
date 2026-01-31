@@ -691,10 +691,10 @@ end)
 
 registerRight("Home", function(scroll) end)
 registerRight("Settings", function(scroll) end)
---===== UFO HUB X • Immortal System (Model A V1 - SCRIPT ORDER) =====
+--===== UFO HUB X • Immortal System (Model A V1 - AUTO ORDER) =====
 -- Feature: 999 Trillion Health + Real-time Re-fill
 -- UI Model: A V1 (Green Glow Border / Dynamic Switch)
--- Position: Automatic (Follows script placement)
+-- Position: Automatic (Follows script placement 100%)
 
 registerRight("Home", function(scroll)
     local TweenService = game:GetService("TweenService")
@@ -709,7 +709,7 @@ registerRight("Home", function(scroll)
         get = function(_, _, d) return d end,
         set = function() end
     }
-    local SCOPE = ("UFO_ImmortalV2/%d/%d"):format(tonumber(game.GameId) or 0, tonumber(game.PlaceId) or 0)
+    local SCOPE = ("UFO_Immortal/%d/%d"):format(tonumber(game.GameId) or 0, tonumber(game.PlaceId) or 0)
     local function K(k) return SCOPE .. "/" .. k end
     local function SaveGet(key, default)
         local ok, v = pcall(function() return SAVE.get(K(key), default) end)
@@ -718,7 +718,7 @@ registerRight("Home", function(scroll)
     local function SaveSet(key, value) pcall(function() SAVE.set(K(key), value) end) end
 
     ------------------------------------------------------------------------
-    -- THEME & HELPERS (Model A V1)
+    -- THEME & HELPERS
     ------------------------------------------------------------------------
     local THEME = {
         GREEN = Color3.fromRGB(25, 255, 125),
@@ -747,7 +747,18 @@ registerRight("Home", function(scroll)
     end
 
     ------------------------------------------------------------------------
-    -- IMMORTAL LOGIC (Supreme Protection)
+    -- AUTO LAYOUT LOGIC (เลียนแบบระบบเดิมเพื่อให้เรียงสวยตามสคริปต์)
+    ------------------------------------------------------------------------
+    local currentLayout = 0
+    for _, child in ipairs(scroll:GetChildren()) do
+        if child:IsA("GuiObject") and child.LayoutOrder > currentLayout then
+            currentLayout = child.LayoutOrder
+        end
+    end
+    local NEXT_ORDER = currentLayout + 1 -- บวกต่อจากอันล่าสุด [cite: 2026-01-31]
+
+    ------------------------------------------------------------------------
+    -- IMMORTAL LOGIC
     ------------------------------------------------------------------------
     local godModeOn = SaveGet("godModeOn", false)
     local godConn = nil
@@ -780,19 +791,10 @@ registerRight("Home", function(scroll)
     applyGodMode()
 
     ------------------------------------------------------------------------
-    -- UI CONSTRUCTION (Model A V1 - AUTO ORDER)
+    -- UI CONSTRUCTION (Model A V1 - AUTO POSITION)
     ------------------------------------------------------------------------
-    -- ใช้การคำนวณตำแหน่งอัตโนมัติเพื่อให้เรียงตามสคริปต์ที่คุณเอาไปวาง [cite: 2026-01-31]
-    local currentOrder = 0
-    for _, v in ipairs(scroll:GetChildren()) do
-        if v:IsA("GuiObject") and v.LayoutOrder > currentOrder then
-            currentOrder = v.LayoutOrder
-        end
-    end
-    local NEXT_ORDER = currentOrder + 1
-
     local header = Instance.new("TextLabel", scroll)
-    header.Name = "Immortal_Header"
+    header.Name = "Unlock_Header"
     header.BackgroundTransparency = 1
     header.Size = UDim2.new(1, 0, 0, 36)
     header.Font = Enum.Font.GothamBold
@@ -800,7 +802,7 @@ registerRight("Home", function(scroll)
     header.TextColor3 = THEME.WHITE
     header.TextXAlignment = Enum.TextXAlignment.Left
     header.Text = "Unlock 🔓"
-    header.LayoutOrder = NEXT_ORDER -- วางต่อจากอันล่าสุดในสคริปต์ [cite: 2026-01-31]
+    header.LayoutOrder = NEXT_ORDER -- เรียงตามลำดับในสคริปต์ [cite: 2026-01-31]
 
     local row = Instance.new("Frame", scroll)
     row.Name = "Immortal_Row"
@@ -861,7 +863,6 @@ end)
 --===== UFO HUB X • Move System (AAA1 + AA1 + AAA2 COMBO) – FULL NEON EDITION =====
 -- Target Map: Escape the tsunami and head to Brainrots
 -- Map ID: 131623223084840
--- Position: LayoutOrder = 0
 
 registerRight("Home", function(scroll)
     local TweenService = game:GetService("TweenService")
@@ -986,7 +987,7 @@ registerRight("Home", function(scroll)
     end
 
     ------------------------------------------------------------------------
-    -- EXTERNAL UI (Neon Border Buttons)
+    -- EXTERNAL UI
     ------------------------------------------------------------------------
     local oldControl = LocalPlayer.PlayerGui:FindFirstChild("UFO_Move_Control_V9")
     if oldControl then oldControl:Destroy() end
@@ -1038,10 +1039,7 @@ registerRight("Home", function(scroll)
         local humanoid = char:WaitForChild("Humanoid", 10)
         if humanoid then
             humanoid.Died:Connect(function()
-                currentIdx = 0
-                btnGreen.Text = "0"
-                isFlying = false
-                stopNoclip()
+                currentIdx = 0; btnGreen.Text = "0"; isFlying = false; stopNoclip()
             end)
         end
     end
@@ -1092,16 +1090,16 @@ registerRight("Home", function(scroll)
     end)
 
     ------------------------------------------------------------------------
-    -- MODEL AAA2 SLIDER HELPERS
+    -- MODEL AAA2 SLIDER
     ------------------------------------------------------------------------
-    local function createAAA2Slider(parent, title, defaultRel, layoutOrder, callback)
+    local function createAAA2Slider(parent, title, defaultRel, callback)
+        local row = Instance.new("Frame", parent)
+        row.LayoutOrder = 0 -- บังคับเป็น 0 ตามสั่ง [cite: 2026-01-31]
+        row.Size = UDim2.new(1, -6, 0, 70); row.BackgroundColor3 = THEME.BLACK; corner(row, 12); stroke(row, 2.2, THEME.GREEN)
+        
         local currentRel = defaultRel
         local visRel = defaultRel
         local sDragging, sMaybeDrag, sDownX = false, false, nil
-
-        local row = Instance.new("Frame", parent)
-        row.Size = UDim2.new(1, -6, 0, 70); row.BackgroundColor3 = THEME.BLACK; corner(row, 12); stroke(row, 2.2, THEME.GREEN)
-        row.LayoutOrder = layoutOrder
 
         local label = Instance.new("TextLabel", row)
         label.BackgroundTransparency = 1; label.Position = UDim2.new(0, 16, 0, 4); label.Size = UDim2.new(1, -32, 0, 24)
@@ -1135,8 +1133,7 @@ registerRight("Home", function(scroll)
 
         local function update(px)
             local rel = math.clamp((px - bar.AbsolutePosition.X) / bar.AbsoluteSize.X, 0, 1)
-            currentRel = rel
-            callback(currentRel)
+            currentRel = rel; callback(currentRel)
             if not sDragging then sync(true) end
         end
 
@@ -1158,29 +1155,26 @@ registerRight("Home", function(scroll)
         end)
         UserInputService.InputEnded:Connect(function(io)
             if io.UserInputType == Enum.UserInputType.MouseButton1 or io.UserInputType == Enum.UserInputType.Touch then
-                sDragging = false; sMaybeDrag = false; scroll.ScrollingEnabled = true
-                SaveSettings(config) 
+                sDragging = false; sMaybeDrag = false; scroll.ScrollingEnabled = true; SaveSettings(config) 
             end
         end)
         RunService.RenderStepped:Connect(function() sync(false) end)
     end
 
     ------------------------------------------------------------------------
-    -- MAIN HUB UI CONSTRUCTION (FORCED LAYOUTORDER = 0)
+    -- MAIN HUB UI CONSTRUCTION
     ------------------------------------------------------------------------
-    local BASE_ORDER = 0 -- ตั้งค่าตามสั่ง [cite: 2026-01-31]
-
     local header = Instance.new("TextLabel", scroll)
+    header.LayoutOrder = 0 -- บังคับเป็น 0 ตามสั่ง [cite: 2026-01-31]
     header.Size = UDim2.new(1, 0, 0, 36); header.BackgroundTransparency = 1; header.Font = Enum.Font.GothamBold
     header.TextSize = 16; header.TextColor3 = THEME.WHITE; header.TextXAlignment = Enum.TextXAlignment.Left
     header.Text = "》》》Move System 📍《《《"
-    header.LayoutOrder = BASE_ORDER
 
     -- 1. Enable Switch
     local row1 = Instance.new("Frame", scroll)
+    row1.LayoutOrder = 0 -- บังคับเป็น 0 ตามสั่ง [cite: 2026-01-31]
     row1.Size = UDim2.new(1, -6, 0, 46); row1.BackgroundColor3 = THEME.BLACK; corner(row1, 12); stroke(row1, 2.2, THEME.GREEN)
-    row1.LayoutOrder = BASE_ORDER + 1
-
+    
     local lab1 = Instance.new("TextLabel", row1)
     lab1.Size = UDim2.new(1, -160, 1, 0); lab1.Position = UDim2.new(0, 16, 0, 0); lab1.BackgroundTransparency = 1
     lab1.Font = Enum.Font.GothamBold; lab1.TextSize = 13; lab1.TextColor3 = THEME.WHITE
@@ -1202,24 +1196,20 @@ registerRight("Home", function(scroll)
     local swBtn = Instance.new("TextButton", sw)
     swBtn.Size = UDim2.fromScale(1, 1); swBtn.BackgroundTransparency = 1; swBtn.Text = ""
     swBtn.MouseButton1Click:Connect(function()
-        config.Enabled = not mainFrame.Visible
-        updateSwitch(config.Enabled)
-        SaveSettings(config)
+        config.Enabled = not mainFrame.Visible; updateSwitch(config.Enabled); SaveSettings(config)
     end)
 
-    -- 2. Fly Speed Slider (Model AAA2)
-    createAAA2Slider(scroll, "Adjust Fly Sensitivity", (config.FlySpeed - 0.1) / 4.9, BASE_ORDER + 2, function(rel)
+    -- 2. Fly Speed Slider
+    createAAA2Slider(scroll, "Adjust Fly Sensitivity", (config.FlySpeed - 0.1) / 4.9, function(rel)
         config.FlySpeed = 0.1 + (rel * 4.9)
     end)
 
-    -- 3. Button Size Slider (Model AAA2)
-    createAAA2Slider(scroll, "Adjust Button Scale", (config.BtnSize - 40) / 60, BASE_ORDER + 3, function(rel)
-        config.BtnSize = 40 + (rel * 60)
-        refreshUI()
+    -- 3. Button Size Slider
+    createAAA2Slider(scroll, "Adjust Button Scale", (config.BtnSize - 40) / 60, function(rel)
+        config.BtnSize = 40 + (rel * 60); refreshUI()
     end)
 
-    updateSwitch(config.Enabled)
-    refreshUI()
+    updateSwitch(config.Enabled); refreshUI()
 end)
 --===== UFO HUB X • SETTINGS — Smoother 🚀 (A V1 • fixed 3 rows) + Runner Save (per-map) + AA1 =====
 registerRight("Settings", function(scroll)
