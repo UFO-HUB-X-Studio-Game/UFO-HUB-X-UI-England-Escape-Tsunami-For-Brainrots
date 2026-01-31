@@ -691,7 +691,7 @@ end)
 
 registerRight("Home", function(scroll) end)
 registerRight("Settings", function(scroll) end)
---===== UFO HUB X • Home • Position Mover 🚀 (Model A V1) =====
+--===== UFO HUB X • Home • Position Move 🚀 (Model A V1) =====
 registerRight("Home", function(scroll)
 
 ------------------------------------------------------------------------
@@ -726,18 +726,18 @@ local function stroke(ui,t,col)
 end
 
 ------------------------------------------------------------------------
--- POSITIONS DATA (1–9)
+-- POSITIONS (1–9)
 ------------------------------------------------------------------------
 local POSITIONS = {
-    Vector3.new(200.000, -2.742, 0.000),
-    Vector3.new(284.000, -2.742, 0.000),
-    Vector3.new(398.000, -2.742, 0.000),
-    Vector3.new(542.000, -2.742, 0.000),
-    Vector3.new(756.000, -2.742, 0.000),
-    Vector3.new(1074.004, -2.742, 0.002),
-    Vector3.new(1546.773, -2.742, 0.812),
-    Vector3.new(2247.060, -2.734, 2.466),
-    Vector3.new(2602.500, -2.742, -2.176),
+    Vector3.new(200.000, -2.742,  0.000),
+    Vector3.new(284.000, -2.742,  0.000),
+    Vector3.new(398.000, -2.742,  0.000),
+    Vector3.new(542.000, -2.742,  0.000),
+    Vector3.new(756.000, -2.742,  0.000),
+    Vector3.new(1074.004,-2.742,  0.002),
+    Vector3.new(1546.773,-2.742,  0.812),
+    Vector3.new(2247.060,-2.734,  2.466),
+    Vector3.new(2602.500,-2.742, -2.176),
 }
 
 ------------------------------------------------------------------------
@@ -749,22 +749,21 @@ local gui
 local moving = false
 
 ------------------------------------------------------------------------
--- MOVE SYSTEM
+-- FLY MOVE (NO WARP)
 ------------------------------------------------------------------------
 local function flyTo(index)
     if moving then return end
     local char = LP.Character
     local hrp = char and char:FindFirstChild("HumanoidRootPart")
     if not hrp then return end
-
-    local targetPos = POSITIONS[index]
-    if not targetPos then return end
+    local target = POSITIONS[index]
+    if not target then return end
 
     moving = true
     local tween = TweenService:Create(
         hrp,
         TweenInfo.new(0.6, Enum.EasingStyle.Linear),
-        {CFrame = CFrame.new(targetPos)}
+        {CFrame = CFrame.new(target)}
     )
     tween:Play()
     tween.Completed:Wait()
@@ -772,74 +771,75 @@ local function flyTo(index)
 end
 
 ------------------------------------------------------------------------
--- WORLD BUTTON UI (RIGHT SIDE)
+-- WORLD BUTTONS (3 COLOR STACK)
 ------------------------------------------------------------------------
 local function createWorldButtons()
     if gui then return end
 
     gui = Instance.new("ScreenGui")
-    gui.Name = "UFOX_PositionMover"
+    gui.Name = "UFOX_PositionMove"
     gui.ResetOnSpawn = false
     gui.Parent = LP:WaitForChild("PlayerGui")
 
     local holder = Instance.new("Frame", gui)
     holder.Size = UDim2.fromOffset(72, 220)
-    holder.Position = UDim2.new(1, -96, 0.5, -110)
+    holder.Position = UDim2.new(1, -92, 0.5, -110)
     holder.BackgroundTransparency = 1
 
     local layout = Instance.new("UIListLayout", holder)
     layout.Padding = UDim.new(0, 12)
     layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 
-    -- ▲ UP
-    local up = Instance.new("TextButton", holder)
-    up.Size = UDim2.fromOffset(64,64)
-    up.BackgroundColor3 = THEME.BLACK
-    up.Text = "⬆️"
-    up.TextSize = 28
-    up.TextColor3 = THEME.RED
-    corner(up,12)
-    stroke(up,2)
+    -- 🔴 FORWARD
+    local forward = Instance.new("TextButton", holder)
+    forward.Size = UDim2.fromOffset(64,64)
+    forward.BackgroundColor3 = THEME.BLACK
+    forward.Text = "⬆️"
+    forward.TextSize = 28
+    forward.TextColor3 = THEME.RED
+    corner(forward,12)
+    stroke(forward,2.2,THEME.GREEN)
 
-    up.MouseButton1Click:Connect(function()
+    forward.MouseButton1Click:Connect(function()
         if currentIndex < #POSITIONS then
             currentIndex += 1
             flyTo(currentIndex)
         end
     end)
 
-    -- ■ INDEX
-    local mid = Instance.new("TextLabel", holder)
-    mid.Size = UDim2.fromOffset(64,64)
-    mid.BackgroundColor3 = THEME.BLACK
-    mid.Font = Enum.Font.GothamBold
-    mid.TextSize = 22
-    mid.TextColor3 = THEME.GREEN
-    mid.TextXAlignment = Enum.TextXAlignment.Center
-    mid.TextYAlignment = Enum.TextYAlignment.Center
-    corner(mid,12)
-    stroke(mid,2)
+    -- 🟢 INDEX
+    local indexBox = Instance.new("TextLabel", holder)
+    indexBox.Size = UDim2.fromOffset(64,64)
+    indexBox.BackgroundColor3 = THEME.BLACK
+    indexBox.Text = tostring(currentIndex)
+    indexBox.Font = Enum.Font.GothamBold
+    indexBox.TextSize = 22
+    indexBox.TextColor3 = THEME.GREEN
+    corner(indexBox,12)
+    stroke(indexBox,2.2,THEME.GREEN)
 
-    -- ▼ DOWN
-    local down = Instance.new("TextButton", holder)
-    down.Size = UDim2.fromOffset(64,64)
-    down.BackgroundColor3 = THEME.BLACK
-    down.Text = "⬇️"
-    down.TextSize = 28
-    down.TextColor3 = THEME.BLUE
-    corner(down,12)
-    stroke(down,2)
+    -- 🔵 BACKWARD
+    local back = Instance.new("TextButton", holder)
+    back.Size = UDim2.fromOffset(64,64)
+    back.BackgroundColor3 = THEME.BLACK
+    back.Text = "⬇️"
+    back.TextSize = 28
+    back.TextColor3 = THEME.BLUE
+    corner(back,12)
+    stroke(back,2.2,THEME.GREEN)
 
-    down.MouseButton1Click:Connect(function()
-        if currentIndex > 1 then
+    back.MouseButton1Click:Connect(function()
+        if currentIndex > 0 then
             currentIndex -= 1
-            flyTo(currentIndex)
+            if currentIndex > 0 then
+                flyTo(currentIndex)
+            end
         end
     end)
 
     RunService.Heartbeat:Connect(function()
-        if mid then
-            mid.Text = tostring(currentIndex)
+        if indexBox then
+            indexBox.Text = tostring(currentIndex)
         end
     end)
 end
@@ -866,7 +866,7 @@ header.Font = Enum.Font.GothamBold
 header.TextSize = 16
 header.TextColor3 = THEME.WHITE
 header.TextXAlignment = Enum.TextXAlignment.Left
-header.Text = "Position Mover 🚀"
+header.Text = "Position Move 🚀"
 
 local row = Instance.new("Frame",scroll)
 row.Size = UDim2.new(1,-6,0,46)
@@ -874,16 +874,9 @@ row.BackgroundColor3 = THEME.BLACK
 corner(row,12)
 stroke(row)
 
--- LEFT BAR (STATE)
-local bar = Instance.new("Frame", row)
-bar.Size = UDim2.new(0,4,1,0)
-bar.BackgroundColor3 = THEME.GREEN
-bar.Visible = false
-corner(bar,2)
-
 local txt = Instance.new("TextLabel",row)
 txt.BackgroundTransparency = 1
-txt.Size = UDim2.new(1,-100,1,0)
+txt.Size = UDim2.new(1,-120,1,0)
 txt.Position = UDim2.new(0,16,0,0)
 txt.Font = Enum.Font.GothamBold
 txt.TextSize = 13
@@ -891,20 +884,18 @@ txt.TextColor3 = THEME.WHITE
 txt.TextXAlignment = Enum.TextXAlignment.Left
 txt.Text = "Enable Position Move"
 
--- ACTION BUTTON ▶ (Model A V1)
-local act = Instance.new("TextButton",row)
-act.AnchorPoint = Vector2.new(1,0.5)
-act.Position = UDim2.new(1,-12,0.5,0)
-act.Size = UDim2.fromOffset(26,26)
-act.BackgroundTransparency = 1
-act.Text = "▶"
-act.Font = Enum.Font.GothamBold
-act.TextSize = 18
-act.TextColor3 = THEME.GREEN
+local btn = Instance.new("TextButton",row)
+btn.AnchorPoint = Vector2.new(1,0.5)
+btn.Position = UDim2.new(1,-12,0.5,0)
+btn.Size = UDim2.fromOffset(26,26)
+btn.BackgroundTransparency = 1
+btn.Text = "▶"
+btn.TextSize = 18
+btn.Font = Enum.Font.GothamBold
+btn.TextColor3 = THEME.GREEN
 
-act.MouseButton1Click:Connect(function()
+btn.MouseButton1Click:Connect(function()
     ENABLED = not ENABLED
-    bar.Visible = ENABLED
     if ENABLED then
         createWorldButtons()
     else
