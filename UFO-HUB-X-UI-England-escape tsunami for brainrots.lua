@@ -441,7 +441,15 @@ task.defer(function()
         end, btnHome)
     end)
 
+
+btnShop.MouseButton1Click:Connect(function()
+        onTabClick("Shop", ICON_SHOP, function()
+            setHomeActive(false); setQuestActive(false)
+            setShopActive(true); setSettingsActive(false)
+        end, btnShop)
+    end)
     
+
     btnSettings.MouseButton1Click:Connect(function()
         onTabClick("Settings", ICON_SETTINGS, function()
             setHomeActive(false); setQuestActive(false)
