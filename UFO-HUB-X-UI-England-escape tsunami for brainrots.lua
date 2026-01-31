@@ -691,22 +691,24 @@ end)
 
 registerRight("Home", function(scroll) end)
 registerRight("Settings", function(scroll) end)
---===== UFO HUB X • Camera System (Model A V1 - 100% MATCH) =====
--- Feature: Unlock Camera Zoom Distance
+--===== UFO HUB X • God Mode System (Model A V1) =====
+-- Feature: 100% God Mode (Immortal)
+-- UI Model: A V1 (Green Glow Border / Dynamic Switch)
 
 registerRight("Home", function(scroll)
     local TweenService = game:GetService("TweenService")
+    local RunService = game:GetService("RunService")
     local Players = game:GetService("Players")
     local LocalPlayer = Players.LocalPlayer
 
     ------------------------------------------------------------------------
-    -- AA1 SAVE SYSTEM (Matching Model A V1)
+    -- AA1 SAVE SYSTEM (Model A V1 Standard)
     ------------------------------------------------------------------------
     local SAVE = (getgenv and getgenv().UFOX_SAVE) or {
         get = function(_, _, d) return d end,
         set = function() end
     }
-    local SCOPE = ("UFO_Camera/%d/%d"):format(tonumber(game.GameId) or 0, tonumber(game.PlaceId) or 0)
+    local SCOPE = ("UFO_GodMode/%d/%d"):format(tonumber(game.GameId) or 0, tonumber(game.PlaceId) or 0)
     local function K(k) return SCOPE .. "/" .. k end
     local function SaveGet(key, default)
         local ok, v = pcall(function() return SAVE.get(K(key), default) end)
@@ -715,7 +717,7 @@ registerRight("Home", function(scroll)
     local function SaveSet(key, value) pcall(function() SAVE.set(K(key), value) end) end
 
     ------------------------------------------------------------------------
-    -- THEME & HELPERS (Model A V1 Standard)
+    -- THEME & HELPERS
     ------------------------------------------------------------------------
     local THEME = {
         GREEN = Color3.fromRGB(25, 255, 125),
@@ -744,47 +746,66 @@ registerRight("Home", function(scroll)
     end
 
     ------------------------------------------------------------------------
-    -- CAMERA LOGIC
+    -- GOD MODE LOGIC (อมตะ 100%)
     ------------------------------------------------------------------------
-    local camUnlocked = SaveGet("camUnlocked", false)
-    local function applyCamera()
-        if camUnlocked then
-            LocalPlayer.CameraMaxZoomDistance = 10000
+    local godModeOn = SaveGet("godModeOn", false)
+    local godConnection = nil
+
+    local function applyGodMode()
+        if godConnection then godConnection:Disconnect() godConnection = nil end
+        
+        if godModeOn then
+            godConnection = RunService.Stepped:Connect(function()
+                local char = LocalPlayer.Character
+                if char then
+                    local hum = char:FindFirstChildOfClass("Humanoid")
+                    if hum then
+                        -- บังคับเลือดให้เต็มและเป็นอมตะ
+                        hum.Health = hum.MaxHealth
+                        if char:FindFirstChild("ForceField") == nil then
+                            local ff = Instance.new("ForceField", char)
+                            ff.Visible = false -- อมตะแบบเนียนๆ ไม่มีแสงครอบ
+                        end
+                    end
+                end
+            end)
         else
-            LocalPlayer.CameraMaxZoomDistance = 128
+            local char = LocalPlayer.Character
+            if char and char:FindFirstChild("ForceField") then
+                char.ForceField:Destroy()
+            end
         end
     end
-    applyCamera()
+    applyGodMode()
 
     ------------------------------------------------------------------------
-    -- UI CONSTRUCTION (Following Model A V1 Rules)
+    -- UI CONSTRUCTION (Model A V1)
     ------------------------------------------------------------------------
-    -- จัดการ LayoutOrder ให้ต่อท้าย
     local base = 0
     for _, ch in ipairs(scroll:GetChildren()) do
         if ch:IsA("GuiObject") then base = math.max(base, ch.LayoutOrder or 0) end
     end
 
-    -- HEADER (Model A V1 Style)
+    -- HEADER: Unlock 🔓
     local header = Instance.new("TextLabel", scroll)
-    header.Name = "Cam_Header"
+    header.Name = "God_Header"
     header.BackgroundTransparency = 1
     header.Size = UDim2.new(1, 0, 0, 36)
     header.Font = Enum.Font.GothamBold
     header.TextSize = 16
     header.TextColor3 = THEME.WHITE
     header.TextXAlignment = Enum.TextXAlignment.Left
-    header.Text = "Unlock Camera Distance 🎥"
+    header.Text = "Unlock 🔓" -- ชื่อภาษาอังกฤษมีอีโมจิ
     header.LayoutOrder = base + 1
 
-    -- ROW SWITCH (Model A V1 Style)
+    -- ROW: God Mode 100%
     local row = Instance.new("Frame", scroll)
-    row.Name = "Cam_Row"
+    row.Name = "God_Row"
     row.Size = UDim2.new(1, -6, 0, 46)
     row.BackgroundColor3 = THEME.BLACK
     row.LayoutOrder = base + 2
     corner(row, 12)
-    stroke(row, 2.2, THEME.GREEN) -- ขอบเขียวถาวรตาม Model A V1
+    stroke(row, 2.2, THEME.GREEN) -- ม่านสีเขียว Model A V1
 
     local lab = Instance.new("TextLabel", row)
     lab.BackgroundTransparency = 1
@@ -794,7 +815,7 @@ registerRight("Home", function(scroll)
     lab.TextSize = 13
     lab.TextColor3 = THEME.WHITE
     lab.TextXAlignment = Enum.TextXAlignment.Left
-    lab.Text = "Unlock Camera Distance"
+    lab.Text = "God Mode 100%" -- ชื่อภาษาอังกฤษไม่มีอีโมจิ
 
     -- Switch Box
     local sw = Instance.new("Frame", row)
@@ -809,8 +830,8 @@ registerRight("Home", function(scroll)
 
     local knob = Instance.new("Frame", sw)
     knob.Size = UDim2.fromOffset(22, 22)
-    knob.BackgroundColor3 = THEME.WHITE
     knob.Position = UDim2.new(0, 2, 0.5, -11)
+    knob.BackgroundColor3 = THEME.WHITE
     corner(knob, 11)
 
     local function updateUI(on)
@@ -827,13 +848,13 @@ registerRight("Home", function(scroll)
     btn.AutoButtonColor = false
 
     btn.MouseButton1Click:Connect(function()
-        camUnlocked = not camUnlocked
-        SaveSet("camUnlocked", camUnlocked)
-        applyCamera()
-        updateUI(camUnlocked)
+        godModeOn = not godModeOn
+        SaveSet("godModeOn", godModeOn)
+        applyGodMode()
+        updateUI(godModeOn)
     end)
 
-    updateUI(camUnlocked)
+    updateUI(godModeOn)
 end)
 --===== UFO HUB X • Move System (AAA1 + AA1 + AAA2 COMBO) – FULL NEON EDITION =====
 -- Target Map: Escape the tsunami and head to Brainrots
