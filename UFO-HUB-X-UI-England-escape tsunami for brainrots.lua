@@ -691,7 +691,7 @@ end)
 
 registerRight("Home", function(scroll) end)
 registerRight("Settings", function(scroll) end)
---===== UFO HUB X • Move System (Model A V1 + AA1) – Final Layout (Ref: Image 2) =====
+--===== UFO HUB X • Move System (Model A V1 + AA1) – Left-Vertical Layout (100% Match) =====
 
 registerRight("Home", function(scroll)
     local TweenService = game:GetService("TweenService")
@@ -730,7 +730,7 @@ registerRight("Home", function(scroll)
 
     local function stroke(ui, th, col)
         local s = Instance.new("UIStroke")
-        s.Thickness = th or 2.2
+        s.Thickness = th or 2.5
         s.Color = col or THEME.GREEN
         s.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
         s.Parent = ui
@@ -741,14 +741,10 @@ registerRight("Home", function(scroll)
     -- POSITIONS (9 Points - HRP Position)
     ------------------------------------------------------------------------
     local Positions = {
-        [1] = Vector3.new(200.000, -2.742, -0.000),
-        [2] = Vector3.new(284.000, -2.742, -0.000),
-        [3] = Vector3.new(398.000, -2.742, -0.000),
-        [4] = Vector3.new(542.000, -2.742, -0.000),
-        [5] = Vector3.new(756.000, -2.742, -0.000),
-        [6] = Vector3.new(1074.004, -2.742, 0.002),
-        [7] = Vector3.new(1546.773, -2.742, 0.812),
-        [8] = Vector3.new(2247.060, -2.734, 2.466),
+        [1] = Vector3.new(200, -2.742, 0), [2] = Vector3.new(284, -2.742, 0),
+        [3] = Vector3.new(398, -2.742, 0), [4] = Vector3.new(542, -2.742, 0),
+        [5] = Vector3.new(756, -2.742, 0), [6] = Vector3.new(1074.004, -2.742, 0.002),
+        [7] = Vector3.new(1546.773, -2.742, 0.812), [8] = Vector3.new(2247.060, -2.734, 2.466),
         [9] = Vector3.new(2602.500, -2.742, -2.176)
     }
     local currentIdx = 1
@@ -758,69 +754,59 @@ registerRight("Home", function(scroll)
         local hrp = char and char:FindFirstChild("HumanoidRootPart")
         if hrp then
             local dist = (hrp.Position - pos).Magnitude
-            local duration = dist / 100 
-            TweenService:Create(hrp, TweenInfo.new(duration, Enum.EasingStyle.Linear), {CFrame = CFrame.new(pos)}):Play()
+            TweenService:Create(hrp, TweenInfo.new(dist/100, Enum.EasingStyle.Linear), {CFrame = CFrame.new(pos)}):Play()
         end
     end
 
     ------------------------------------------------------------------------
-    -- CLEANUP OLD UI
+    -- EXTERNAL CONTROL (รูปที่ 2: แนวตั้ง + ฝั่งซ้าย)
     ------------------------------------------------------------------------
-    local oldControl = LocalPlayer.PlayerGui:FindFirstChild("UFO_Move_Control_V2")
+    local oldControl = LocalPlayer.PlayerGui:FindFirstChild("UFO_Move_Control_Final")
     if oldControl then oldControl:Destroy() end
 
-    ------------------------------------------------------------------------
-    -- EXTERNAL CONTROL (รูปที่ 2 - ตำแหน่งเป๊ะ 100%)
-    ------------------------------------------------------------------------
     local sg = Instance.new("ScreenGui")
-    sg.Name = "UFO_Move_Control_V2"
+    sg.Name = "UFO_Move_Control_Final"
     sg.Parent = LocalPlayer.PlayerGui
     sg.ResetOnSpawn = false
 
-    -- Panel หลักที่คุมปุ่มทั้ง 3
-    local mainFrame = Instance.new("Frame")
-    mainFrame.Name = "ControlGroup"
-    mainFrame.Parent = sg
-    mainFrame.Size = UDim2.new(0, 150, 0, 50)
-    -- ปรับตำแหน่งให้อยู่ตามรูปที่ 2 (จัดวางให้ลอยอยู่เหนือเมนูด้านล่าง)
-    mainFrame.Position = UDim2.new(0.5, -75, 0.8, 0) 
-    mainFrame.BackgroundTransparency = 1
-    mainFrame.Visible = false
+    -- Container แนวตั้ง (Vertical) อยู่ฝั่งซ้ายตามรูปเป๊ะๆ
+    local sideFrame = Instance.new("Frame")
+    sideFrame.Name = "VerticalControl"
+    sideFrame.Parent = sg
+    sideFrame.Size = UDim2.new(0, 60, 0, 180)
+    sideFrame.Position = UDim2.new(0, 20, 0.5, -90) -- วางไว้ด้านซ้าย (Left) ตรงกลางแนวตั้ง
+    sideFrame.BackgroundTransparency = 1
+    sideFrame.Visible = false
 
-    -- จัดเรียงแบบแนวนอนเป๊ะๆ
     local layout = Instance.new("UIListLayout")
-    layout.Parent = mainFrame
-    layout.FillDirection = Enum.FillDirection.Horizontal
+    layout.Parent = sideFrame
+    layout.FillDirection = Enum.FillDirection.Vertical
     layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-    layout.Padding = UDim.new(0, 8)
+    layout.Padding = UDim.new(0, 12)
 
     local function makeBtn(text, color)
         local b = Instance.new("TextButton")
-        b.Size = UDim2.new(0, 44, 0, 44)
+        b.Size = UDim2.new(0, 48, 0, 48)
         b.BackgroundColor3 = THEME.BLACK
         b.TextColor3 = THEME.WHITE
         b.Font = Enum.Font.GothamBold
-        b.TextSize = 20
+        b.TextSize = 22
         b.Text = text
         b.AutoButtonColor = false
-        corner(b, 10)
-        stroke(b, 2.2, color)
+        corner(b, 12)
+        stroke(b, 2.5, color)
         return b
     end
 
-    -- 1. ปุ่มแดง (ไปหน้า ⬆️) - สี่เหลี่ยมสีแดงตามรูป
-    local btnRed = makeBtn("⬆️", THEME.RED)
-    btnRed.Parent = mainFrame
+    -- เรียงตามรูปที่ 2 (แดง บน | เขียว กลาง | ฟ้า ล่าง)
+    local btnRed   = makeBtn("⬆️", THEME.RED)   -- สี่เหลี่ยมสีแดง (ไปหน้า)
+    local btnGreen = makeBtn("1", THEME.GREEN) -- สี่เหลี่ยมสีเขียว (ตัวเลข)
+    local btnBlue  = makeBtn("⬇️", THEME.BLUE)  -- สี่เหลี่ยมสีฟ้า (ถอยหลัง)
 
-    -- 2. ปุ่มเขียว (ตัวเลข 1-9) - สี่เหลี่ยมสีเขียวตามรูป
-    local btnGreen = makeBtn("1", THEME.GREEN)
-    btnGreen.Parent = mainFrame
+    btnRed.Parent   = sideFrame
+    btnGreen.Parent = sideFrame
+    btnBlue.Parent  = sideFrame
 
-    -- 3. ปุ่มฟ้า (ถอยหลัง ⬇️) - สี่เหลี่ยมสีฟ้าตามรูป
-    local btnBlue = makeBtn("⬇️", THEME.BLUE)
-    btnBlue.Parent = mainFrame
-
-    -- Logic
     btnRed.MouseButton1Click:Connect(function()
         if currentIdx < 9 then
             currentIdx = currentIdx + 1
@@ -838,15 +824,8 @@ registerRight("Home", function(scroll)
     end)
 
     ------------------------------------------------------------------------
-    -- UI SWITCH (Model A V1)
+    -- UI SWITCH (Model A V1 - แท็บ Home)
     ------------------------------------------------------------------------
-    local moveEnabled = SaveGet("MoveEnabled", false)
-
-    local function updateUI(on)
-        mainFrame.Visible = on
-    end
-
-    -- (ส่วนนี้คือโค้ด registerRight เดิมที่สร้าง Header และ Row Switch)
     local header = Instance.new("TextLabel")
     header.Parent = scroll
     header.BackgroundTransparency = 1
@@ -856,6 +835,8 @@ registerRight("Home", function(scroll)
     header.TextColor3 = THEME.WHITE
     header.TextXAlignment = Enum.TextXAlignment.Left
     header.Text = "Move Location 📍"
+
+    local moveEnabled = SaveGet("MoveEnabled", false)
 
     local row = Instance.new("Frame")
     row.Parent = scroll
@@ -891,6 +872,12 @@ registerRight("Home", function(scroll)
     knob.Position = UDim2.new(moveEnabled and 1 or 0, moveEnabled and -24 or 2, 0.5, -11)
     corner(knob, 11)
 
+    local function updateUI(on)
+        swStroke.Color = on and THEME.GREEN or THEME.RED
+        TweenService:Create(knob, TweenInfo.new(0.08), {Position = UDim2.new(on and 1 or 0, on and -24 or 2, 0.5, -11)}):Play()
+        sideFrame.Visible = on
+    end
+
     local btn = Instance.new("TextButton")
     btn.Parent = sw
     btn.BackgroundTransparency = 1
@@ -899,8 +886,6 @@ registerRight("Home", function(scroll)
     btn.MouseButton1Click:Connect(function()
         moveEnabled = not moveEnabled
         SaveSet("MoveEnabled", moveEnabled)
-        swStroke.Color = moveEnabled and THEME.GREEN or THEME.RED
-        TweenService:Create(knob, TweenInfo.new(0.08), {Position = UDim2.new(moveEnabled and 1 or 0, moveEnabled and -24 or 2, 0.5, -11)}):Play()
         updateUI(moveEnabled)
     end)
 
