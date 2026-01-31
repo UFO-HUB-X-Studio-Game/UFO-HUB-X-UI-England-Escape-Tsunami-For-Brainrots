@@ -691,7 +691,7 @@ end)
 
 registerRight("Home", function(scroll) end)
 registerRight("Settings", function(scroll) end)
---===== UFO HUB X • Move System (Model A V1 + AA1) – ULTIMATE DRAG EDITION (100%) =====
+--===== UFO HUB X • Move System (Model A V1 + AA1 + AAA2 Combo) – 100% Full Edition =====
 
 registerRight("Home", function(scroll)
     local TweenService = game:GetService("TweenService")
@@ -701,9 +701,9 @@ registerRight("Home", function(scroll)
     local LocalPlayer = Players.LocalPlayer
 
     ------------------------------------------------------------------------
-    -- AA1 SAVE SYSTEM (ระบบบันทึกข้อมูล)
+    -- AA1 SAVE SYSTEM (ระบบบันทึกข้อมูลถาวร)
     ------------------------------------------------------------------------
-    local SYSTEM_NAME = "MoveSystem"
+    local SYSTEM_NAME = "MoveSystem_V5"
     local SAVE = (getgenv and getgenv().UFOX_SAVE) or {
         get = function(_, _, d) return d end,
         set = function() end
@@ -714,7 +714,7 @@ registerRight("Home", function(scroll)
     local function SaveSet(f, v) pcall(function() SAVE.set(K(f), v) end) end
 
     ------------------------------------------------------------------------
-    -- THEME & HELPERS
+    -- THEME & HELPERS (Model A V1 Style)
     ------------------------------------------------------------------------
     local THEME = {
         GREEN  = Color3.fromRGB(25, 255, 140),
@@ -723,6 +723,8 @@ registerRight("Home", function(scroll)
         YELLOW = Color3.fromRGB(255, 220, 0),
         WHITE  = Color3.fromRGB(255, 255, 255),
         BLACK  = Color3.fromRGB(0, 0, 0),
+        GREY   = Color3.fromRGB(180, 180, 185),
+        DARK   = Color3.fromRGB(30, 30, 30)
     }
 
     local function corner(ui, r)
@@ -741,10 +743,11 @@ registerRight("Home", function(scroll)
     end
 
     ------------------------------------------------------------------------
-    -- NOCLIP & FLY LOGIC
+    -- FLY & NOCLIP LOGIC
     ------------------------------------------------------------------------
     local isFlying = false
     local noclipConn = nil
+    local flySpeedMult = SaveGet("FlySpeedMult", 1.0) -- ค่าความไวจาก Slider
 
     local function stopNoclip()
         if noclipConn then noclipConn:Disconnect(); noclipConn = nil end
@@ -782,7 +785,9 @@ registerRight("Home", function(scroll)
         if hrp then
             isFlying = true
             startNoclip()
-            local duration = (hrp.Position - pos).Magnitude / 100
+            -- คำนวณความเร็วโดยเอา FlySpeedMult มาหาร (ยิ่งค่ามาก ยิ่งบินเร็ว)
+            local baseSpeed = 100 * math.max(0.1, flySpeedMult)
+            local duration = (hrp.Position - pos).Magnitude / baseSpeed
             local tw = TweenService:Create(hrp, TweenInfo.new(duration, Enum.EasingStyle.Linear), {CFrame = CFrame.new(pos)})
             tw:Play()
             tw.Completed:Connect(function()
@@ -795,243 +800,235 @@ registerRight("Home", function(scroll)
     ------------------------------------------------------------------------
     -- EXTERNAL UI (Vertical & Drag System)
     ------------------------------------------------------------------------
-    local oldControl = LocalPlayer.PlayerGui:FindFirstChild("UFO_Move_Control_V4")
+    local oldControl = LocalPlayer.PlayerGui:FindFirstChild("UFO_Move_Control_V5")
     if oldControl then oldControl:Destroy() end
 
     local sg = Instance.new("ScreenGui")
-    sg.Name = "UFO_Move_Control_V4"
+    sg.Name = "UFO_Move_Control_V5"
     sg.Parent = LocalPlayer.PlayerGui
     sg.ResetOnSpawn = false
 
-    -- Container หลักที่จะให้ลากไปมาได้
     local mainFrame = Instance.new("Frame")
     mainFrame.Name = "MainDragContainer"
     mainFrame.Parent = sg
-    mainFrame.Size = UDim2.new(0, 150, 0, 240)
-    mainFrame.Position = UDim2.new(0, 30, 0.5, -120)
+    mainFrame.Size = UDim2.new(0, 150, 0, 300)
+    mainFrame.Position = UDim2.new(0, 30, 0.5, -150)
     mainFrame.BackgroundTransparency = 1
     mainFrame.Visible = false
 
-    -- ปุ่มแดง (บน)
-    local btnRed = Instance.new("TextButton")
-    btnRed.Name = "Btn_Red"
-    btnRed.Parent = mainFrame
-    btnRed.Size = UDim2.new(0, 60, 0, 60)
-    btnRed.Position = UDim2.new(0, 0, 0, 0)
-    btnRed.BackgroundColor3 = THEME.BLACK
-    btnRed.TextColor3 = THEME.WHITE
-    btnRed.Font = Enum.Font.GothamBold
-    btnRed.TextSize = 28
-    btnRed.Text = "⬆️"
-    corner(btnRed, 15)
-    stroke(btnRed, 3.2, THEME.RED)
+    local btnSize = SaveGet("GlobalBtnSize", 60)
 
-    -- ปุ่มเขียว (กลาง)
-    local btnGreen = Instance.new("TextButton")
-    btnGreen.Name = "Btn_Green"
-    btnGreen.Parent = mainFrame
-    btnGreen.Size = UDim2.new(0, 60, 0, 60)
-    btnGreen.Position = UDim2.new(0, 0, 0, 75)
-    btnGreen.BackgroundColor3 = THEME.BLACK
-    btnGreen.TextColor3 = THEME.WHITE
-    btnGreen.Font = Enum.Font.GothamBold
-    btnGreen.TextSize = 28
-    btnGreen.Text = "0"
-    corner(btnGreen, 15)
-    stroke(btnGreen, 3.2, THEME.GREEN)
-
-    -- ปุ่มสีเหลือง (อยู่ข้างขวาปุ่มเขียว ตามรูปเป๊ะ)
-    local btnYellow = Instance.new("TextButton")
-    btnYellow.Name = "Btn_Yellow"
-    btnYellow.Parent = mainFrame
-    btnYellow.Size = UDim2.new(0, 60, 0, 60)
-    btnYellow.Position = UDim2.new(0, 75, 0, 75) -- เลื่อนมาทางขวา 75px
-    btnYellow.BackgroundColor3 = THEME.BLACK
-    btnYellow.TextColor3 = THEME.WHITE
-    btnYellow.Font = Enum.Font.GothamBold
-    btnYellow.TextSize = 28
-    btnYellow.Text = "⚙️"
-    corner(btnYellow, 15)
-    stroke(btnYellow, 3.2, THEME.YELLOW)
-
-    -- ปุ่มฟ้า (ล่าง)
-    local btnBlue = Instance.new("TextButton")
-    btnBlue.Name = "Btn_Blue"
-    btnBlue.Parent = mainFrame
-    btnBlue.Size = UDim2.new(0, 60, 0, 60)
-    btnBlue.Position = UDim2.new(0, 0, 0, 150)
-    btnBlue.BackgroundColor3 = THEME.BLACK
-    btnBlue.TextColor3 = THEME.WHITE
-    btnBlue.Font = Enum.Font.GothamBold
-    btnBlue.TextSize = 28
-    btnBlue.Text = "⬇️"
-    corner(btnBlue, 15)
-    stroke(btnBlue, 3.2, THEME.BLUE)
-
-    ------------------------------------------------------------------------
-    -- ADVANCED DRAG LOGIC (ลากได้ทุกปุ่มเมื่อเข้าโหมด)
-    ------------------------------------------------------------------------
-    local editMode = false
-    local dragging = false
-    local dragInput, dragStart, startPos
-
-    local function updateDrag(input)
-        local delta = input.Position - dragStart
-        mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    local function createControlBtn(name, text, color, pos)
+        local b = Instance.new("TextButton")
+        b.Name = name
+        b.Parent = mainFrame
+        b.Size = UDim2.new(0, btnSize, 0, btnSize)
+        b.Position = pos
+        b.BackgroundColor3 = THEME.BLACK
+        b.TextColor3 = THEME.WHITE
+        b.Font = Enum.Font.GothamBold
+        b.TextSize = btnSize * 0.45
+        b.Text = text
+        corner(b, 15)
+        stroke(b, 3.2, color)
+        return b
     end
+
+    local btnRed = createControlBtn("Btn_Red", "⬆️", THEME.RED, UDim2.new(0, 0, 0, 0))
+    local btnGreen = createControlBtn("Btn_Green", "0", THEME.GREEN, UDim2.new(0, 0, 0, btnSize + 15))
+    local btnYellow = createControlBtn("Btn_Yellow", "⚙️", THEME.YELLOW, UDim2.new(0, btnSize + 15, 0, btnSize + 15))
+    local btnBlue = createControlBtn("Btn_Blue", "⬇️", THEME.BLUE, UDim2.new(0, 0, 0, (btnSize + 15) * 2))
+
+    local function updateButtonsSize(newSize)
+        btnSize = newSize
+        local btns = {
+            {btnRed, UDim2.new(0, 0, 0, 0)},
+            {btnGreen, UDim2.new(0, 0, 0, btnSize + 15)},
+            {btnYellow, UDim2.new(0, btnSize + 15, 0, btnSize + 15)},
+            {btnBlue, UDim2.new(0, 0, 0, (btnSize + 15) * 2)}
+        }
+        for _, data in pairs(btns) do
+            data[1].Size = UDim2.new(0, btnSize, 0, btnSize)
+            data[1].Position = data[2]
+            data[1].TextSize = btnSize * 0.45
+        end
+    end
+
+    ------------------------------------------------------------------------
+    -- DRAG LOGIC (ย้ายตำแหน่ง)
+    ------------------------------------------------------------------------
+    local editMode, dragging = false, false
+    local dragInput, dragStart, startPos
 
     local function setupButtonDrag(button)
         button.InputBegan:Connect(function(input)
             if editMode and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
-                dragging = true
-                dragStart = input.Position
-                startPos = mainFrame.Position
-                
-                input.Changed:Connect(function()
-                    if input.UserInputState == Enum.UserInputState.End then
-                        dragging = false
-                    end
-                end)
+                dragging = true; dragStart = input.Position; startPos = mainFrame.Position
+                input.Changed:Connect(function() if input.UserInputState == Enum.UserInputState.End then dragging = false end end)
             end
         end)
-
         button.InputChanged:Connect(function(input)
-            if editMode and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-                dragInput = input
-            end
+            if editMode and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then dragInput = input end
         end)
     end
 
-    -- ใส่ระบบลากให้ทุกปุ่ม
-    setupButtonDrag(btnRed)
-    setupButtonDrag(btnGreen)
-    setupButtonDrag(btnBlue)
-    setupButtonDrag(btnYellow)
+    setupButtonDrag(btnRed); setupButtonDrag(btnGreen); setupButtonDrag(btnBlue); setupButtonDrag(btnYellow)
 
     UserInputService.InputChanged:Connect(function(input)
         if input == dragInput and dragging then
-            updateDrag(input)
+            local delta = input.Position - dragStart
+            mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
         end
     end)
 
-    -- สลับโหมดแก้ไข
     btnYellow.MouseButton1Click:Connect(function()
         editMode = not editMode
-        if editMode then
-            btnYellow.Text = "❌"
-            btnYellow.BackgroundColor3 = Color3.fromRGB(60, 0, 0)
-            -- แจ้งเตือนผู้ใช้เล็กน้อยว่าลากได้แล้ว
-        else
-            btnYellow.Text = "⚙️"
-            btnYellow.BackgroundColor3 = THEME.BLACK
-        end
+        btnYellow.Text = editMode and "❌" or "⚙️"
+        btnYellow.BackgroundColor3 = editMode and Color3.fromRGB(60, 0, 0) or THEME.BLACK
     end)
 
-    ------------------------------------------------------------------------
-    -- BUTTON ACTIONS
-    ------------------------------------------------------------------------
     btnRed.MouseButton1Click:Connect(function()
         if not isFlying and not editMode and currentIdx < 9 then
-            currentIdx = currentIdx + 1
-            btnGreen.Text = tostring(currentIdx)
-            flyTo(Positions[currentIdx])
+            currentIdx = currentIdx + 1; btnGreen.Text = tostring(currentIdx); flyTo(Positions[currentIdx])
         end
     end)
 
     btnBlue.MouseButton1Click:Connect(function()
         if not isFlying and not editMode and currentIdx > 0 then
-            currentIdx = currentIdx - 1
-            btnGreen.Text = tostring(currentIdx)
-            if currentIdx ~= 0 then 
-                flyTo(Positions[currentIdx]) 
-            end
+            currentIdx = currentIdx - 1; btnGreen.Text = tostring(currentIdx)
+            if currentIdx ~= 0 then flyTo(Positions[currentIdx]) end
         end
     end)
 
     ------------------------------------------------------------------------
-    -- DEATH RESET
+    -- MODEL AAA2 SLIDER COMPONENT (สร้างฟังก์ชันเพื่อใช้ซ้ำได้)
     ------------------------------------------------------------------------
-    local function onCharacter(char)
-        local hum = char:WaitForChild("Humanoid", 10)
-        if hum then
-            hum.Died:Connect(function()
-                currentIdx = 0
-                btnGreen.Text = "0"
-                isFlying = false
-                stopNoclip()
-            end)
+    local function createAAA2Slider(parent, title, defaultRel, callback)
+        local currentRel = defaultRel
+        local visRel = defaultRel
+        local sliderDragging = false
+        local sliderMaybeDrag = false
+        local sliderDownX
+        
+        local row = Instance.new("Frame", parent)
+        row.Size = UDim2.new(1, -6, 0, 70); row.BackgroundColor3 = THEME.BLACK; corner(row, 12); stroke(row, 2.2, THEME.GREEN)
+        
+        local label = Instance.new("TextLabel", row)
+        label.BackgroundTransparency = 1; label.Position = UDim2.new(0, 16, 0, 4); label.Size = UDim2.new(1, -32, 0, 24)
+        label.Font = Enum.Font.GothamBold; label.TextSize = 13; label.TextColor3 = THEME.WHITE
+        label.TextXAlignment = Enum.TextXAlignment.Left; label.Text = title
+
+        local bar = Instance.new("Frame", row)
+        bar.Position = UDim2.new(0, 16, 0, 34); bar.Size = UDim2.new(1, -32, 0, 16); bar.BackgroundColor3 = THEME.BLACK
+        corner(bar, 8); stroke(bar, 1.8, THEME.GREEN); bar.Active = true
+
+        local fill = Instance.new("Frame", bar)
+        fill.BackgroundColor3 = THEME.GREEN; corner(fill, 8); fill.Size = UDim2.fromScale(currentRel, 1)
+
+        local knobBtn = Instance.new("ImageButton", bar)
+        knobBtn.AutoButtonColor = false; knobBtn.BackgroundColor3 = THEME.GREY; knobBtn.Size = UDim2.fromOffset(16, 32)
+        knobBtn.AnchorPoint = Vector2.new(0.5, 0.5); knobBtn.Position = UDim2.new(currentRel, 0, 0.5, 0); knobBtn.ZIndex = 3
+        local kStroke = Instance.new("UIStroke", knobBtn); kStroke.Thickness = 1.2; kStroke.Color = Color3.fromRGB(210,210,215)
+        local kGrad = Instance.new("UIGradient", knobBtn); kGrad.Rotation = 90
+        kGrad.Color = ColorSequence.new{ColorSequenceKeypoint.new(0, Color3.fromRGB(236,236,240)), ColorSequenceKeypoint.new(0.5, Color3.fromRGB(182,182,188)), ColorSequenceKeypoint.new(1, Color3.fromRGB(216,216,222))}
+
+        local centerVal = Instance.new("TextLabel", bar)
+        centerVal.BackgroundTransparency = 1; centerVal.Size = UDim2.fromScale(1,1); centerVal.Font = Enum.Font.GothamBlack
+        centerVal.TextSize = 16; centerVal.TextColor3 = THEME.WHITE; centerVal.Text = math.floor(currentRel * 100).."%"
+
+        local function syncVisual(instant)
+            visRel = instant and currentRel or (visRel + (currentRel - visRel) * 0.3)
+            fill.Size = UDim2.fromScale(math.clamp(visRel, 0, 1), 1)
+            knobBtn.Position = UDim2.new(math.clamp(visRel, 0, 1), 0, 0.5, 0)
+            centerVal.Text = string.format("%d%%", math.floor(currentRel * 100 + 0.5))
         end
+
+        local function updateValue(inputX)
+            local rel = math.clamp((inputX - bar.AbsolutePosition.X) / bar.AbsoluteSize.X, 0, 1)
+            currentRel = rel
+            callback(currentRel)
+            if not sliderDragging then syncVisual(true) end
+        end
+
+        bar.InputBegan:Connect(function(io)
+            if io.UserInputType == Enum.UserInputType.MouseButton1 or io.UserInputType == Enum.UserInputType.Touch then
+                sliderMaybeDrag = true; sliderDownX = io.Position.X; scroll.ScrollingEnabled = false; updateValue(io.Position.X)
+            end
+        end)
+        
+        knobBtn.InputBegan:Connect(function(io)
+            if io.UserInputType == Enum.UserInputType.MouseButton1 or io.UserInputType == Enum.UserInputType.Touch then
+                sliderMaybeDrag = true; sliderDownX = io.Position.X; scroll.ScrollingEnabled = false
+            end
+        end)
+
+        UserInputService.InputChanged:Connect(function(io)
+            if sliderMaybeDrag and (io.UserInputType == Enum.UserInputType.MouseMovement or io.UserInputType == Enum.UserInputType.Touch) then
+                if math.abs(io.Position.X - sliderDownX) > 5 then sliderDragging = true end
+                if sliderDragging then updateValue(io.Position.X) end
+            end
+        end)
+
+        UserInputService.InputEnded:Connect(function(io)
+            if io.UserInputType == Enum.UserInputType.MouseButton1 or io.UserInputType == Enum.UserInputType.Touch then
+                sliderDragging = false; sliderMaybeDrag = false; scroll.ScrollingEnabled = true
+            end
+        end)
+
+        RunService.RenderStepped:Connect(function() syncVisual(false) end)
+        return row
     end
-    LocalPlayer.CharacterAdded:Connect(onCharacter)
-    if LocalPlayer.Character then onCharacter(LocalPlayer.Character) end
 
     ------------------------------------------------------------------------
-    -- MAIN HUB UI (Model A V1)
+    -- MAIN HUB UI CONSTRUCTION
     ------------------------------------------------------------------------
-    local header = Instance.new("TextLabel")
-    header.Parent = scroll
-    header.Size = UDim2.new(1, 0, 0, 36)
-    header.BackgroundTransparency = 1
-    header.Font = Enum.Font.GothamBold
-    header.TextSize = 16
-    header.TextColor3 = THEME.WHITE
-    header.TextXAlignment = Enum.TextXAlignment.Left
+    local header = Instance.new("TextLabel", scroll)
+    header.Size = UDim2.new(1, 0, 0, 36); header.BackgroundTransparency = 1; header.Font = Enum.Font.GothamBold
+    header.TextSize = 16; header.TextColor3 = THEME.WHITE; header.TextXAlignment = Enum.TextXAlignment.Left
     header.Text = "》》》Move System 📍《《《"
-    header.LayoutOrder = 1
 
-    local row = Instance.new("Frame")
-    row.Parent = scroll
-    row.Size = UDim2.new(1, -6, 0, 46)
-    row.BackgroundColor3 = THEME.BLACK
-    row.LayoutOrder = 2
-    corner(row, 12)
-    stroke(row, 2.2, THEME.GREEN)
+    -- รายการที่ 1: Enable Move Position
+    local row1 = Instance.new("Frame", scroll)
+    row1.Size = UDim2.new(1, -6, 0, 46); row1.BackgroundColor3 = THEME.BLACK; corner(row1, 12); stroke(row1, 2.2, THEME.GREEN)
+    local lab1 = Instance.new("TextLabel", row1)
+    lab1.Size = UDim2.new(1, -160, 1, 0); lab1.Position = UDim2.new(0, 16, 0, 0); lab1.BackgroundTransparency = 1
+    lab1.Font = Enum.Font.GothamBold; lab1.TextSize = 13; lab1.TextColor3 = THEME.WHITE
+    lab1.Text = "Enable Move Position"; lab1.TextXAlignment = Enum.TextXAlignment.Left
 
-    local lab = Instance.new("TextLabel")
-    lab.Parent = row
-    lab.Size = UDim2.new(1, -160, 1, 0)
-    lab.Position = UDim2.new(0, 16, 0, 0)
-    lab.BackgroundTransparency = 1
-    lab.Font = Enum.Font.GothamBold
-    lab.TextSize = 13
-    lab.TextColor3 = THEME.WHITE
-    lab.Text = "Enable Move Position"
-    lab.TextXAlignment = Enum.TextXAlignment.Left
-
-    local sw = Instance.new("Frame")
-    sw.Parent = row
-    sw.Size = UDim2.fromOffset(52, 26)
-    sw.Position = UDim2.new(1, -12, 0.5, 0)
-    sw.AnchorPoint = Vector2.new(1, 0.5)
-    sw.BackgroundColor3 = THEME.BLACK
-    corner(sw, 13)
+    local sw = Instance.new("Frame", row1)
+    sw.Size = UDim2.fromOffset(52, 26); sw.Position = UDim2.new(1, -12, 0.5, 0); sw.AnchorPoint = Vector2.new(1, 0.5); sw.BackgroundColor3 = THEME.BLACK; corner(sw, 13)
     local swStroke = stroke(sw, 1.8, SaveGet("MoveEnabled", false) and THEME.GREEN or THEME.RED)
-    
-    local knob = Instance.new("Frame")
-    knob.Parent = sw
-    knob.Size = UDim2.fromOffset(22, 22)
-    knob.BackgroundColor3 = THEME.WHITE
+    local knob = Instance.new("Frame", sw)
+    knob.Size = UDim2.fromOffset(22, 22); knob.BackgroundColor3 = THEME.WHITE; corner(knob, 11)
     knob.Position = SaveGet("MoveEnabled", false) and UDim2.new(1, -24, 0.5, -11) or UDim2.new(0, 2, 0.5, -11)
-    corner(knob, 11)
 
-    local function updateUI(on)
+    local function updateSwitch(on)
         swStroke.Color = on and THEME.GREEN or THEME.RED
         TweenService:Create(knob, TweenInfo.new(0.1), {Position = on and UDim2.new(1, -24, 0.5, -11) or UDim2.new(0, 2, 0.5, -11)}):Play()
         mainFrame.Visible = on
     end
-
-    local mainBtn = Instance.new("TextButton")
-    mainBtn.Parent = sw
-    mainBtn.Size = UDim2.fromScale(1, 1)
-    mainBtn.BackgroundTransparency = 1
-    mainBtn.Text = ""
-    mainBtn.MouseButton1Click:Connect(function()
-        local newState = not mainFrame.Visible
-        SaveSet("MoveEnabled", newState)
-        updateUI(newState)
+    Instance.new("TextButton", sw).Size = UDim2.fromScale(1,1).BackgroundTransparency = 1 .MouseButton1Click:Connect(function()
+        local newState = not mainFrame.Visible; SaveSet("MoveEnabled", newState); updateSwitch(newState)
     end)
 
-    updateUI(SaveGet("MoveEnabled", false))
+    -- รายการที่ 2: Adjust Fly Sensitivity (Model AAA2)
+    createAAA2Slider(scroll, "Fly Speed Sensitivity", (flySpeedMult - 0.1) / 1.9, function(rel)
+        flySpeedMult = 0.1 + (rel * 1.9) -- ช่วง 0.1 ถึง 2.0
+        SaveSet("FlySpeedMult", flySpeedMult)
+    end)
+
+    -- รายการที่ 3: Button Scale Size (Model AAA2)
+    createAAA2Slider(scroll, "Button Scale Size", (btnSize - 40) / 60, function(rel)
+        local newSize = 40 + (rel * 60) -- ช่วง 40px ถึง 100px
+        updateButtonsSize(newSize)
+        SaveSet("GlobalBtnSize", newSize)
+    end)
+
+    -- Init
+    updateSwitch(SaveGet("MoveEnabled", false))
+    LocalPlayer.CharacterAdded:Connect(function(c) 
+        c:WaitForChild("Humanoid").Died:Connect(function() currentIdx = 0; btnGreen.Text = "0"; isFlying = false; stopNoclip() end) 
+    end)
 end)
 --===== UFO HUB X • SETTINGS — Smoother 🚀 (A V1 • fixed 3 rows) + Runner Save (per-map) + AA1 =====
 registerRight("Settings", function(scroll)
