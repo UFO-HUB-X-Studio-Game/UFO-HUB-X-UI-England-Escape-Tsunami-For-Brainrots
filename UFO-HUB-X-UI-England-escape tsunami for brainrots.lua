@@ -691,7 +691,7 @@ end)
 
 registerRight("Home", function(scroll) end)
 registerRight("Settings", function(scroll) end)
---===== UFO HUB X • Camera System (Model A V1) =====
+--===== UFO HUB X • Camera System (Model A V1 - NEON FIXED) =====
 -- Feature: Unlock Camera Zoom Distance
 
 registerRight("Home", function(scroll)
@@ -759,7 +759,7 @@ registerRight("Home", function(scroll)
     row1.Size = UDim2.new(1, -6, 0, 46)
     row1.BackgroundColor3 = THEME.BLACK
     corner(row1)
-    -- ปรับขอบรายการให้เป็นสีเขียวเรืองแสงปกติ ไม่เปลี่ยนเป็นสีแดง
+    -- แก้ไข: ปรับขอบเมนูให้เป็นสีเขียวเรืองแสงตลอดเวลา (เหมือน Model A V1)
     stroke(row1, 2.2, THEME.NEON_GREEN) 
 
     local lab1 = Instance.new("TextLabel", row1)
@@ -772,14 +772,14 @@ registerRight("Home", function(scroll)
     lab1.Text = "Unlock Camera Distance" 
     lab1.TextXAlignment = Enum.TextXAlignment.Left
 
-    -- Switch UI (เฉพาะส่วนนี้ที่จะเปลี่ยนสีแดง/เขียว)
+    -- Switch UI (สวิตซ์เปิด-ปิด)
     local sw = Instance.new("Frame", row1)
     sw.Size = UDim2.fromOffset(52, 26)
     sw.Position = UDim2.new(1, -12, 0.5, 0)
     sw.AnchorPoint = Vector2.new(1, 0.5)
     sw.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
     corner(sw, 13)
-    local swStroke = stroke(sw, 1.8, THEME.RED) -- สวิตซ์เริ่มต้นเป็นสีแดง
+    local swStroke = stroke(sw, 1.8, THEME.RED) -- ขอบสวิตซ์เริ่มที่สีแดง
 
     local knob = Instance.new("Frame", sw)
     knob.Size = UDim2.fromOffset(22, 22)
@@ -796,7 +796,7 @@ registerRight("Home", function(scroll)
         cameraUnlocked = not cameraUnlocked
         toggleCamera(cameraUnlocked)
         
-        -- อัปเดตเฉพาะสีของ Switch
+        -- อัปเดตเฉพาะสีของสวิตซ์และตำแหน่งปุ่ม
         local targetColor = cameraUnlocked and THEME.NEON_GREEN or THEME.RED
         local targetPos = cameraUnlocked and UDim2.new(1, -24, 0.5, -11) or UDim2.new(0, 2, 0.5, -11)
         
