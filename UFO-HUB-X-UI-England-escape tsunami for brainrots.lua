@@ -977,7 +977,7 @@ registerRight("Home", function(scroll)
 end)
 --===== UFO HUB X • Move System (AAA1 + AA1 + AAA2 COMBO) – FULL NEON EDITION =====
 -- Target Map: Escape the tsunami and head to Brainrots
--- Fix: Force Reset to 0 even if Immortal is ON (ตรวจจับการเกิดใหม่โดยตรง)
+-- Feature: Added Out of Map (Emoji 🚀) - Position X=155.465, Y=3.258, Z=-122.514
 -- LayoutOrder: 0
 
 registerRight("Home", function(scroll)
@@ -1029,6 +1029,7 @@ registerRight("Home", function(scroll)
         NEON_GREEN = Color3.fromRGB(50, 255, 50),
         RED    = Color3.fromRGB(255, 40, 40),
         BLUE   = Color3.fromRGB(0, 170, 255),
+        PURPLE = Color3.fromRGB(180, 50, 255),
         YELLOW = Color3.fromRGB(255, 220, 0),
         WHITE  = Color3.fromRGB(255, 255, 255),
         BLACK  = Color3.fromRGB(0, 0, 0),
@@ -1050,7 +1051,7 @@ registerRight("Home", function(scroll)
     end
 
     ------------------------------------------------------------------------
-    -- FLY & NOCLIP LOGIC (AAA1 RE-INTEGRATED)
+    -- FLY & NOCLIP LOGIC
     ------------------------------------------------------------------------
     local isFlying = false
     local noclipConn = nil
@@ -1103,13 +1104,13 @@ registerRight("Home", function(scroll)
     end
 
     ------------------------------------------------------------------------
-    -- EXTERNAL UI
+    -- EXTERNAL UI (Control Buttons)
     ------------------------------------------------------------------------
-    local oldControl = LocalPlayer.PlayerGui:FindFirstChild("UFO_Move_Control_V9")
+    local oldControl = LocalPlayer.PlayerGui:FindFirstChild("UFO_Move_Control_V10")
     if oldControl then oldControl:Destroy() end
 
     local sg = Instance.new("ScreenGui", LocalPlayer.PlayerGui)
-    sg.Name = "UFO_Move_Control_V9"
+    sg.Name = "UFO_Move_Control_V10"
     sg.ResetOnSpawn = false
 
     local mainFrame = Instance.new("Frame", sg)
@@ -1135,39 +1136,48 @@ registerRight("Home", function(scroll)
         return b
     end
 
-    local btnRed = createBtn("Btn_Red", "⬆️", UDim2.new(0, 0, 0, 0))
-    local btnGreen = createBtn("Btn_Green", "0", UDim2.new(0, 0, 0, config.BtnSize + 15))
+    -- ตำแหน่งปุ่มต่างๆ
+    local btnRed    = createBtn("Btn_Red", "⬆️", UDim2.new(0, 0, 0, 0))
+    local btnWarp   = createBtn("Btn_Warp", "🔄", UDim2.new(0, -(config.BtnSize + 15), 0, config.BtnSize + 15)) -- ปุ่มที่ 5 (Out of Map)
+    local btnGreen  = createBtn("Btn_Green", "0", UDim2.new(0, 0, 0, config.BtnSize + 15))
     local btnYellow = createBtn("Btn_Yellow", "⚙️", UDim2.new(0, config.BtnSize + 15, 0, config.BtnSize + 15))
-    local btnBlue = createBtn("Btn_Blue", "⬇️", UDim2.new(0, 0, 0, (config.BtnSize + 15) * 2))
+    local btnBlue   = createBtn("Btn_Blue", "⬇️", UDim2.new(0, 0, 0, (config.BtnSize + 15) * 2))
 
     local function refreshUI()
-        btnRed.Size = UDim2.new(0, config.BtnSize, 0, config.BtnSize)
-        btnGreen.Size = UDim2.new(0, config.BtnSize, 0, config.BtnSize)
-        btnGreen.Position = UDim2.new(0, 0, 0, config.BtnSize + 15)
-        btnYellow.Size = UDim2.new(0, config.BtnSize, 0, config.BtnSize)
-        btnYellow.Position = UDim2.new(0, config.BtnSize + 15, 0, config.BtnSize + 15)
-        btnBlue.Size = UDim2.new(0, config.BtnSize, 0, config.BtnSize)
-        btnBlue.Position = UDim2.new(0, 0, 0, (config.BtnSize + 15) * 2)
-        btnRed.TextSize, btnGreen.TextSize, btnYellow.TextSize, btnBlue.TextSize = config.BtnSize*0.45, config.BtnSize*0.45, config.BtnSize*0.45, config.BtnSize*0.45
+        local s = config.BtnSize
+        local p = 15
+        btnRed.Size, btnWarp.Size, btnGreen.Size, btnYellow.Size, btnBlue.Size = UDim2.fromOffset(s,s), UDim2.fromOffset(s,s), UDim2.fromOffset(s,s), UDim2.fromOffset(s,s), UDim2.fromOffset(s,s)
+        
+        btnRed.Position    = UDim2.new(0, 0, 0, 0)
+        btnWarp.Position   = UDim2.new(0, -(s + p), 0, s + p)
+        btnGreen.Position  = UDim2.new(0, 0, 0, s + p)
+        btnYellow.Position = UDim2.new(0, s + p, 0, s + p)
+        btnBlue.Position   = UDim2.new(0, 0, 0, (s + p) * 2)
+
+        local ts = s * 0.45
+        btnRed.TextSize, btnWarp.TextSize, btnGreen.TextSize, btnYellow.TextSize, btnBlue.TextSize = ts, ts, ts, ts, ts
     end
 
-    -- ระบบ Reset ใหม่: ตรวจจับเมื่อตัวละคร "ใหม่" ถูกโหลดเข้ามา (ใช้แก้ปัญหาเปิดอมตะแล้วเลขไม่รี)
-    LocalPlayer.CharacterAdded:Connect(function(char)
+    local function resetToZero()
         currentIdx = 0
         btnGreen.Text = "0"
         isFlying = false
         stopNoclip()
-        
-        -- เผื่อไว้กรณีตายธรรมดา
-        local hum = char:WaitForChild("Humanoid", 10)
-        if hum then
-            hum.Died:Connect(function()
-                currentIdx = 0
-                btnGreen.Text = "0"
-                isFlying = false
-                stopNoclip()
-            end)
+    end
+
+    -- ระบบ Out of Map (วาร์ปไปตำแหน่ง X=155.465, Y=3.258, Z=-122.514 ทันที)
+    btnWarp.MouseButton1Click:Connect(function()
+        if editMode then return end
+        local char = LocalPlayer.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        if hrp then
+            hrp.CFrame = CFrame.new(155.465, 3.258, -122.514)
+            resetToZero() 
         end
+    end)
+
+    LocalPlayer.CharacterAdded:Connect(function()
+        resetToZero()
     end)
 
     local editMode, dragging, dragStart, startPos = false, false, nil, nil
@@ -1185,7 +1195,7 @@ registerRight("Home", function(scroll)
             end
         end)
     end
-    makeDraggable(btnRed); makeDraggable(btnGreen); makeDraggable(btnBlue); makeDraggable(btnYellow)
+    makeDraggable(btnRed); makeDraggable(btnWarp); makeDraggable(btnGreen); makeDraggable(btnBlue); makeDraggable(btnYellow)
 
     UserInputService.InputChanged:Connect(function(input)
         if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
@@ -1209,7 +1219,7 @@ registerRight("Home", function(scroll)
     btnBlue.MouseButton1Click:Connect(function()
         if not isFlying and not editMode and currentIdx > 0 then
             currentIdx = currentIdx - 1; btnGreen.Text = tostring(currentIdx)
-            if currentIdx ~= 0 then flyTo(Positions[currentIdx]) end
+            if currentIdx ~= 0 then flyTo(Positions[currentIdx]) else stopNoclip() end
         end
     end)
 
@@ -1292,7 +1302,7 @@ registerRight("Home", function(scroll)
     header.LayoutOrder = 0 
     header.Size = UDim2.new(1, 0, 0, 36); header.BackgroundTransparency = 1; header.Font = Enum.Font.GothamBold
     header.TextSize = 16; header.TextColor3 = THEME.WHITE; header.TextXAlignment = Enum.TextXAlignment.Left
-    header.Text = "》》》 Move System 📍《《《"
+    header.Text = "》》》Move System 📍《《《"
 
     local row1 = Instance.new("Frame", scroll)
     row1.LayoutOrder = 0 
