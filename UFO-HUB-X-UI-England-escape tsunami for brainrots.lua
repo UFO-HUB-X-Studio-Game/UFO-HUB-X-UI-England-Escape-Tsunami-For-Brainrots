@@ -691,7 +691,7 @@ end)
 
 registerRight("Home", function(scroll) end)
 registerRight("Settings", function(scroll) end)
---===== UFO HUB X • Immortal System (Model A V1 - ORDER 0) =====
+--===== UFO HUB X • Immortal System (Model A V1 - LAYOUT ORDER 0 ALL) =====
 -- Feature: 999 Trillion Health + Real-time Re-fill + Damage Protection
 -- UI Model: A V1 (Green Glow Border / Dynamic Switch)
 
@@ -759,18 +759,14 @@ registerRight("Home", function(scroll)
                 local char = LocalPlayer.Character
                 local hum = char and char:FindFirstChildOfClass("Humanoid")
                 if hum then
-                    -- ล็อคเลือดมหาศาลและเติมให้เต็มตลอดเวลา [cite: 2026-01-31]
                     hum.MaxHealth = SUPREME_HEALTH
                     hum.Health = SUPREME_HEALTH
-                    -- ปิดสถานะการตายเพื่อกันระบบลบตัวละคร [cite: 2026-01-31]
                     hum:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
-                    -- ป้องกันดาเมจทุกอย่างด้วยเกราะล่องหน [cite: 2026-01-31]
                     if not char:FindFirstChildOfClass("ForceField") then
                         Instance.new("ForceField", char).Visible = false
                     end
                 end
                 
-                -- ปิดหน้าจอแดงกระพริบ [cite: 2026-01-31]
                 local gui = LocalPlayer:FindFirstChild("PlayerGui")
                 if gui then
                     local b1, b2 = gui:FindFirstChild("BloodGui"), gui:FindFirstChild("HealthGui")
@@ -795,9 +791,8 @@ registerRight("Home", function(scroll)
     ------------------------------------------------------------------------
     -- UI CONSTRUCTION (Model A V1 - LAYOUT ORDER 0)
     ------------------------------------------------------------------------
-    -- ปรับ LayoutOrder เป็น 0 ตามที่สั่ง [cite: 2026-01-31]
-    local FIXED_ORDER = 0 
-
+    -- ปรับ LayoutOrder ทุกอย่างเป็น 0 ตามคำสั่ง [cite: 2026-01-31]
+    
     local header = Instance.new("TextLabel", scroll)
     header.Name = "Immortal_Header"
     header.BackgroundTransparency = 1
@@ -807,15 +802,15 @@ registerRight("Home", function(scroll)
     header.TextColor3 = THEME.WHITE
     header.TextXAlignment = Enum.TextXAlignment.Left
     header.Text = "Unlock 🔓"
-    header.LayoutOrder = FIXED_ORDER
+    header.LayoutOrder = 0 -- ปรับเป็น 0 [cite: 2026-01-31]
 
     local row = Instance.new("Frame", scroll)
     row.Name = "Immortal_Row"
     row.Size = UDim2.new(1, -6, 0, 46)
     row.BackgroundColor3 = THEME.BLACK
-    row.LayoutOrder = FIXED_ORDER + 1
+    row.LayoutOrder = 0 -- ปรับเป็น 0 [cite: 2026-01-31]
     corner(row, 12)
-    stroke(row, 2.2, THEME.GREEN) -- ขอบเขียว Model A V1
+    stroke(row, 2.2, THEME.GREEN)
 
     local lab = Instance.new("TextLabel", row)
     lab.BackgroundTransparency = 1
