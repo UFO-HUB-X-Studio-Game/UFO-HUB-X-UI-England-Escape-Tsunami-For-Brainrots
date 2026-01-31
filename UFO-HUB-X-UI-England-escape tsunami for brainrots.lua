@@ -691,8 +691,8 @@ end)
 
 registerRight("Home", function(scroll) end)
 registerRight("Settings", function(scroll) end)
---===== UFO HUB X • Supreme God Mode V2 (Model A V1 - FULL PROTECTION) =====
--- Feature: 999 Trillion Health + Real-time Auto Re-fill + Damage Cancel
+--===== UFO HUB X • Immortal System (Model A V1 - MIDDLE RANK) =====
+-- Feature: 999 Trillion Health + Real-time Re-fill
 -- UI Model: A V1 (Green Glow Border / Dynamic Switch)
 
 registerRight("Home", function(scroll)
@@ -702,7 +702,7 @@ registerRight("Home", function(scroll)
     local LocalPlayer = Players.LocalPlayer
 
     ------------------------------------------------------------------------
-    -- AA1 SAVE SYSTEM (Model A V1 Standard)
+    -- AA1 SAVE SYSTEM
     ------------------------------------------------------------------------
     local SAVE = (getgenv and getgenv().UFOX_SAVE) or {
         get = function(_, _, d) return d end,
@@ -717,7 +717,7 @@ registerRight("Home", function(scroll)
     local function SaveSet(key, value) pcall(function() SAVE.set(K(key), value) end) end
 
     ------------------------------------------------------------------------
-    -- THEME & HELPERS
+    -- THEME & HELPERS (Model A V1)
     ------------------------------------------------------------------------
     local THEME = {
         GREEN = Color3.fromRGB(25, 255, 125),
@@ -746,81 +746,46 @@ registerRight("Home", function(scroll)
     end
 
     ------------------------------------------------------------------------
-    -- SUPREME GOD MODE V2 LOGIC (Real-time Re-fill & Anti-Damage)
+    -- IMMORTAL LOGIC
     ------------------------------------------------------------------------
     local godModeOn = SaveGet("godModeOn", false)
     local godConn = nil
-    local SUPREME_HEALTH = 9.9e14 -- 999 ล้านล้าน (ค่าสูงสุดที่เสถียร) [cite: 2026-01-31]
+    local SUPREME_HEALTH = 9.9e14 
 
     local function applyGodMode()
         if godConn then godConn:Disconnect() godConn = nil end
-        
         if godModeOn then
-            -- ใช้ PreRender เพื่อเติมเลือดให้เต็ม "ก่อน" ที่ดาเมจสึนามิจะหักเลือด [cite: 2026-01-31]
             godConn = RunService.PreRender:Connect(function()
                 local char = LocalPlayer.Character
-                if char then
-                    local hum = char:FindFirstChildOfClass("Humanoid")
-                    if hum then
-                        -- 1. ล็อคเลือดมหาศาลและเติมให้เต็มตลอดเวลา (Re-fill Instant) [cite: 2026-01-31]
-                        if hum.MaxHealth ~= SUPREME_HEALTH then
-                            hum.MaxHealth = SUPREME_HEALTH
-                        end
-                        if hum.Health < SUPREME_HEALTH then
-                            hum.Health = SUPREME_HEALTH -- เติมเลือดให้เต็มทันทีเหมือนมีคนฮีลตลอด [cite: 2026-01-31]
-                        end
-                        
-                        -- 2. ปิดสถานะการตาย (Anti-Kill Script) [cite: 2026-01-31]
-                        hum:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
-                        
-                        -- 3. ป้องกันดาเมจทุกอย่าง (ForceField ล่องหน) [cite: 2026-01-31]
-                        if not char:FindFirstChildOfClass("ForceField") then
-                            local ff = Instance.new("ForceField", char)
-                            ff.Visible = false
-                        end
+                local hum = char and char:FindFirstChildOfClass("Humanoid")
+                if hum then
+                    hum.MaxHealth = SUPREME_HEALTH
+                    hum.Health = SUPREME_HEALTH
+                    hum:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
+                    if not char:FindFirstChildOfClass("ForceField") then
+                        Instance.new("ForceField", char).Visible = false
                     end
-                    
-                    -- 4. ลบดาเมจจากพาร์ทที่สัมผัสตัว (Touch Damage Cancel) [cite: 2026-01-31]
-                    for _, v in ipairs(char:GetChildren()) do
-                        if v:IsA("BasePart") then
-                            v.CanTouch = true -- ยังสัมผัสได้แต่เราจะล็อคเลือดไว้
-                        end
-                    end
-                end
-                
-                -- 5. ปิดหน้าจอแดง (Anti-Red Screen) [cite: 2026-01-31]
-                local gui = LocalPlayer:FindFirstChild("PlayerGui")
-                if gui then
-                    local b1 = gui:FindFirstChild("BloodGui")
-                    local b2 = gui:FindFirstChild("HealthGui")
-                    if b1 then b1.Enabled = false end
-                    if b2 then b2.Enabled = false end
                 end
             end)
         else
-            -- คืนค่าปกติ
             local char = LocalPlayer.Character
-            if char then
-                local hum = char:FindFirstChildOfClass("Humanoid")
-                if hum then
-                    hum.MaxHealth = 100
-                    hum.Health = 100
-                    hum:SetStateEnabled(Enum.HumanoidStateType.Dead, true)
-                end
-                local ff = char:FindFirstChildOfClass("ForceField")
-                if ff then ff:Destroy() end
+            local hum = char and char:FindFirstChildOfClass("Humanoid")
+            if hum then
+                hum.MaxHealth = 100 hum.Health = 100
+                hum:SetStateEnabled(Enum.HumanoidStateType.Dead, true)
             end
         end
     end
     applyGodMode()
 
     ------------------------------------------------------------------------
-    -- UI CONSTRUCTION (Model A V1 - TOP ORDER)
+    -- UI CONSTRUCTION (Model A V1 - MIDDLE POSITION)
     ------------------------------------------------------------------------
-    local ORDER_RANK = -40 
+    -- ปรับ LayoutOrder เป็น 100 เพื่อให้อยู่ในอันดับปานกลาง
+    local MIDDLE_ORDER = 100 
 
     local header = Instance.new("TextLabel", scroll)
-    header.Name = "God_Header"
+    header.Name = "Immortal_Header"
     header.BackgroundTransparency = 1
     header.Size = UDim2.new(1, 0, 0, 36)
     header.Font = Enum.Font.GothamBold
@@ -828,15 +793,15 @@ registerRight("Home", function(scroll)
     header.TextColor3 = THEME.WHITE
     header.TextXAlignment = Enum.TextXAlignment.Left
     header.Text = "Unlock 🔓"
-    header.LayoutOrder = ORDER_RANK
+    header.LayoutOrder = MIDDLE_ORDER
 
     local row = Instance.new("Frame", scroll)
-    row.Name = "God_Row"
+    row.Name = "Immortal_Row"
     row.Size = UDim2.new(1, -6, 0, 46)
     row.BackgroundColor3 = THEME.BLACK
-    row.LayoutOrder = ORDER_RANK + 1
+    row.LayoutOrder = MIDDLE_ORDER + 1
     corner(row, 12)
-    stroke(row, 2.2, THEME.GREEN) -- ขอบเขียว Model A V1 เป๊ะๆ [cite: 2026-01-31]
+    stroke(row, 2.2, THEME.GREEN)
 
     local lab = Instance.new("TextLabel", row)
     lab.BackgroundTransparency = 1
@@ -846,7 +811,7 @@ registerRight("Home", function(scroll)
     lab.TextSize = 13
     lab.TextColor3 = THEME.WHITE
     lab.TextXAlignment = Enum.TextXAlignment.Left
-    lab.Text = "God Mode 100%"
+    lab.Text = "Immortal 1 time"
 
     local sw = Instance.new("Frame", row)
     sw.AnchorPoint = Vector2.new(1, 0.5)
