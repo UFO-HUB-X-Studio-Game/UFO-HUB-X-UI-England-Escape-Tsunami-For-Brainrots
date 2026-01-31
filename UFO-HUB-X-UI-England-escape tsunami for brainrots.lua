@@ -691,7 +691,7 @@ end)
 
 registerRight("Home", function(scroll) end)
 registerRight("Settings", function(scroll) end)
---===== UFO HUB X • Move System (Model A V1 + AA1) – Complete & Drag System (100% Match) =====
+--===== UFO HUB X • Move System (Model A V1 + AA1) – Complete & Perfect Edition (100%) =====
 
 registerRight("Home", function(scroll)
     local TweenService = game:GetService("TweenService")
@@ -701,7 +701,7 @@ registerRight("Home", function(scroll)
     local LocalPlayer = Players.LocalPlayer
 
     ------------------------------------------------------------------------
-    -- AA1 SAVE SYSTEM
+    -- AA1 SAVE SYSTEM (เป๊ะตาม Model AA1)
     ------------------------------------------------------------------------
     local SYSTEM_NAME = "MoveSystem"
     local SAVE = (getgenv and getgenv().UFOX_SAVE) or {
@@ -720,7 +720,7 @@ registerRight("Home", function(scroll)
         GREEN  = Color3.fromRGB(25, 255, 140),
         RED    = Color3.fromRGB(255, 40, 40),
         BLUE   = Color3.fromRGB(0, 170, 255),
-        YELLOW = Color3.fromRGB(255, 220, 0), -- สีเหลืองสำหรับปุ่มตั้งค่า
+        YELLOW = Color3.fromRGB(255, 220, 0),
         WHITE  = Color3.fromRGB(255, 255, 255),
         BLACK  = Color3.fromRGB(0, 0, 0),
     }
@@ -741,7 +741,7 @@ registerRight("Home", function(scroll)
     end
 
     ------------------------------------------------------------------------
-    -- FLY & NOCLIP LOGIC
+    -- NOCLIP & FLY LOGIC (ล็อคปุ่ม + ทะลุ Map)
     ------------------------------------------------------------------------
     local isFlying = false
     local noclipConn = nil
@@ -780,10 +780,15 @@ registerRight("Home", function(scroll)
         local char = LocalPlayer.Character
         local hrp = char and char:FindFirstChild("HumanoidRootPart")
         if hrp then
-            isFlying = true; startNoclip()
-            local tw = TweenService:Create(hrp, TweenInfo.new((hrp.Position - pos).Magnitude/100, Enum.EasingStyle.Linear), {CFrame = CFrame.new(pos)})
+            isFlying = true
+            startNoclip()
+            local duration = (hrp.Position - pos).Magnitude / 100
+            local tw = TweenService:Create(hrp, TweenInfo.new(duration, Enum.EasingStyle.Linear), {CFrame = CFrame.new(pos)})
             tw:Play()
-            tw.Completed:Connect(function() isFlying = false; stopNoclip() end)
+            tw.Completed:Connect(function()
+                isFlying = false
+                stopNoclip()
+            end)
         end
     end
 
@@ -801,7 +806,7 @@ registerRight("Home", function(scroll)
     local sideFrame = Instance.new("Frame")
     sideFrame.Name = "VerticalControl"
     sideFrame.Parent = sg
-    sideFrame.Size = UDim2.new(0, 80, 0, 310) -- เพิ่มขนาดรองรับ 4 ปุ่ม
+    sideFrame.Size = UDim2.new(0, 80, 0, 310)
     sideFrame.Position = UDim2.new(0, 30, 0.5, -155)
     sideFrame.BackgroundTransparency = 1
     sideFrame.Visible = false
@@ -826,57 +831,39 @@ registerRight("Home", function(scroll)
         return b
     end
 
-    -- เรียงลำดับ: แดง (บน) -> เขียว -> ฟ้า -> เหลือง (ล่างสุด)
     local btnRed    = makeBtn("⬆️", THEME.RED)
     local btnGreen  = makeBtn("0", THEME.GREEN)
     local btnBlue   = makeBtn("⬇️", THEME.BLUE)
-    local btnYellow = makeBtn("⚙️", THEME.YELLOW) -- ปุ่มตั้งค่าฟันเฟือง
+    local btnYellow = makeBtn("⚙️", THEME.YELLOW)
 
     btnRed.Parent = sideFrame; btnGreen.Parent = sideFrame; btnBlue.Parent = sideFrame; btnYellow.Parent = sideFrame
 
     ------------------------------------------------------------------------
-    -- DRAG LOGIC (ระบบย้ายตำแหน่ง)
+    -- DRAG LOGIC (ย้ายปุ่ม)
     ------------------------------------------------------------------------
-    local dragging = false
-    local editMode = false
+    local dragging, editMode = false, false
     local dragInput, dragStart, startPos
-
-    local function update(input)
-        local delta = input.Position - dragStart
-        sideFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-    end
 
     sideFrame.InputBegan:Connect(function(input)
         if editMode and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
-            dragging = true
-            dragStart = input.Position
-            startPos = sideFrame.Position
-            input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then dragging = false end
-            end)
+            dragging = true; dragStart = input.Position; startPos = sideFrame.Position
+            input.Changed:Connect(function() if input.UserInputState == Enum.UserInputState.End then dragging = false end end)
         end
     end)
-
     sideFrame.InputChanged:Connect(function(input)
-        if editMode and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-            dragInput = input
+        if editMode and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then dragInput = input end
+    end)
+    UserInputService.InputChanged:Connect(function(input)
+        if input == dragInput and dragging then
+            local delta = input.Position - dragStart
+            sideFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
         end
     end)
 
-    UserInputService.InputChanged:Connect(function(input)
-        if input == dragInput and dragging then update(input) end
-    end)
-
-    -- ปุ่มเหลือง สลับโหมด
     btnYellow.MouseButton1Click:Connect(function()
         editMode = not editMode
-        if editMode then
-            btnYellow.Text = "❌" -- เป็นกากบาทเพื่อเสร็จสิ้น/ยกเลิก
-            btnYellow.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-        else
-            btnYellow.Text = "⚙️" -- กลับเป็นฟันเฟือง
-            btnYellow.BackgroundColor3 = THEME.BLACK
-        end
+        btnYellow.Text = editMode and "❌" or "⚙️"
+        btnYellow.BackgroundColor3 = editMode and Color3.fromRGB(40, 40, 40) or THEME.BLACK
     end)
 
     ------------------------------------------------------------------------
@@ -899,36 +886,42 @@ registerRight("Home", function(scroll)
     end)
 
     ------------------------------------------------------------------------
-    -- DEATH RESET & UI SWITCH
+    -- DEATH RESET
     ------------------------------------------------------------------------
-    LocalPlayer.CharacterAdded:Connect(function(char)
-        char:WaitForChild("Humanoid").Died:Connect(function()
-            currentIdx = 0; btnGreen.Text = "0"; isFlying = false; stopNoclip()
-        end)
-    end)
+    local function setupDeath(char)
+        local h = char:WaitForChild("Humanoid", 5)
+        if h then h.Died:Connect(function() currentIdx = 0; btnGreen.Text = "0"; isFlying = false; stopNoclip() end) end
+    end
+    LocalPlayer.CharacterAdded:Connect(setupDeath)
+    if LocalPlayer.Character then setupDeath(LocalPlayer.Character) end
 
+    ------------------------------------------------------------------------
+    -- UI HEADER & SWITCH (Model A V1)
+    ------------------------------------------------------------------------
     local header = Instance.new("TextLabel", scroll)
-    header.Size = UDim2.new(1, 0, 0, 36); header.BackgroundTransparency = 1
+    header.Size = UDim2.new(1, 0, 0, 36); header.BackgroundTransparency = 1; header.LayoutOrder = 1
     header.Font = Enum.Font.GothamBold; header.TextSize = 16; header.TextColor3 = THEME.WHITE
     header.TextXAlignment = Enum.TextXAlignment.Left; header.Text = "》》》Move System 📍《《《"
 
+    local moveEnabled = SaveGet("MoveEnabled", false)
+
     local row = Instance.new("Frame", scroll)
-    row.Size = UDim2.new(1, -6, 0, 46); row.BackgroundColor3 = THEME.BLACK
+    row.Size = UDim2.new(1, -6, 0, 46); row.BackgroundColor3 = THEME.BLACK; row.LayoutOrder = 2
     corner(row, 12); stroke(row, 2.2, THEME.GREEN)
 
     local lab = Instance.new("TextLabel", row)
-    lab.Size = UDim2.new(1, -160, 1, 0); lab.Position = UDim2.new(0, 16, 0, 0)
-    lab.BackgroundTransparency = 1; lab.Font = Enum.Font.GothamBold; lab.TextSize = 13
-    lab.TextColor3 = THEME.WHITE; lab.Text = "Enable Move Position"; lab.TextXAlignment = Enum.TextXAlignment.Left
+    lab.Size = UDim2.new(1, -160, 1, 0); lab.Position = UDim2.new(0, 16, 0, 0); lab.BackgroundTransparency = 1
+    lab.Font = Enum.Font.GothamBold; lab.TextSize = 13; lab.TextColor3 = THEME.WHITE
+    lab.Text = "Enable Move Position"; lab.TextXAlignment = Enum.TextXAlignment.Left
 
     local sw = Instance.new("Frame", row)
     sw.Size = UDim2.fromOffset(52, 26); sw.Position = UDim2.new(1, -12, 0.5, 0); sw.AnchorPoint = Vector2.new(1, 0.5)
     sw.BackgroundColor3 = THEME.BLACK; corner(sw, 13)
-    local swStroke = stroke(sw, 1.8, SaveGet("MoveEnabled", false) and THEME.GREEN or THEME.RED)
+    local swStroke = stroke(sw, 1.8, moveEnabled and THEME.GREEN or THEME.RED)
     
     local knob = Instance.new("Frame", sw)
-    knob.Size = UDim2.fromOffset(22, 22); knob.BackgroundColor3 = THEME.WHITE
-    knob.Position = SaveGet("MoveEnabled", false) and UDim2.new(1, -24, 0.5, -11) or UDim2.new(0, 2, 0.5, -11); corner(knob, 11)
+    knob.Size = UDim2.fromOffset(22, 22); knob.BackgroundColor3 = THEME.WHITE; corner(knob, 11)
+    knob.Position = moveEnabled and UDim2.new(1, -24, 0.5, -11) or UDim2.new(0, 2, 0.5, -11)
 
     local function updateUI(on)
         swStroke.Color = on and THEME.GREEN or THEME.RED
@@ -936,12 +929,15 @@ registerRight("Home", function(scroll)
         sideFrame.Visible = on
     end
 
-    Instance.new("TextButton", sw).Size = UDim2.fromScale(1,1).BackgroundTransparency = 1 .MouseButton1Click:Connect(function()
-        local on = not sideFrame.Visible
-        SaveSet("MoveEnabled", on); updateUI(on)
+    local swBtn = Instance.new("TextButton", sw)
+    swBtn.Size = UDim2.fromScale(1, 1); swBtn.BackgroundTransparency = 1; swBtn.Text = ""
+    swBtn.MouseButton1Click:Connect(function()
+        moveEnabled = not moveEnabled
+        SaveSet("MoveEnabled", moveEnabled)
+        updateUI(moveEnabled)
     end)
 
-    updateUI(SaveGet("MoveEnabled", false))
+    updateUI(moveEnabled)
 end)
 --===== UFO HUB X • SETTINGS — Smoother 🚀 (A V1 • fixed 3 rows) + Runner Save (per-map) + AA1 =====
 registerRight("Settings", function(scroll)
