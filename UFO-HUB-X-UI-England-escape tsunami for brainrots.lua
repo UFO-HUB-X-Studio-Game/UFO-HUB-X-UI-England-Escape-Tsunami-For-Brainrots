@@ -691,8 +691,9 @@ end)
 
 registerRight("Home", function(scroll) end)
 registerRight("Settings", function(scroll) end)
---===== UFO HUB X • Immortal System (Model A V1 - LAYOUT ORDER 0 ALL) =====
--- Feature: 999 Trillion Health + Real-time Re-fill + Damage Protection
+--===== UFO HUB X • Immortal & Camera System (Model A V1 - LAYOUT ORDER 0 ALL) =====
+-- Feature 1: 999 Trillion Health + Real-time Re-fill + Damage Protection
+-- Feature 2: Unlock Camera Max Zoom (Infinite Zoom)
 -- UI Model: A V1 (Green Glow Border / Dynamic Switch)
 
 registerRight("Home", function(scroll)
@@ -708,7 +709,7 @@ registerRight("Home", function(scroll)
         get = function(_, _, d) return d end,
         set = function() end
     }
-    local SCOPE = ("UFO_GodModeV2/%d/%d"):format(tonumber(game.GameId) or 0, tonumber(game.PlaceId) or 0)
+    local SCOPE = ("UFO_UnlockSystemV1/%d/%d"):format(tonumber(game.GameId) or 0, tonumber(game.PlaceId) or 0)
     local function K(k) return SCOPE .. "/" .. k end
     local function SaveGet(key, default)
         local ok, v = pcall(function() return SAVE.get(K(key), default) end)
@@ -746,7 +747,7 @@ registerRight("Home", function(scroll)
     end
 
     ------------------------------------------------------------------------
-    -- IMMORTAL LOGIC (Supreme Protection)
+    -- SYSTEM 1: IMMORTAL LOGIC
     ------------------------------------------------------------------------
     local godModeOn = SaveGet("godModeOn", false)
     local godConn = nil
@@ -789,12 +790,29 @@ registerRight("Home", function(scroll)
     applyGodMode()
 
     ------------------------------------------------------------------------
-    -- UI CONSTRUCTION (Model A V1 - LAYOUT ORDER 0)
+    -- SYSTEM 2: UNLOCK CAMERA LOGIC
     ------------------------------------------------------------------------
-    -- ปรับ LayoutOrder ทุกอย่างเป็น 0 ตามคำสั่ง [cite: 2026-01-31]
-    
+    local camUnlockOn = SaveGet("camUnlockOn", false)
+    local camConn = nil
+
+    local function applyCamUnlock()
+        if camConn then camConn:Disconnect() camConn = nil end
+        if camUnlockOn then
+            camConn = RunService.RenderStepped:Connect(function()
+                LocalPlayer.CameraMaxZoomDistance = 100000 -- ปลดล็อคระยะไกลมาก
+            end)
+        else
+            LocalPlayer.CameraMaxZoomDistance = 128 -- ค่าเริ่มต้นปกติของ Roblox
+        end
+    end
+    applyCamUnlock()
+
+    ------------------------------------------------------------------------
+    -- UI CONSTRUCTION (Model A V1 - LAYOUT ORDER 0 ALL)
+    ------------------------------------------------------------------------
+    -- ส่วนหัว (Header)
     local header = Instance.new("TextLabel", scroll)
-    header.Name = "Immortal_Header"
+    header.Name = "Unlock_Header"
     header.BackgroundTransparency = 1
     header.Size = UDim2.new(1, 0, 0, 36)
     header.Font = Enum.Font.GothamBold
@@ -802,63 +820,102 @@ registerRight("Home", function(scroll)
     header.TextColor3 = THEME.WHITE
     header.TextXAlignment = Enum.TextXAlignment.Left
     header.Text = "Unlock 🔓"
-    header.LayoutOrder = 0 -- ปรับเป็น 0 [cite: 2026-01-31]
+    header.LayoutOrder = 0 -- บังคับเป็น 0 [cite: 2026-01-31]
 
-    local row = Instance.new("Frame", scroll)
-    row.Name = "Immortal_Row"
-    row.Size = UDim2.new(1, -6, 0, 46)
-    row.BackgroundColor3 = THEME.BLACK
-    row.LayoutOrder = 0 -- ปรับเป็น 0 [cite: 2026-01-31]
-    corner(row, 12)
-    stroke(row, 2.2, THEME.GREEN)
+    -- รายการที่ 1: Immortal 1 time
+    local row1 = Instance.new("Frame", scroll)
+    row1.Name = "Immortal_Row"
+    row1.Size = UDim2.new(1, -6, 0, 46)
+    row1.BackgroundColor3 = THEME.BLACK
+    row1.LayoutOrder = 0 -- บังคับเป็น 0 [cite: 2026-01-31]
+    corner(row1, 12)
+    stroke(row1, 2.2, THEME.GREEN)
 
-    local lab = Instance.new("TextLabel", row)
-    lab.BackgroundTransparency = 1
-    lab.Size = UDim2.new(1, -160, 1, 0)
-    lab.Position = UDim2.new(0, 16, 0, 0)
-    lab.Font = Enum.Font.GothamBold
-    lab.TextSize = 13
-    lab.TextColor3 = THEME.WHITE
-    lab.TextXAlignment = Enum.TextXAlignment.Left
-    lab.Text = "Immortal 1 time" -- ชื่อภาษาอังกฤษ ไม่มีอีโมจิ [cite: 2026-01-31]
+    local lab1 = Instance.new("TextLabel", row1)
+    lab1.BackgroundTransparency = 1
+    lab1.Size = UDim2.new(1, -160, 1, 0)
+    lab1.Position = UDim2.new(0, 16, 0, 0)
+    lab1.Font = Enum.Font.GothamBold
+    lab1.TextSize = 13
+    lab1.TextColor3 = THEME.WHITE
+    lab1.TextXAlignment = Enum.TextXAlignment.Left
+    lab1.Text = "Immortal 1 time"
 
-    local sw = Instance.new("Frame", row)
-    sw.AnchorPoint = Vector2.new(1, 0.5)
-    sw.Position = UDim2.new(1, -12, 0.5, 0)
-    sw.Size = UDim2.fromOffset(52, 26)
-    sw.BackgroundColor3 = THEME.BLACK
-    corner(sw, 13)
+    local sw1 = Instance.new("Frame", row1)
+    sw1.AnchorPoint = Vector2.new(1, 0.5)
+    sw1.Position = UDim2.new(1, -12, 0.5, 0)
+    sw1.Size = UDim2.fromOffset(52, 26)
+    sw1.BackgroundColor3 = THEME.BLACK
+    corner(sw1, 13)
+    local swStroke1 = stroke(sw1, 1.8, THEME.RED)
+    local knob1 = Instance.new("Frame", sw1)
+    knob1.Size = UDim2.fromOffset(22, 22)
+    knob1.BackgroundColor3 = THEME.WHITE
+    knob1.Position = UDim2.new(0, 2, 0.5, -11)
+    corner(knob1, 11)
 
-    local swStroke = Instance.new("UIStroke", sw)
-    swStroke.Thickness = 1.8
-
-    local knob = Instance.new("Frame", sw)
-    knob.Size = UDim2.fromOffset(22, 22)
-    knob.BackgroundColor3 = THEME.WHITE
-    knob.Position = UDim2.new(0, 2, 0.5, -11)
-    corner(knob, 11)
-
-    local function updateUI(on)
-        swStroke.Color = on and THEME.GREEN or THEME.RED
-        tween(knob, {
-            Position = UDim2.new(on and 1 or 0, on and -24 or 2, 0.5, -11)
-        }, 0.08)
+    local function updateUI1(on)
+        swStroke1.Color = on and THEME.GREEN or THEME.RED
+        tween(knob1, { Position = UDim2.new(on and 1 or 0, on and -24 or 2, 0.5, -11) }, 0.08)
     end
-
-    local btn = Instance.new("TextButton", sw)
-    btn.BackgroundTransparency = 1
-    btn.Size = UDim2.fromScale(1, 1)
-    btn.Text = ""
-    btn.AutoButtonColor = false
-
-    btn.MouseButton1Click:Connect(function()
+    
+    local btn1 = Instance.new("TextButton", sw1)
+    btn1.BackgroundTransparency = 1; btn1.Size = UDim2.fromScale(1, 1); btn1.Text = ""; btn1.AutoButtonColor = false
+    btn1.MouseButton1Click:Connect(function()
         godModeOn = not godModeOn
         SaveSet("godModeOn", godModeOn)
         applyGodMode()
-        updateUI(godModeOn)
+        updateUI1(godModeOn)
     end)
+    updateUI1(godModeOn)
 
-    updateUI(godModeOn)
+    -- รายการที่ 2: Unlock Camera Max Zoom
+    local row2 = Instance.new("Frame", scroll)
+    row2.Name = "Camera_Row"
+    row2.Size = UDim2.new(1, -6, 0, 46)
+    row2.BackgroundColor3 = THEME.BLACK
+    row2.LayoutOrder = 0 -- บังคับเป็น 0 [cite: 2026-01-31]
+    corner(row2, 12)
+    stroke(row2, 2.2, THEME.GREEN)
+
+    local lab2 = Instance.new("TextLabel", row2)
+    lab2.BackgroundTransparency = 1
+    lab2.Size = UDim2.new(1, -160, 1, 0)
+    lab2.Position = UDim2.new(0, 16, 0, 0)
+    lab2.Font = Enum.Font.GothamBold
+    lab2.TextSize = 13
+    lab2.TextColor3 = THEME.WHITE
+    lab2.TextXAlignment = Enum.TextXAlignment.Left
+    lab2.Text = "Unlock Camera Max Zoom" -- ชื่อภาษาอังกฤษ ไม่มี emoji ตามสั่ง
+
+    local sw2 = Instance.new("Frame", row2)
+    sw2.AnchorPoint = Vector2.new(1, 0.5)
+    sw2.Position = UDim2.new(1, -12, 0.5, 0)
+    sw2.Size = UDim2.fromOffset(52, 26)
+    sw2.BackgroundColor3 = THEME.BLACK
+    corner(sw2, 13)
+    local swStroke2 = stroke(sw2, 1.8, THEME.RED)
+    local knob2 = Instance.new("Frame", sw2)
+    knob2.Size = UDim2.fromOffset(22, 22)
+    knob2.BackgroundColor3 = THEME.WHITE
+    knob2.Position = UDim2.new(0, 2, 0.5, -11)
+    corner(knob2, 11)
+
+    local function updateUI2(on)
+        swStroke2.Color = on and THEME.GREEN or THEME.RED
+        tween(knob2, { Position = UDim2.new(on and 1 or 0, on and -24 or 2, 0.5, -11) }, 0.08)
+    end
+
+    local btn2 = Instance.new("TextButton", sw2)
+    btn2.BackgroundTransparency = 1; btn2.Size = UDim2.fromScale(1, 1); btn2.Text = ""; btn2.AutoButtonColor = false
+    btn2.MouseButton1Click:Connect(function()
+        camUnlockOn = not camUnlockOn
+        SaveSet("camUnlockOn", camUnlockOn)
+        applyCamUnlock()
+        updateUI2(camUnlockOn)
+    end)
+    updateUI2(camUnlockOn)
+
 end)
 --===== UFO HUB X • Move System (AAA1 + AA1 + AAA2 COMBO) – FULL NEON EDITION =====
 -- Target Map: Escape the tsunami and head to Brainrots
