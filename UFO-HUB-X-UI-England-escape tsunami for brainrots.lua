@@ -691,284 +691,257 @@ end)
 
 registerRight("Home", function(scroll) end)
 registerRight("Settings", function(scroll) end)
---===== UFO HUB X • Home • Position Move 🚀 (Model A V1 • REAL) =====
+--===== UFO HUB X • Move System (Model A V1 + AA1) – Complete & Drag System (100% Match) =====
+
 registerRight("Home", function(scroll)
+    local TweenService = game:GetService("TweenService")
+    local RunService = game:GetService("RunService")
+    local UserInputService = game:GetService("UserInputService")
+    local Players = game:GetService("Players")
+    local LocalPlayer = Players.LocalPlayer
 
-------------------------------------------------------------------------
--- SERVICES
-------------------------------------------------------------------------
-local Players = game:GetService("Players")
-local TweenService = game:GetService("TweenService")
-local RunService = game:GetService("RunService")
-local LP = Players.LocalPlayer
+    ------------------------------------------------------------------------
+    -- AA1 SAVE SYSTEM
+    ------------------------------------------------------------------------
+    local SYSTEM_NAME = "MoveSystem"
+    local SAVE = (getgenv and getgenv().UFOX_SAVE) or {
+        get = function(_, _, d) return d end,
+        set = function() end
+    }
+    local BASE_SCOPE = ("AA1/%s/%d/%d"):format(SYSTEM_NAME, game.GameId, game.PlaceId)
+    local function K(f) return BASE_SCOPE .. "/" .. f end
+    local function SaveGet(f, d) local ok, v = pcall(function() return SAVE.get(K(f), d) end) return ok and v or d end
+    local function SaveSet(f, v) pcall(function() SAVE.set(K(f), v) end) end
 
-------------------------------------------------------------------------
--- AA1 SAVE (UFOX)
-------------------------------------------------------------------------
-local SAVE = (getgenv and getgenv().UFOX_SAVE) or {
-    get = function(_,_,d) return d end,
-    set = function() end
-}
+    ------------------------------------------------------------------------
+    -- THEME & HELPERS
+    ------------------------------------------------------------------------
+    local THEME = {
+        GREEN  = Color3.fromRGB(25, 255, 140),
+        RED    = Color3.fromRGB(255, 40, 40),
+        BLUE   = Color3.fromRGB(0, 170, 255),
+        YELLOW = Color3.fromRGB(255, 220, 0), -- สีเหลืองสำหรับปุ่มตั้งค่า
+        WHITE  = Color3.fromRGB(255, 255, 255),
+        BLACK  = Color3.fromRGB(0, 0, 0),
+    }
 
-local SCOPE = ("PositionMove/%d/%d"):format(
-    tonumber(game.GameId) or 0,
-    tonumber(game.PlaceId) or 0
-)
-
-local function K(k) return SCOPE.."/"..k end
-local function SaveGet(k,d)
-    local ok,v = pcall(function() return SAVE.get(K(k),d) end)
-    return ok and v or d
-end
-local function SaveSet(k,v)
-    pcall(function() SAVE.set(K(k),v) end)
-end
-
-------------------------------------------------------------------------
--- THEME + HELPERS (Model A V1)
-------------------------------------------------------------------------
-local THEME = {
-    GREEN = Color3.fromRGB(25,255,125),
-    RED   = Color3.fromRGB(255,80,80),
-    BLUE  = Color3.fromRGB(80,170,255),
-    WHITE = Color3.fromRGB(255,255,255),
-    BLACK = Color3.fromRGB(0,0,0),
-}
-
-local function corner(ui,r)
-    local c = Instance.new("UICorner")
-    c.CornerRadius = UDim.new(0,r or 12)
-    c.Parent = ui
-end
-
-local function stroke(ui,t,col)
-    local s = Instance.new("UIStroke")
-    s.Thickness = t or 2.2
-    s.Color = col or THEME.GREEN
-    s.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-    s.Parent = ui
-end
-
-------------------------------------------------------------------------
--- CLEANUP (A V1 ONLY)
-------------------------------------------------------------------------
-for _,n in ipairs({"A_Header","A_Row1"}) do
-    local o = scroll:FindFirstChild(n)
-    if o then o:Destroy() end
-end
-
-------------------------------------------------------------------------
--- UIListLayout (A V1 RULE)
-------------------------------------------------------------------------
-local vlist = scroll:FindFirstChildOfClass("UIListLayout")
-if not vlist then
-    vlist = Instance.new("UIListLayout",scroll)
-    vlist.Padding = UDim.new(0,12)
-    vlist.SortOrder = Enum.SortOrder.LayoutOrder
-end
-scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
-
-local base = 0
-for _,ch in ipairs(scroll:GetChildren()) do
-    if ch:IsA("GuiObject") and ch ~= vlist then
-        base = math.max(base, ch.LayoutOrder or 0)
+    local function corner(ui, r)
+        local c = Instance.new("UICorner")
+        c.CornerRadius = UDim.new(0, r or 15)
+        c.Parent = ui
     end
-end
 
-------------------------------------------------------------------------
--- HEADER (A V1)
-------------------------------------------------------------------------
-local header = Instance.new("TextLabel")
-header.Name = "A_Header"
-header.Parent = scroll
-header.BackgroundTransparency = 1
-header.Size = UDim2.new(1,0,0,36)
-header.Font = Enum.Font.GothamBold
-header.TextSize = 16
-header.TextColor3 = THEME.WHITE
-header.TextXAlignment = Enum.TextXAlignment.Left
-header.Text = "Position Move 🚀"
-header.LayoutOrder = base + 1
-
-------------------------------------------------------------------------
--- POSITIONS (1–9)
-------------------------------------------------------------------------
-local POSITIONS = {
-    Vector3.new(200.000, -2.742,  0.000),
-    Vector3.new(284.000, -2.742,  0.000),
-    Vector3.new(398.000, -2.742,  0.000),
-    Vector3.new(542.000, -2.742,  0.000),
-    Vector3.new(756.000, -2.742,  0.000),
-    Vector3.new(1074.004,-2.742,  0.002),
-    Vector3.new(1546.773,-2.742,  0.812),
-    Vector3.new(2247.060,-2.734,  2.466),
-    Vector3.new(2602.500,-2.742, -2.176),
-}
-
-------------------------------------------------------------------------
--- MOVE (FLY ONLY)
-------------------------------------------------------------------------
-local currentIndex = 0
-local moving = false
-
-local function flyTo(i)
-    if moving then return end
-    local char = LP.Character
-    local hrp = char and char:FindFirstChild("HumanoidRootPart")
-    if not hrp or not POSITIONS[i] then return end
-
-    moving = true
-    TweenService:Create(
-        hrp,
-        TweenInfo.new(0.6, Enum.EasingStyle.Linear),
-        {CFrame = CFrame.new(POSITIONS[i])}
-    ):Play()
-
-    task.delay(0.6,function()
-        moving = false
-    end)
-end
-
-------------------------------------------------------------------------
--- WORLD BUTTONS (RED / GREEN / BLUE)
-------------------------------------------------------------------------
-local gui
-
-local function createButtons()
-    if gui then return end
-
-    gui = Instance.new("ScreenGui")
-    gui.Name = "UFOX_PositionButtons"
-    gui.ResetOnSpawn = false
-    gui.Parent = LP:WaitForChild("PlayerGui")
-
-    local holder = Instance.new("Frame",gui)
-    holder.Size = UDim2.fromOffset(72,220)
-    holder.Position = UDim2.new(1,-92,0.5,-110)
-    holder.BackgroundTransparency = 1
-
-    local list = Instance.new("UIListLayout",holder)
-    list.Padding = UDim.new(0,12)
-    list.HorizontalAlignment = Enum.HorizontalAlignment.Center
-
-    -- 🔴 FORWARD
-    local f = Instance.new("TextButton",holder)
-    f.Size = UDim2.fromOffset(64,64)
-    f.BackgroundColor3 = THEME.BLACK
-    f.Text = "⬆️"
-    f.TextSize = 28
-    f.TextColor3 = THEME.RED
-    corner(f); stroke(f)
-
-    f.MouseButton1Click:Connect(function()
-        if currentIndex < #POSITIONS then
-            currentIndex += 1
-            flyTo(currentIndex)
-        end
-    end)
-
-    -- 🟢 INDEX
-    local mid = Instance.new("TextLabel",holder)
-    mid.Size = UDim2.fromOffset(64,64)
-    mid.BackgroundColor3 = THEME.BLACK
-    mid.Font = Enum.Font.GothamBold
-    mid.TextSize = 22
-    mid.TextColor3 = THEME.GREEN
-    corner(mid); stroke(mid)
-
-    -- 🔵 BACK
-    local b = Instance.new("TextButton",holder)
-    b.Size = UDim2.fromOffset(64,64)
-    b.BackgroundColor3 = THEME.BLACK
-    b.Text = "⬇️"
-    b.TextSize = 28
-    b.TextColor3 = THEME.BLUE
-    corner(b); stroke(b)
-
-    b.MouseButton1Click:Connect(function()
-        if currentIndex > 1 then
-            currentIndex -= 1
-            flyTo(currentIndex)
-        end
-    end)
-
-    RunService.Heartbeat:Connect(function()
-        if mid then
-            mid.Text = tostring(currentIndex)
-        end
-    end)
-end
-
-local function destroyButtons()
-    if gui then gui:Destroy(); gui=nil end
-    currentIndex = 0
-end
-
-------------------------------------------------------------------------
--- ROW 1 : SWITCH (Model A V1)
-------------------------------------------------------------------------
-local enabled = SaveGet("enabled", false)
-
-local row = Instance.new("Frame")
-row.Name = "A_Row1"
-row.Parent = scroll
-row.Size = UDim2.new(1,-6,0,46)
-row.BackgroundColor3 = THEME.BLACK
-corner(row); stroke(row)
-row.LayoutOrder = base + 2
-
-local lab = Instance.new("TextLabel",row)
-lab.BackgroundTransparency = 1
-lab.Size = UDim2.new(1,-160,1,0)
-lab.Position = UDim2.new(0,16,0,0)
-lab.Font = Enum.Font.GothamBold
-lab.TextSize = 13
-lab.TextColor3 = THEME.WHITE
-lab.TextXAlignment = Enum.TextXAlignment.Left
-lab.Text = "Enable Position Move"
-
-local sw = Instance.new("Frame",row)
-sw.AnchorPoint = Vector2.new(1,0.5)
-sw.Position = UDim2.new(1,-12,0.5,0)
-sw.Size = UDim2.fromOffset(52,26)
-sw.BackgroundColor3 = THEME.BLACK
-corner(sw,13)
-
-local swStroke = Instance.new("UIStroke",sw)
-swStroke.Thickness = 1.8
-
-local knob = Instance.new("Frame",sw)
-knob.Size = UDim2.fromOffset(22,22)
-knob.BackgroundColor3 = THEME.WHITE
-corner(knob,11)
-
-local function refresh()
-    swStroke.Color = enabled and THEME.GREEN or THEME.RED
-    knob.Position = enabled
-        and UDim2.new(1,-24,0.5,-11)
-        or  UDim2.new(0,2,0.5,-11)
-end
-
-local hit = Instance.new("TextButton",sw)
-hit.BackgroundTransparency = 1
-hit.Size = UDim2.fromScale(1,1)
-hit.Text = ""
-hit.AutoButtonColor = false
-
-hit.MouseButton1Click:Connect(function()
-    enabled = not enabled
-    SaveSet("enabled", enabled)
-    refresh()
-    if enabled then
-        createButtons()
-    else
-        destroyButtons()
+    local function stroke(ui, th, col)
+        local s = Instance.new("UIStroke")
+        s.Thickness = th or 3.2
+        s.Color = col or THEME.GREEN
+        s.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+        s.Parent = ui
+        return s
     end
-end)
 
-refresh()
-if enabled then createButtons() end
+    ------------------------------------------------------------------------
+    -- FLY & NOCLIP LOGIC
+    ------------------------------------------------------------------------
+    local isFlying = false
+    local noclipConn = nil
 
+    local function stopNoclip()
+        if noclipConn then noclipConn:Disconnect(); noclipConn = nil end
+        if LocalPlayer.Character then
+            for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
+                if part:IsA("BasePart") then part.CanCollide = true end
+            end
+        end
+    end
+
+    local function startNoclip()
+        if noclipConn then noclipConn:Disconnect() end
+        noclipConn = RunService.Stepped:Connect(function()
+            if isFlying and LocalPlayer.Character then
+                for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
+                    if part:IsA("BasePart") then part.CanCollide = false end
+                end
+            end
+        end)
+    end
+
+    local Positions = {
+        [1] = Vector3.new(200, -2.742, 0), [2] = Vector3.new(284, -2.742, 0),
+        [3] = Vector3.new(398, -2.742, 0), [4] = Vector3.new(542, -2.742, 0),
+        [5] = Vector3.new(756, -2.742, 0), [6] = Vector3.new(1074.004, -2.742, 0.002),
+        [7] = Vector3.new(1546.773, -2.742, 0.812), [8] = Vector3.new(2247.06, -2.734, 2.466),
+        [9] = Vector3.new(2602.5, -2.742, -2.176)
+    }
+    local currentIdx = 0
+
+    local function flyTo(pos)
+        if not pos or isFlying then return end
+        local char = LocalPlayer.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        if hrp then
+            isFlying = true; startNoclip()
+            local tw = TweenService:Create(hrp, TweenInfo.new((hrp.Position - pos).Magnitude/100, Enum.EasingStyle.Linear), {CFrame = CFrame.new(pos)})
+            tw:Play()
+            tw.Completed:Connect(function() isFlying = false; stopNoclip() end)
+        end
+    end
+
+    ------------------------------------------------------------------------
+    -- EXTERNAL UI (Vertical Left + Drag System)
+    ------------------------------------------------------------------------
+    local oldControl = LocalPlayer.PlayerGui:FindFirstChild("UFO_Move_Control_Final")
+    if oldControl then oldControl:Destroy() end
+
+    local sg = Instance.new("ScreenGui")
+    sg.Name = "UFO_Move_Control_Final"
+    sg.Parent = LocalPlayer.PlayerGui
+    sg.ResetOnSpawn = false
+
+    local sideFrame = Instance.new("Frame")
+    sideFrame.Name = "VerticalControl"
+    sideFrame.Parent = sg
+    sideFrame.Size = UDim2.new(0, 80, 0, 310) -- เพิ่มขนาดรองรับ 4 ปุ่ม
+    sideFrame.Position = UDim2.new(0, 30, 0.5, -155)
+    sideFrame.BackgroundTransparency = 1
+    sideFrame.Visible = false
+
+    local layout = Instance.new("UIListLayout")
+    layout.Parent = sideFrame
+    layout.FillDirection = Enum.FillDirection.Vertical
+    layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+    layout.Padding = UDim.new(0, 15)
+
+    local function makeBtn(text, color)
+        local b = Instance.new("TextButton")
+        b.Size = UDim2.new(0, 60, 0, 60)
+        b.BackgroundColor3 = THEME.BLACK
+        b.TextColor3 = THEME.WHITE
+        b.Font = Enum.Font.GothamBold
+        b.TextSize = 28
+        b.Text = text
+        b.AutoButtonColor = false
+        corner(b, 15)
+        stroke(b, 3.2, color)
+        return b
+    end
+
+    -- เรียงลำดับ: แดง (บน) -> เขียว -> ฟ้า -> เหลือง (ล่างสุด)
+    local btnRed    = makeBtn("⬆️", THEME.RED)
+    local btnGreen  = makeBtn("0", THEME.GREEN)
+    local btnBlue   = makeBtn("⬇️", THEME.BLUE)
+    local btnYellow = makeBtn("⚙️", THEME.YELLOW) -- ปุ่มตั้งค่าฟันเฟือง
+
+    btnRed.Parent = sideFrame; btnGreen.Parent = sideFrame; btnBlue.Parent = sideFrame; btnYellow.Parent = sideFrame
+
+    ------------------------------------------------------------------------
+    -- DRAG LOGIC (ระบบย้ายตำแหน่ง)
+    ------------------------------------------------------------------------
+    local dragging = false
+    local editMode = false
+    local dragInput, dragStart, startPos
+
+    local function update(input)
+        local delta = input.Position - dragStart
+        sideFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+
+    sideFrame.InputBegan:Connect(function(input)
+        if editMode and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
+            dragging = true
+            dragStart = input.Position
+            startPos = sideFrame.Position
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then dragging = false end
+            end)
+        end
+    end)
+
+    sideFrame.InputChanged:Connect(function(input)
+        if editMode and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            dragInput = input
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if input == dragInput and dragging then update(input) end
+    end)
+
+    -- ปุ่มเหลือง สลับโหมด
+    btnYellow.MouseButton1Click:Connect(function()
+        editMode = not editMode
+        if editMode then
+            btnYellow.Text = "❌" -- เป็นกากบาทเพื่อเสร็จสิ้น/ยกเลิก
+            btnYellow.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+        else
+            btnYellow.Text = "⚙️" -- กลับเป็นฟันเฟือง
+            btnYellow.BackgroundColor3 = THEME.BLACK
+        end
+    end)
+
+    ------------------------------------------------------------------------
+    -- BUTTON ACTIONS
+    ------------------------------------------------------------------------
+    btnRed.MouseButton1Click:Connect(function()
+        if not isFlying and not editMode and currentIdx < 9 then
+            currentIdx = currentIdx + 1
+            btnGreen.Text = tostring(currentIdx)
+            flyTo(Positions[currentIdx])
+        end
+    end)
+
+    btnBlue.MouseButton1Click:Connect(function()
+        if not isFlying and not editMode and currentIdx > 0 then
+            currentIdx = currentIdx - 1
+            btnGreen.Text = tostring(currentIdx)
+            if currentIdx ~= 0 then flyTo(Positions[currentIdx]) end
+        end
+    end)
+
+    ------------------------------------------------------------------------
+    -- DEATH RESET & UI SWITCH
+    ------------------------------------------------------------------------
+    LocalPlayer.CharacterAdded:Connect(function(char)
+        char:WaitForChild("Humanoid").Died:Connect(function()
+            currentIdx = 0; btnGreen.Text = "0"; isFlying = false; stopNoclip()
+        end)
+    end)
+
+    local header = Instance.new("TextLabel", scroll)
+    header.Size = UDim2.new(1, 0, 0, 36); header.BackgroundTransparency = 1
+    header.Font = Enum.Font.GothamBold; header.TextSize = 16; header.TextColor3 = THEME.WHITE
+    header.TextXAlignment = Enum.TextXAlignment.Left; header.Text = "》》》Move System 📍《《《"
+
+    local row = Instance.new("Frame", scroll)
+    row.Size = UDim2.new(1, -6, 0, 46); row.BackgroundColor3 = THEME.BLACK
+    corner(row, 12); stroke(row, 2.2, THEME.GREEN)
+
+    local lab = Instance.new("TextLabel", row)
+    lab.Size = UDim2.new(1, -160, 1, 0); lab.Position = UDim2.new(0, 16, 0, 0)
+    lab.BackgroundTransparency = 1; lab.Font = Enum.Font.GothamBold; lab.TextSize = 13
+    lab.TextColor3 = THEME.WHITE; lab.Text = "Enable Move Position"; lab.TextXAlignment = Enum.TextXAlignment.Left
+
+    local sw = Instance.new("Frame", row)
+    sw.Size = UDim2.fromOffset(52, 26); sw.Position = UDim2.new(1, -12, 0.5, 0); sw.AnchorPoint = Vector2.new(1, 0.5)
+    sw.BackgroundColor3 = THEME.BLACK; corner(sw, 13)
+    local swStroke = stroke(sw, 1.8, SaveGet("MoveEnabled", false) and THEME.GREEN or THEME.RED)
+    
+    local knob = Instance.new("Frame", sw)
+    knob.Size = UDim2.fromOffset(22, 22); knob.BackgroundColor3 = THEME.WHITE
+    knob.Position = SaveGet("MoveEnabled", false) and UDim2.new(1, -24, 0.5, -11) or UDim2.new(0, 2, 0.5, -11); corner(knob, 11)
+
+    local function updateUI(on)
+        swStroke.Color = on and THEME.GREEN or THEME.RED
+        TweenService:Create(knob, TweenInfo.new(0.08), {Position = on and UDim2.new(1, -24, 0.5, -11) or UDim2.new(0, 2, 0.5, -11)}):Play()
+        sideFrame.Visible = on
+    end
+
+    Instance.new("TextButton", sw).Size = UDim2.fromScale(1,1).BackgroundTransparency = 1 .MouseButton1Click:Connect(function()
+        local on = not sideFrame.Visible
+        SaveSet("MoveEnabled", on); updateUI(on)
+    end)
+
+    updateUI(SaveGet("MoveEnabled", false))
 end)
 --===== UFO HUB X • SETTINGS — Smoother 🚀 (A V1 • fixed 3 rows) + Runner Save (per-map) + AA1 =====
 registerRight("Settings", function(scroll)
