@@ -691,7 +691,7 @@ end)
 
 registerRight("Home", function(scroll) end)
 registerRight("Settings", function(scroll) end)
---===== UFO HUB X • Move System (Model A V1 + AA1) – Complete & Perfect Edition (100%) =====
+--===== UFO HUB X • Move System (Model A V1 + AA1) – FIX CRASH EDITION (100%) =====
 
 registerRight("Home", function(scroll)
     local TweenService = game:GetService("TweenService")
@@ -701,7 +701,7 @@ registerRight("Home", function(scroll)
     local LocalPlayer = Players.LocalPlayer
 
     ------------------------------------------------------------------------
-    -- AA1 SAVE SYSTEM (เป๊ะตาม Model AA1)
+    -- AA1 SAVE SYSTEM
     ------------------------------------------------------------------------
     local SYSTEM_NAME = "MoveSystem"
     local SAVE = (getgenv and getgenv().UFOX_SAVE) or {
@@ -741,7 +741,7 @@ registerRight("Home", function(scroll)
     end
 
     ------------------------------------------------------------------------
-    -- NOCLIP & FLY LOGIC (ล็อคปุ่ม + ทะลุ Map)
+    -- FLY & NOCLIP LOGIC
     ------------------------------------------------------------------------
     local isFlying = false
     local noclipConn = nil
@@ -793,7 +793,7 @@ registerRight("Home", function(scroll)
     end
 
     ------------------------------------------------------------------------
-    -- EXTERNAL UI (Vertical Left + Drag System)
+    -- EXTERNAL UI (Vertical Left)
     ------------------------------------------------------------------------
     local oldControl = LocalPlayer.PlayerGui:FindFirstChild("UFO_Move_Control_Final")
     if oldControl then oldControl:Destroy() end
@@ -836,22 +836,31 @@ registerRight("Home", function(scroll)
     local btnBlue   = makeBtn("⬇️", THEME.BLUE)
     local btnYellow = makeBtn("⚙️", THEME.YELLOW)
 
-    btnRed.Parent = sideFrame; btnGreen.Parent = sideFrame; btnBlue.Parent = sideFrame; btnYellow.Parent = sideFrame
+    btnRed.Parent = sideFrame
+    btnGreen.Parent = sideFrame
+    btnBlue.Parent = sideFrame
+    btnYellow.Parent = sideFrame
 
     ------------------------------------------------------------------------
-    -- DRAG LOGIC (ย้ายปุ่ม)
+    -- DRAG LOGIC
     ------------------------------------------------------------------------
     local dragging, editMode = false, false
     local dragInput, dragStart, startPos
 
     sideFrame.InputBegan:Connect(function(input)
         if editMode and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
-            dragging = true; dragStart = input.Position; startPos = sideFrame.Position
-            input.Changed:Connect(function() if input.UserInputState == Enum.UserInputState.End then dragging = false end end)
+            dragging = true
+            dragStart = input.Position
+            startPos = sideFrame.Position
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then dragging = false end
+            end)
         end
     end)
     sideFrame.InputChanged:Connect(function(input)
-        if editMode and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then dragInput = input end
+        if editMode and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            dragInput = input
+        end
     end)
     UserInputService.InputChanged:Connect(function(input)
         if input == dragInput and dragging then
@@ -866,9 +875,6 @@ registerRight("Home", function(scroll)
         btnYellow.BackgroundColor3 = editMode and Color3.fromRGB(40, 40, 40) or THEME.BLACK
     end)
 
-    ------------------------------------------------------------------------
-    -- BUTTON ACTIONS
-    ------------------------------------------------------------------------
     btnRed.MouseButton1Click:Connect(function()
         if not isFlying and not editMode and currentIdx < 9 then
             currentIdx = currentIdx + 1
@@ -885,9 +891,6 @@ registerRight("Home", function(scroll)
         end
     end)
 
-    ------------------------------------------------------------------------
-    -- DEATH RESET
-    ------------------------------------------------------------------------
     local function setupDeath(char)
         local h = char:WaitForChild("Humanoid", 5)
         if h then h.Died:Connect(function() currentIdx = 0; btnGreen.Text = "0"; isFlying = false; stopNoclip() end) end
@@ -896,32 +899,57 @@ registerRight("Home", function(scroll)
     if LocalPlayer.Character then setupDeath(LocalPlayer.Character) end
 
     ------------------------------------------------------------------------
-    -- UI HEADER & SWITCH (Model A V1)
+    -- UI HEADER & SWITCH (Model A V1 Style)
     ------------------------------------------------------------------------
-    local header = Instance.new("TextLabel", scroll)
-    header.Size = UDim2.new(1, 0, 0, 36); header.BackgroundTransparency = 1; header.LayoutOrder = 1
-    header.Font = Enum.Font.GothamBold; header.TextSize = 16; header.TextColor3 = THEME.WHITE
-    header.TextXAlignment = Enum.TextXAlignment.Left; header.Text = "》》》Move System 📍《《《"
+    local header = Instance.new("TextLabel")
+    header.Name = "Move_Section_Header"
+    header.Parent = scroll
+    header.Size = UDim2.new(1, 0, 0, 36)
+    header.BackgroundTransparency = 1
+    header.LayoutOrder = 1
+    header.Font = Enum.Font.GothamBold
+    header.TextSize = 16
+    header.TextColor3 = THEME.WHITE
+    header.TextXAlignment = Enum.TextXAlignment.Left
+    header.Text = "》》》Move System 📍《《《"
 
     local moveEnabled = SaveGet("MoveEnabled", false)
 
-    local row = Instance.new("Frame", scroll)
-    row.Size = UDim2.new(1, -6, 0, 46); row.BackgroundColor3 = THEME.BLACK; row.LayoutOrder = 2
-    corner(row, 12); stroke(row, 2.2, THEME.GREEN)
+    local row = Instance.new("Frame")
+    row.Name = "Move_Row1"
+    row.Parent = scroll
+    row.Size = UDim2.new(1, -6, 0, 46)
+    row.BackgroundColor3 = THEME.BLACK
+    row.LayoutOrder = 2
+    corner(row, 12)
+    stroke(row, 2.2, THEME.GREEN)
 
-    local lab = Instance.new("TextLabel", row)
-    lab.Size = UDim2.new(1, -160, 1, 0); lab.Position = UDim2.new(0, 16, 0, 0); lab.BackgroundTransparency = 1
-    lab.Font = Enum.Font.GothamBold; lab.TextSize = 13; lab.TextColor3 = THEME.WHITE
-    lab.Text = "Enable Move Position"; lab.TextXAlignment = Enum.TextXAlignment.Left
+    local lab = Instance.new("TextLabel")
+    lab.Parent = row
+    lab.Size = UDim2.new(1, -160, 1, 0)
+    lab.Position = UDim2.new(0, 16, 0, 0)
+    lab.BackgroundTransparency = 1
+    lab.Font = Enum.Font.GothamBold
+    lab.TextSize = 13
+    lab.TextColor3 = THEME.WHITE
+    lab.Text = "Enable Move Position"
+    lab.TextXAlignment = Enum.TextXAlignment.Left
 
-    local sw = Instance.new("Frame", row)
-    sw.Size = UDim2.fromOffset(52, 26); sw.Position = UDim2.new(1, -12, 0.5, 0); sw.AnchorPoint = Vector2.new(1, 0.5)
-    sw.BackgroundColor3 = THEME.BLACK; corner(sw, 13)
+    local sw = Instance.new("Frame")
+    sw.Parent = row
+    sw.Size = UDim2.fromOffset(52, 26)
+    sw.Position = UDim2.new(1, -12, 0.5, 0)
+    sw.AnchorPoint = Vector2.new(1, 0.5)
+    sw.BackgroundColor3 = THEME.BLACK
+    corner(sw, 13)
     local swStroke = stroke(sw, 1.8, moveEnabled and THEME.GREEN or THEME.RED)
     
-    local knob = Instance.new("Frame", sw)
-    knob.Size = UDim2.fromOffset(22, 22); knob.BackgroundColor3 = THEME.WHITE; corner(knob, 11)
+    local knob = Instance.new("Frame")
+    knob.Parent = sw
+    knob.Size = UDim2.fromOffset(22, 22)
+    knob.BackgroundColor3 = THEME.WHITE
     knob.Position = moveEnabled and UDim2.new(1, -24, 0.5, -11) or UDim2.new(0, 2, 0.5, -11)
+    corner(knob, 11)
 
     local function updateUI(on)
         swStroke.Color = on and THEME.GREEN or THEME.RED
@@ -929,8 +957,11 @@ registerRight("Home", function(scroll)
         sideFrame.Visible = on
     end
 
-    local swBtn = Instance.new("TextButton", sw)
-    swBtn.Size = UDim2.fromScale(1, 1); swBtn.BackgroundTransparency = 1; swBtn.Text = ""
+    local swBtn = Instance.new("TextButton")
+    swBtn.Parent = sw
+    swBtn.Size = UDim2.fromScale(1, 1)
+    swBtn.BackgroundTransparency = 1
+    swBtn.Text = ""
     swBtn.MouseButton1Click:Connect(function()
         moveEnabled = not moveEnabled
         SaveSet("MoveEnabled", moveEnabled)
