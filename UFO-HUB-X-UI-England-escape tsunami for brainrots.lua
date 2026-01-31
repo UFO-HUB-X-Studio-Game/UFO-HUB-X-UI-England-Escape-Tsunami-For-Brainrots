@@ -691,9 +691,10 @@ end)
 
 registerRight("Home", function(scroll) end)
 registerRight("Settings", function(scroll) end)
---===== UFO HUB X • Immortal System (Model A V1 - MIDDLE RANK) =====
--- Feature: 999 Trillion Health + Real-time Re-fill
+--===== UFO HUB X • Immortal System (Model A V1 - BALANCED RANK) =====
+-- Feature: 999 Trillion Health + Real-time Auto Re-fill + Damage Cancel
 -- UI Model: A V1 (Green Glow Border / Dynamic Switch)
+-- Position: Middle Rank (Below Top Headers)
 
 registerRight("Home", function(scroll)
     local TweenService = game:GetService("TweenService")
@@ -708,7 +709,7 @@ registerRight("Home", function(scroll)
         get = function(_, _, d) return d end,
         set = function() end
     }
-    local SCOPE = ("UFO_GodModeV2/%d/%d"):format(tonumber(game.GameId) or 0, tonumber(game.PlaceId) or 0)
+    local SCOPE = ("UFO_Immortal/%d/%d"):format(tonumber(game.GameId) or 0, tonumber(game.PlaceId) or 0)
     local function K(k) return SCOPE .. "/" .. k end
     local function SaveGet(key, default)
         local ok, v = pcall(function() return SAVE.get(K(key), default) end)
@@ -746,33 +747,55 @@ registerRight("Home", function(scroll)
     end
 
     ------------------------------------------------------------------------
-    -- IMMORTAL LOGIC
+    -- SUPREME IMMORTAL LOGIC (รอบคอบที่สุด)
     ------------------------------------------------------------------------
     local godModeOn = SaveGet("godModeOn", false)
     local godConn = nil
-    local SUPREME_HEALTH = 9.9e14 
+    local SUPREME_HEALTH = 9.9e14 -- เลือด 999 ล้านล้าน [cite: 2026-01-31]
 
     local function applyGodMode()
         if godConn then godConn:Disconnect() godConn = nil end
+        
         if godModeOn then
+            -- ใช้ PreRender เพื่อเติมเลือดให้เต็ม "ก่อน" ดาเมจจะหักล้างในทุกเฟรม [cite: 2026-01-31]
             godConn = RunService.PreRender:Connect(function()
                 local char = LocalPlayer.Character
-                local hum = char and char:FindFirstChildOfClass("Humanoid")
-                if hum then
-                    hum.MaxHealth = SUPREME_HEALTH
-                    hum.Health = SUPREME_HEALTH
-                    hum:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
-                    if not char:FindFirstChildOfClass("ForceField") then
-                        Instance.new("ForceField", char).Visible = false
+                if char then
+                    local hum = char:FindFirstChildOfClass("Humanoid")
+                    if hum then
+                        -- ล็อคเลือดมหาศาลและรีฟิลตลอดเวลา [cite: 2026-01-31]
+                        hum.MaxHealth = SUPREME_HEALTH
+                        hum.Health = SUPREME_HEALTH
+                        -- ปิดช่องโหว่การตายจากระบบลบตัวละคร [cite: 2026-01-31]
+                        hum:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
+                        
+                        -- ป้องกันดาเมจทุกอย่างด้วยเกราะล่องหน [cite: 2026-01-31]
+                        if not char:FindFirstChildOfClass("ForceField") then
+                            local ff = Instance.new("ForceField", char)
+                            ff.Visible = false
+                        end
                     end
+                end
+                
+                -- ปิดหน้าจอแดงกระพริบ [cite: 2026-01-31]
+                local gui = LocalPlayer:FindFirstChild("PlayerGui")
+                if gui then
+                    local b1, b2 = gui:FindFirstChild("BloodGui"), gui:FindFirstChild("HealthGui")
+                    if b1 then b1.Enabled = false end
+                    if b2 then b2.Enabled = false end
                 end
             end)
         else
+            -- คืนค่าปกติ
             local char = LocalPlayer.Character
-            local hum = char and char:FindFirstChildOfClass("Humanoid")
-            if hum then
-                hum.MaxHealth = 100 hum.Health = 100
-                hum:SetStateEnabled(Enum.HumanoidStateType.Dead, true)
+            if char then
+                local hum = char:FindFirstChildOfClass("Humanoid")
+                if hum then
+                    hum.MaxHealth = 100 hum.Health = 100
+                    hum:SetStateEnabled(Enum.HumanoidStateType.Dead, true)
+                end
+                local ff = char:FindFirstChildOfClass("ForceField")
+                if ff then ff:Destroy() end
             end
         end
     end
@@ -781,11 +804,11 @@ registerRight("Home", function(scroll)
     ------------------------------------------------------------------------
     -- UI CONSTRUCTION (Model A V1 - MIDDLE POSITION)
     ------------------------------------------------------------------------
-    -- ปรับ LayoutOrder เป็น 100 เพื่อให้อยู่ในอันดับปานกลาง
-    local MIDDLE_ORDER = 100 
+    -- ปรับ LayoutOrder ให้สูงขึ้น (เช่น 50) เพื่อให้ลงไปอยู่ด้านล่างไม่ให้สูงเกินไป [cite: 2026-01-31]
+    local POSITION_ORDER = 50 
 
     local header = Instance.new("TextLabel", scroll)
-    header.Name = "Immortal_Header"
+    header.Name = "Unlock_Header"
     header.BackgroundTransparency = 1
     header.Size = UDim2.new(1, 0, 0, 36)
     header.Font = Enum.Font.GothamBold
@@ -793,15 +816,15 @@ registerRight("Home", function(scroll)
     header.TextColor3 = THEME.WHITE
     header.TextXAlignment = Enum.TextXAlignment.Left
     header.Text = "Unlock 🔓"
-    header.LayoutOrder = MIDDLE_ORDER
+    header.LayoutOrder = POSITION_ORDER
 
     local row = Instance.new("Frame", scroll)
     row.Name = "Immortal_Row"
     row.Size = UDim2.new(1, -6, 0, 46)
     row.BackgroundColor3 = THEME.BLACK
-    row.LayoutOrder = MIDDLE_ORDER + 1
+    row.LayoutOrder = POSITION_ORDER + 1
     corner(row, 12)
-    stroke(row, 2.2, THEME.GREEN)
+    stroke(row, 2.2, THEME.GREEN) -- ขอบเขียว Model A V1 [cite: 2026-01-31]
 
     local lab = Instance.new("TextLabel", row)
     lab.BackgroundTransparency = 1
@@ -811,7 +834,7 @@ registerRight("Home", function(scroll)
     lab.TextSize = 13
     lab.TextColor3 = THEME.WHITE
     lab.TextXAlignment = Enum.TextXAlignment.Left
-    lab.Text = "Immortal 1 time"
+    lab.Text = "Immortal 1 time" -- เปลี่ยนชื่อตามสั่งเป๊ะๆ [cite: 2026-01-31]
 
     local sw = Instance.new("Frame", row)
     sw.AnchorPoint = Vector2.new(1, 0.5)
