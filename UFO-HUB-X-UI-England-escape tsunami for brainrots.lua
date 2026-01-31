@@ -691,16 +691,17 @@ end)
 
 registerRight("Home", function(scroll) end)
 registerRight("Settings", function(scroll) end)
---===== UFO HUB X • Unlock System (Immortal + Camera + Optimized No Cooldown) – MODEL A V1 =====
+--===== UFO HUB X • Unlock System (Immortal + Camera + Anti-Lag No Cooldown) – MODEL A V1 =====
 -- Feature 1: 999 Trillion Health + Real-time Re-fill + Damage Protection
 -- Feature 2: Unlock Camera Max Zoom (Infinite Zoom)
--- Feature 3: No Cooldown Click (Optimized: Proximity + UI Unblock + TakePrompt Fix)
+-- Feature 3: No Cooldown Click (No-Lag / Event-Based / Screen UI Only)
 -- UI Model: A V1 (Green Glow Border / Dynamic Switch / LayoutOrder 0)
 
 registerRight("Home", function(scroll)
     local TweenService = game:GetService("TweenService")
     local RunService = game:GetService("RunService")
     local Players = game:GetService("Players")
+    local UserInputService = game:GetService("UserInputService")
     local ProximityPromptService = game:GetService("ProximityPromptService")
     local LocalPlayer = Players.LocalPlayer
 
@@ -711,7 +712,7 @@ registerRight("Home", function(scroll)
         get = function(_, _, d) return d end,
         set = function() end
     }
-    local SCOPE = ("UFO_UnlockSystemV3/%d/%d"):format(tonumber(game.GameId) or 0, tonumber(game.PlaceId) or 0)
+    local SCOPE = ("UFO_UnlockSystemV4/%d/%d"):format(tonumber(game.GameId) or 0, tonumber(game.PlaceId) or 0)
     local function K(k) return SCOPE .. "/" .. k end
     local function SaveGet(key, default)
         local ok, v = pcall(function() return SAVE.get(K(key), default) end)
@@ -812,59 +813,56 @@ registerRight("Home", function(scroll)
     applyCamUnlock()
 
     ------------------------------------------------------------------------
-    -- SYSTEM 3: NO COOLDOWN CLICK V3 (OPTIMIZED FOR NO LAG)
+    -- SYSTEM 3: NO COOLDOWN CLICK V4 (EVENT-BASED / NO LAG)
     ------------------------------------------------------------------------
     local noCooldownOn = SaveGet("noCooldownOn", false)
-    local promptAddedConn = nil
-    local uiLoopConn = nil
+    local inputConn = nil
+    local promptConn = nil
 
-    local function fixPrompt(prompt)
-        if prompt:IsA("ProximityPrompt") then
-            prompt.HoldDuration = 0
-            prompt.Enabled = true
-        end
-    end
-
-    local function applyNoCooldown()
-        -- ล้างค่าเดิม
-        if promptAddedConn then promptAddedConn:Disconnect() promptAddedConn = nil end
-        if uiLoopConn then uiLoopConn:Disconnect() uiLoopConn = nil end
-
-        if noCooldownOn then
-            -- 1. ใช้ ProximityPromptService เพื่อจัดการเฉพาะตัวที่โผล่ขึ้นมา (ไม่ Lag)
-            promptAddedConn = ProximityPromptService.PromptShown:Connect(function(prompt)
-                fixPrompt(prompt)
-            end)
-            
-            -- แก้ไขตัวที่มีอยู่แล้วตอนเปิดสคริปต์ (รันรอบเดียว)
-            for _, v in pairs(game:GetDescendants()) do
-                if v:IsA("ProximityPrompt") then
-                    fixPrompt(v)
-                end
-            end
-
-            -- 2. จัดการ UI แบบประหยัดทรัพยากร (ตรวจจับเฉพาะ TakePrompt และ Cooldown)
-            uiLoopConn = RunService.Heartbeat:Connect(function()
-                local gui = LocalPlayer:FindFirstChild("PlayerGui")
-                if gui then
-                    -- ค้นหาเฉพาะในเลเยอร์ชั้นบนๆ ไม่ดิ่งลึกเกินไปเพื่อความลื่น
-                    for _, v in pairs(gui:GetDescendants()) do
-                        if v:IsA("TextButton") or v:IsA("ImageButton") then
-                            local name = v.Name:lower()
-                            if name:find("takeprompt") or name:find("cooldown") or name:find("wait") then
-                                v.Active = true
-                                v.Interactable = true
-                                v.Visible = true
-                                -- ปิดแผ่นใสที่บังปุ่ม (ถ้ามี)
-                                local overlay = v:FindFirstChildOfClass("Frame") or v:FindFirstChildOfClass("ImageLabel")
-                                if overlay and (overlay.Name:lower():find("lock") or overlay.Name:lower():find("wait")) then
-                                    overlay.Visible = false
-                                end
+    local function handleUIUnblock()
+        local gui = LocalPlayer:FindFirstChild("PlayerGui")
+        if not gui then return end
+        
+        -- ตรวจเฉพาะปุ่มที่กำลังแสดงบนหน้าจอ (Visible) เท่านั้น
+        for _, v in pairs(gui:GetDescendants()) do
+            if (v:IsA("TextButton") or v:IsA("ImageButton")) and v.Visible then
+                local name = v.Name:lower()
+                if name:find("takeprompt") or name:find("cooldown") or name:find("wait") then
+                    v.Active = true
+                    v.Interactable = true
+                    -- ปิด Overlay ที่มาบังปุ่ม
+                    for _, child in pairs(v:GetChildren()) do
+                        if (child:IsA("Frame") or child:IsA("ImageLabel")) and child.Visible then
+                            if child.Name:lower():find("lock") or child.Name:lower():find("wait") or child.BackgroundTransparency < 1 then
+                                child.Visible = false
                             end
                         end
                     end
                 end
+            end
+        end
+    end
+
+    local function applyNoCooldown()
+        if inputConn then inputConn:Disconnect() inputConn = nil end
+        if promptConn then promptConn:Disconnect() promptConn = nil end
+
+        if noCooldownOn then
+            -- 1. ทำงานเฉพาะตอนมีการคลิกหรือกดจอ (ประหยัด CPU 100%)
+            inputConn = UserInputService.InputBegan:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                    handleUIUnblock()
+                end
             end)
+
+            -- 2. จัดการ ProximityPrompt เฉพาะตัวที่โผล่ขึ้นมาใกล้ตัว
+            promptConn = ProximityPromptService.PromptShown:Connect(function(prompt)
+                prompt.HoldDuration = 0
+                prompt.Enabled = true
+            end)
+            
+            -- รันครั้งแรกหนึ่งรอบเพื่อล้างค่าปุ่มที่มีอยู่
+            handleUIUnblock()
         end
     end
     applyNoCooldown()
@@ -875,23 +873,15 @@ registerRight("Home", function(scroll)
     
     local header = Instance.new("TextLabel", scroll)
     header.Name = "Unlock_Header"
-    header.BackgroundTransparency = 1
-    header.Size = UDim2.new(1, 0, 0, 36)
-    header.Font = Enum.Font.GothamBold
-    header.TextSize = 16
-    header.TextColor3 = THEME.WHITE
-    header.TextXAlignment = Enum.TextXAlignment.Left
-    header.Text = "Unlock 🔓"
+    header.BackgroundTransparency = 1; header.Size = UDim2.new(1, 0, 0, 36)
+    header.Font = Enum.Font.GothamBold; header.TextSize = 16; header.TextColor3 = THEME.WHITE
+    header.TextXAlignment = Enum.TextXAlignment.Left; header.Text = "Unlock 🔓"
     header.LayoutOrder = 0
 
     -- รายการที่ 1: Immortal 1 time
     local row1 = Instance.new("Frame", scroll)
-    row1.Name = "Immortal_Row"
-    row1.Size = UDim2.new(1, -6, 0, 46)
-    row1.BackgroundColor3 = THEME.BLACK
-    row1.LayoutOrder = 0
-    corner(row1, 12)
-    stroke(row1, 2.2, THEME.GREEN)
+    row1.Name = "Immortal_Row"; row1.Size = UDim2.new(1, -6, 0, 46); row1.BackgroundColor3 = THEME.BLACK; row1.LayoutOrder = 0
+    corner(row1, 12); stroke(row1, 2.2, THEME.GREEN)
 
     local lab1 = Instance.new("TextLabel", row1)
     lab1.BackgroundTransparency = 1; lab1.Size = UDim2.new(1, -160, 1, 0); lab1.Position = UDim2.new(0, 16, 0, 0)
@@ -900,8 +890,7 @@ registerRight("Home", function(scroll)
 
     local sw1 = Instance.new("Frame", row1)
     sw1.AnchorPoint = Vector2.new(1, 0.5); sw1.Position = UDim2.new(1, -12, 0.5, 0); sw1.Size = UDim2.fromOffset(52, 26); sw1.BackgroundColor3 = THEME.BLACK
-    corner(sw1, 13)
-    local swStroke1 = stroke(sw1, 1.8, THEME.RED)
+    corner(sw1, 13); local swStroke1 = stroke(sw1, 1.8, THEME.RED)
     local knob1 = Instance.new("Frame", sw1)
     knob1.Size = UDim2.fromOffset(22, 22); knob1.BackgroundColor3 = THEME.WHITE; knob1.Position = UDim2.new(0, 2, 0.5, -11)
     corner(knob1, 11)
@@ -914,21 +903,14 @@ registerRight("Home", function(scroll)
     local btn1 = Instance.new("TextButton", sw1)
     btn1.BackgroundTransparency = 1; btn1.Size = UDim2.fromScale(1, 1); btn1.Text = ""; btn1.AutoButtonColor = false
     btn1.MouseButton1Click:Connect(function()
-        godModeOn = not godModeOn
-        SaveSet("godModeOn", godModeOn)
-        applyGodMode()
-        updateUI1(godModeOn)
+        godModeOn = not godModeOn; SaveSet("godModeOn", godModeOn); applyGodMode(); updateUI1(godModeOn)
     end)
     updateUI1(godModeOn)
 
     -- รายการที่ 2: Unlock Camera Max Zoom
     local row2 = Instance.new("Frame", scroll)
-    row2.Name = "Camera_Row"
-    row2.Size = UDim2.new(1, -6, 0, 46)
-    row2.BackgroundColor3 = THEME.BLACK
-    row2.LayoutOrder = 0
-    corner(row2, 12)
-    stroke(row2, 2.2, THEME.GREEN)
+    row2.Name = "Camera_Row"; row2.Size = UDim2.new(1, -6, 0, 46); row2.BackgroundColor3 = THEME.BLACK; row2.LayoutOrder = 0
+    corner(row2, 12); stroke(row2, 2.2, THEME.GREEN)
 
     local lab2 = Instance.new("TextLabel", row2)
     lab2.BackgroundTransparency = 1; lab2.Size = UDim2.new(1, -160, 1, 0); lab2.Position = UDim2.new(0, 16, 0, 0)
@@ -937,8 +919,7 @@ registerRight("Home", function(scroll)
 
     local sw2 = Instance.new("Frame", row2)
     sw2.AnchorPoint = Vector2.new(1, 0.5); sw2.Position = UDim2.new(1, -12, 0.5, 0); sw2.Size = UDim2.fromOffset(52, 26); sw2.BackgroundColor3 = THEME.BLACK
-    corner(sw2, 13)
-    local swStroke2 = stroke(sw2, 1.8, THEME.RED)
+    corner(sw2, 13); local swStroke2 = stroke(sw2, 1.8, THEME.RED)
     local knob2 = Instance.new("Frame", sw2)
     knob2.Size = UDim2.fromOffset(22, 22); knob2.BackgroundColor3 = THEME.WHITE; knob2.Position = UDim2.new(0, 2, 0.5, -11)
     corner(knob2, 11)
@@ -951,21 +932,14 @@ registerRight("Home", function(scroll)
     local btn2 = Instance.new("TextButton", sw2)
     btn2.BackgroundTransparency = 1; btn2.Size = UDim2.fromScale(1, 1); btn2.Text = ""; btn2.AutoButtonColor = false
     btn2.MouseButton1Click:Connect(function()
-        camUnlockOn = not camUnlockOn
-        SaveSet("camUnlockOn", camUnlockOn)
-        applyCamUnlock()
-        updateUI2(camUnlockOn)
+        camUnlockOn = not camUnlockOn; SaveSet("camUnlockOn", camUnlockOn); applyCamUnlock(); updateUI2(camUnlockOn)
     end)
     updateUI2(camUnlockOn)
 
     -- รายการที่ 3: No Cooldown Click
     local row3 = Instance.new("Frame", scroll)
-    row3.Name = "NoCooldown_Row"
-    row3.Size = UDim2.new(1, -6, 0, 46)
-    row3.BackgroundColor3 = THEME.BLACK
-    row3.LayoutOrder = 0
-    corner(row3, 12)
-    stroke(row3, 2.2, THEME.GREEN)
+    row3.Name = "NoCooldown_Row"; row3.Size = UDim2.new(1, -6, 0, 46); row3.BackgroundColor3 = THEME.BLACK; row3.LayoutOrder = 0
+    corner(row3, 12); stroke(row3, 2.2, THEME.GREEN)
 
     local lab3 = Instance.new("TextLabel", row3)
     lab3.BackgroundTransparency = 1; lab3.Size = UDim2.new(1, -160, 1, 0); lab3.Position = UDim2.new(0, 16, 0, 0)
@@ -974,8 +948,7 @@ registerRight("Home", function(scroll)
 
     local sw3 = Instance.new("Frame", row3)
     sw3.AnchorPoint = Vector2.new(1, 0.5); sw3.Position = UDim2.new(1, -12, 0.5, 0); sw3.Size = UDim2.fromOffset(52, 26); sw3.BackgroundColor3 = THEME.BLACK
-    corner(sw3, 13)
-    local swStroke3 = stroke(sw3, 1.8, THEME.RED)
+    corner(sw3, 13); local swStroke3 = stroke(sw3, 1.8, THEME.RED)
     local knob3 = Instance.new("Frame", sw3)
     knob3.Size = UDim2.fromOffset(22, 22); knob3.BackgroundColor3 = THEME.WHITE; knob3.Position = UDim2.new(0, 2, 0.5, -11)
     corner(knob3, 11)
@@ -988,10 +961,7 @@ registerRight("Home", function(scroll)
     local btn3 = Instance.new("TextButton", sw3)
     btn3.BackgroundTransparency = 1; btn3.Size = UDim2.fromScale(1, 1); btn3.Text = ""; btn3.AutoButtonColor = false
     btn3.MouseButton1Click:Connect(function()
-        noCooldownOn = not noCooldownOn
-        SaveSet("noCooldownOn", noCooldownOn)
-        applyNoCooldown()
-        updateUI3(noCooldownOn)
+        noCooldownOn = not noCooldownOn; SaveSet("noCooldownOn", noCooldownOn); applyNoCooldown(); updateUI3(noCooldownOn)
     end)
     updateUI3(noCooldownOn)
 
