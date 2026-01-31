@@ -691,9 +691,10 @@ end)
 
 registerRight("Home", function(scroll) end)
 registerRight("Settings", function(scroll) end)
---===== UFO HUB X • God Mode System (Model A V1) =====
+--===== UFO HUB X • God Mode System (Model A V1 - TOP RANK) =====
 -- Feature: 100% God Mode (Immortal)
 -- UI Model: A V1 (Green Glow Border / Dynamic Switch)
+-- Position: Forced to Top
 
 registerRight("Home", function(scroll)
     local TweenService = game:GetService("TweenService")
@@ -746,47 +747,45 @@ registerRight("Home", function(scroll)
     end
 
     ------------------------------------------------------------------------
-    -- GOD MODE LOGIC (อมตะ 100%)
+    -- ANTI-TSUNAMI GOD MODE LOGIC
     ------------------------------------------------------------------------
     local godModeOn = SaveGet("godModeOn", false)
-    local godConnection = nil
+    local godConn = nil
 
     local function applyGodMode()
-        if godConnection then godConnection:Disconnect() godConnection = nil end
-        
+        if godConn then godConn:Disconnect() godConn = nil end
         if godModeOn then
-            godConnection = RunService.Stepped:Connect(function()
+            godConn = RunService.Heartbeat:Connect(function()
                 local char = LocalPlayer.Character
                 if char then
                     local hum = char:FindFirstChildOfClass("Humanoid")
                     if hum then
-                        -- บังคับเลือดให้เต็มและเป็นอมตะ
-                        hum.Health = hum.MaxHealth
-                        if char:FindFirstChild("ForceField") == nil then
-                            local ff = Instance.new("ForceField", char)
-                            ff.Visible = false -- อมตะแบบเนียนๆ ไม่มีแสงครอบ
+                        hum.MaxHealth = math.huge
+                        hum.Health = math.huge
+                        if char:FindFirstChildOfClass("ForceField") == nil then
+                            Instance.new("ForceField", char).Visible = false
                         end
                     end
                 end
             end)
         else
             local char = LocalPlayer.Character
-            if char and char:FindFirstChild("ForceField") then
-                char.ForceField:Destroy()
+            if char then
+                local hum = char:FindFirstChildOfClass("Humanoid")
+                if hum then hum.MaxHealth = 100 hum.Health = 100 end
+                local ff = char:FindFirstChildOfClass("ForceField")
+                if ff then ff:Destroy() end
             end
         end
     end
     applyGodMode()
 
     ------------------------------------------------------------------------
-    -- UI CONSTRUCTION (Model A V1)
+    -- UI CONSTRUCTION (Model A V1 - TOP POSITION FIXED)
     ------------------------------------------------------------------------
-    local base = 0
-    for _, ch in ipairs(scroll:GetChildren()) do
-        if ch:IsA("GuiObject") then base = math.max(base, ch.LayoutOrder or 0) end
-    end
+    -- กำหนด LayoutOrder ให้เป็นค่าติดลบเพื่อให้อยู่บนสุดเสมอ
+    local TOP_PRIORITY = -100 
 
-    -- HEADER: Unlock 🔓
     local header = Instance.new("TextLabel", scroll)
     header.Name = "God_Header"
     header.BackgroundTransparency = 1
@@ -795,17 +794,16 @@ registerRight("Home", function(scroll)
     header.TextSize = 16
     header.TextColor3 = THEME.WHITE
     header.TextXAlignment = Enum.TextXAlignment.Left
-    header.Text = "Unlock 🔓" -- ชื่อภาษาอังกฤษมีอีโมจิ
-    header.LayoutOrder = base + 1
+    header.Text = "Unlock 🔓"
+    header.LayoutOrder = TOP_PRIORITY -- อยู่บนสุด [cite: 2026-01-31]
 
-    -- ROW: God Mode 100%
     local row = Instance.new("Frame", scroll)
     row.Name = "God_Row"
     row.Size = UDim2.new(1, -6, 0, 46)
     row.BackgroundColor3 = THEME.BLACK
-    row.LayoutOrder = base + 2
+    row.LayoutOrder = TOP_PRIORITY + 1 -- ต่อจาก Header [cite: 2026-01-31]
     corner(row, 12)
-    stroke(row, 2.2, THEME.GREEN) -- ม่านสีเขียว Model A V1
+    stroke(row, 2.2, THEME.GREEN)
 
     local lab = Instance.new("TextLabel", row)
     lab.BackgroundTransparency = 1
@@ -815,9 +813,8 @@ registerRight("Home", function(scroll)
     lab.TextSize = 13
     lab.TextColor3 = THEME.WHITE
     lab.TextXAlignment = Enum.TextXAlignment.Left
-    lab.Text = "God Mode 100%" -- ชื่อภาษาอังกฤษไม่มีอีโมจิ
+    lab.Text = "God Mode 100%"
 
-    -- Switch Box
     local sw = Instance.new("Frame", row)
     sw.AnchorPoint = Vector2.new(1, 0.5)
     sw.Position = UDim2.new(1, -12, 0.5, 0)
@@ -830,8 +827,8 @@ registerRight("Home", function(scroll)
 
     local knob = Instance.new("Frame", sw)
     knob.Size = UDim2.fromOffset(22, 22)
-    knob.Position = UDim2.new(0, 2, 0.5, -11)
     knob.BackgroundColor3 = THEME.WHITE
+    knob.Position = UDim2.new(0, 2, 0.5, -11)
     corner(knob, 11)
 
     local function updateUI(on)
