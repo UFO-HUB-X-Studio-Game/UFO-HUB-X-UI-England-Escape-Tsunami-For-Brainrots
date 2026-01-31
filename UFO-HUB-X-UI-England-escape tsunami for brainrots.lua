@@ -968,8 +968,7 @@ registerRight("Home", function(scroll)
 end)
 --===== UFO HUB X • Move System (AAA1 + AA1 + AAA2 COMBO) – FULL NEON EDITION =====
 -- Target Map: Escape the tsunami and head to Brainrots
--- Feature: Added Warp Button (Emoji 🌀) next to Number Button
--- Fix: Force Reset to 0 when warping or respawning
+-- Fix: Force Reset to 0 even if Immortal is ON (ตรวจจับการเกิดใหม่โดยตรง)
 -- LayoutOrder: 0
 
 registerRight("Home", function(scroll)
@@ -1021,7 +1020,6 @@ registerRight("Home", function(scroll)
         NEON_GREEN = Color3.fromRGB(50, 255, 50),
         RED    = Color3.fromRGB(255, 40, 40),
         BLUE   = Color3.fromRGB(0, 170, 255),
-        PURPLE = Color3.fromRGB(180, 50, 255), -- สีสำหรับปุ่มวาร์ป
         YELLOW = Color3.fromRGB(255, 220, 0),
         WHITE  = Color3.fromRGB(255, 255, 255),
         BLACK  = Color3.fromRGB(0, 0, 0),
@@ -1043,7 +1041,7 @@ registerRight("Home", function(scroll)
     end
 
     ------------------------------------------------------------------------
-    -- FLY & NOCLIP LOGIC
+    -- FLY & NOCLIP LOGIC (AAA1 RE-INTEGRATED)
     ------------------------------------------------------------------------
     local isFlying = false
     local noclipConn = nil
@@ -1096,13 +1094,13 @@ registerRight("Home", function(scroll)
     end
 
     ------------------------------------------------------------------------
-    -- EXTERNAL UI (Control Buttons)
+    -- EXTERNAL UI
     ------------------------------------------------------------------------
-    local oldControl = LocalPlayer.PlayerGui:FindFirstChild("UFO_Move_Control_V10")
+    local oldControl = LocalPlayer.PlayerGui:FindFirstChild("UFO_Move_Control_V9")
     if oldControl then oldControl:Destroy() end
 
     local sg = Instance.new("ScreenGui", LocalPlayer.PlayerGui)
-    sg.Name = "UFO_Move_Control_V10"
+    sg.Name = "UFO_Move_Control_V9"
     sg.ResetOnSpawn = false
 
     local mainFrame = Instance.new("Frame", sg)
@@ -1128,51 +1126,39 @@ registerRight("Home", function(scroll)
         return b
     end
 
-    -- ตำแหน่งปุ่มต่างๆ
-    local btnRed    = createBtn("Btn_Red", "⬆️", UDim2.new(0, 0, 0, 0))
-    local btnWarp   = createBtn("Btn_Warp", "🌀", UDim2.new(0, -(config.BtnSize + 15), 0, config.BtnSize + 15)) -- ปุ่มที่ 5 (ซ้ายของเลข)
-    local btnGreen  = createBtn("Btn_Green", "0", UDim2.new(0, 0, 0, config.BtnSize + 15))
+    local btnRed = createBtn("Btn_Red", "⬆️", UDim2.new(0, 0, 0, 0))
+    local btnGreen = createBtn("Btn_Green", "0", UDim2.new(0, 0, 0, config.BtnSize + 15))
     local btnYellow = createBtn("Btn_Yellow", "⚙️", UDim2.new(0, config.BtnSize + 15, 0, config.BtnSize + 15))
-    local btnBlue   = createBtn("Btn_Blue", "⬇️", UDim2.new(0, 0, 0, (config.BtnSize + 15) * 2))
+    local btnBlue = createBtn("Btn_Blue", "⬇️", UDim2.new(0, 0, 0, (config.BtnSize + 15) * 2))
 
     local function refreshUI()
-        local s = config.BtnSize
-        local p = 15 -- Padding
-        btnRed.Size, btnWarp.Size, btnGreen.Size, btnYellow.Size, btnBlue.Size = UDim2.fromOffset(s,s), UDim2.fromOffset(s,s), UDim2.fromOffset(s,s), UDim2.fromOffset(s,s), UDim2.fromOffset(s,s)
-        
-        btnRed.Position    = UDim2.new(0, 0, 0, 0)
-        btnWarp.Position   = UDim2.new(0, -(s + p), 0, s + p) -- ด้านซ้ายของปุ่มเขียว
-        btnGreen.Position  = UDim2.new(0, 0, 0, s + p)
-        btnYellow.Position = UDim2.new(0, s + p, 0, s + p)
-        btnBlue.Position   = UDim2.new(0, 0, 0, (s + p) * 2)
-
-        local ts = s * 0.45
-        btnRed.TextSize, btnWarp.TextSize, btnGreen.TextSize, btnYellow.TextSize, btnBlue.TextSize = ts, ts, ts, ts, ts
+        btnRed.Size = UDim2.new(0, config.BtnSize, 0, config.BtnSize)
+        btnGreen.Size = UDim2.new(0, config.BtnSize, 0, config.BtnSize)
+        btnGreen.Position = UDim2.new(0, 0, 0, config.BtnSize + 15)
+        btnYellow.Size = UDim2.new(0, config.BtnSize, 0, config.BtnSize)
+        btnYellow.Position = UDim2.new(0, config.BtnSize + 15, 0, config.BtnSize + 15)
+        btnBlue.Size = UDim2.new(0, config.BtnSize, 0, config.BtnSize)
+        btnBlue.Position = UDim2.new(0, 0, 0, (config.BtnSize + 15) * 2)
+        btnRed.TextSize, btnGreen.TextSize, btnYellow.TextSize, btnBlue.TextSize = config.BtnSize*0.45, config.BtnSize*0.45, config.BtnSize*0.45, config.BtnSize*0.45
     end
 
-    -- ฟังก์ชันรีเซ็ตค่าเป็น 0
-    local function resetToZero()
+    -- ระบบ Reset ใหม่: ตรวจจับเมื่อตัวละคร "ใหม่" ถูกโหลดเข้ามา (ใช้แก้ปัญหาเปิดอมตะแล้วเลขไม่รี)
+    LocalPlayer.CharacterAdded:Connect(function(char)
         currentIdx = 0
         btnGreen.Text = "0"
         isFlying = false
         stopNoclip()
-    end
-
-    -- วาร์ปไปยังจุดที่กำหนด (HRP Position)
-    btnWarp.MouseButton1Click:Connect(function()
-        if editMode then return end
-        local char = LocalPlayer.Character
-        local hrp = char and char:FindFirstChild("HumanoidRootPart")
-        if hrp then
-            -- ตำแหน่งที่สั่ง: X=155.465, Y=3.258, Z=-122.514
-            hrp.CFrame = CFrame.new(155.465, 3.258, -122.514)
-            resetToZero() -- กดแล้วเลขเป็น 0 ทันที
+        
+        -- เผื่อไว้กรณีตายธรรมดา
+        local hum = char:WaitForChild("Humanoid", 10)
+        if hum then
+            hum.Died:Connect(function()
+                currentIdx = 0
+                btnGreen.Text = "0"
+                isFlying = false
+                stopNoclip()
+            end)
         end
-    end)
-
-    -- ระบบ Reset เมื่อตายหรือเกิดใหม่
-    LocalPlayer.CharacterAdded:Connect(function()
-        resetToZero()
     end)
 
     local editMode, dragging, dragStart, startPos = false, false, nil, nil
@@ -1190,7 +1176,7 @@ registerRight("Home", function(scroll)
             end
         end)
     end
-    makeDraggable(btnRed); makeDraggable(btnWarp); makeDraggable(btnGreen); makeDraggable(btnBlue); makeDraggable(btnYellow)
+    makeDraggable(btnRed); makeDraggable(btnGreen); makeDraggable(btnBlue); makeDraggable(btnYellow)
 
     UserInputService.InputChanged:Connect(function(input)
         if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
@@ -1214,12 +1200,12 @@ registerRight("Home", function(scroll)
     btnBlue.MouseButton1Click:Connect(function()
         if not isFlying and not editMode and currentIdx > 0 then
             currentIdx = currentIdx - 1; btnGreen.Text = tostring(currentIdx)
-            if currentIdx ~= 0 then flyTo(Positions[currentIdx]) else stopNoclip() end
+            if currentIdx ~= 0 then flyTo(Positions[currentIdx]) end
         end
     end)
 
     ------------------------------------------------------------------------
-    -- MODEL AAA2 SLIDER (ความไวและการปรับขนาดปุ่ม)
+    -- MODEL AAA2 SLIDER
     ------------------------------------------------------------------------
     local function createAAA2Slider(parent, title, defaultRel, callback)
         local row = Instance.new("Frame", parent)
