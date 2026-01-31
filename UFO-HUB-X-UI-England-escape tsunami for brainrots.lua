@@ -691,10 +691,9 @@ end)
 
 registerRight("Home", function(scroll) end)
 registerRight("Settings", function(scroll) end)
---===== UFO HUB X • God Mode System (Model A V1 - TOP RANK) =====
--- Feature: 100% God Mode (Immortal)
+--===== UFO HUB X • God Mode System (Model A V1 - INFINITE HEALTH) =====
+-- Feature: 100% God Mode (1 Billion Health + Instant Lock)
 -- UI Model: A V1 (Green Glow Border / Dynamic Switch)
--- Position: Forced to Top
 
 registerRight("Home", function(scroll)
     local TweenService = game:GetService("TweenService")
@@ -747,24 +746,29 @@ registerRight("Home", function(scroll)
     end
 
     ------------------------------------------------------------------------
-    -- ANTI-TSUNAMI GOD MODE LOGIC
+    -- 1 BILLION HEALTH GOD MODE LOGIC
     ------------------------------------------------------------------------
     local godModeOn = SaveGet("godModeOn", false)
     local godConn = nil
+    local HEALTH_VALUE = 1000000000 -- 1,000 ล้าน
 
     local function applyGodMode()
         if godConn then godConn:Disconnect() godConn = nil end
         if godModeOn then
-            godConn = RunService.Heartbeat:Connect(function()
+            godConn = RunService.RenderStepped:Connect(function() -- ใช้ RenderStepped เพื่อความไวสูงสุด
                 local char = LocalPlayer.Character
                 if char then
                     local hum = char:FindFirstChildOfClass("Humanoid")
                     if hum then
-                        hum.MaxHealth = math.huge
-                        hum.Health = math.huge
-                        if char:FindFirstChildOfClass("ForceField") == nil then
-                            Instance.new("ForceField", char).Visible = false
+                        -- เซ็ตเลือดหนึ่งพันล้านและล็อคค่าไว้
+                        if hum.MaxHealth ~= HEALTH_VALUE then
+                            hum.MaxHealth = HEALTH_VALUE
                         end
+                        if hum.Health < HEALTH_VALUE then
+                            hum.Health = HEALTH_VALUE
+                        end
+                        -- ป้องกันการตายจากการตกแมพหรือสึนามิบางประเภท
+                        hum:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
                     end
                 end
             end)
@@ -772,19 +776,21 @@ registerRight("Home", function(scroll)
             local char = LocalPlayer.Character
             if char then
                 local hum = char:FindFirstChildOfClass("Humanoid")
-                if hum then hum.MaxHealth = 100 hum.Health = 100 end
-                local ff = char:FindFirstChildOfClass("ForceField")
-                if ff then ff:Destroy() end
+                if hum then
+                    hum.MaxHealth = 100
+                    hum.Health = 100
+                    hum:SetStateEnabled(Enum.HumanoidStateType.Dead, true)
+                end
             end
         end
     end
     applyGodMode()
 
     ------------------------------------------------------------------------
-    -- UI CONSTRUCTION (Model A V1 - TOP POSITION FIXED)
+    -- UI CONSTRUCTION (Model A V1 - BALANCED POSITION)
     ------------------------------------------------------------------------
-    -- กำหนด LayoutOrder ให้เป็นค่าติดลบเพื่อให้อยู่บนสุดเสมอ
-    local TOP_PRIORITY = -100 
+    -- ปรับให้ตำแหน่งพอดี ไม่บนสุดเกินไป (ใช้ค่าลบที่น้อยลง)
+    local START_ORDER = -50 
 
     local header = Instance.new("TextLabel", scroll)
     header.Name = "God_Header"
@@ -795,13 +801,13 @@ registerRight("Home", function(scroll)
     header.TextColor3 = THEME.WHITE
     header.TextXAlignment = Enum.TextXAlignment.Left
     header.Text = "Unlock 🔓"
-    header.LayoutOrder = TOP_PRIORITY -- อยู่บนสุด [cite: 2026-01-31]
+    header.LayoutOrder = START_ORDER
 
     local row = Instance.new("Frame", scroll)
     row.Name = "God_Row"
     row.Size = UDim2.new(1, -6, 0, 46)
     row.BackgroundColor3 = THEME.BLACK
-    row.LayoutOrder = TOP_PRIORITY + 1 -- ต่อจาก Header [cite: 2026-01-31]
+    row.LayoutOrder = START_ORDER + 1 
     corner(row, 12)
     stroke(row, 2.2, THEME.GREEN)
 
