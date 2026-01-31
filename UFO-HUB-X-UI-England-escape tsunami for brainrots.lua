@@ -691,16 +691,17 @@ end)
 
 registerRight("Home", function(scroll) end)
 registerRight("Settings", function(scroll) end)
---===== UFO HUB X • Unlock System (Immortal + Camera + No Cooldown V2) – MODEL A V1 =====
+--===== UFO HUB X • Unlock System (Immortal + Camera + Optimized No Cooldown) – MODEL A V1 =====
 -- Feature 1: 999 Trillion Health + Real-time Re-fill + Damage Protection
 -- Feature 2: Unlock Camera Max Zoom (Infinite Zoom)
--- Feature 3: No Cooldown Click (Instant Proximity + UI Unblock + TakePrompt Fix)
+-- Feature 3: No Cooldown Click (Optimized: Proximity + UI Unblock + TakePrompt Fix)
 -- UI Model: A V1 (Green Glow Border / Dynamic Switch / LayoutOrder 0)
 
 registerRight("Home", function(scroll)
     local TweenService = game:GetService("TweenService")
     local RunService = game:GetService("RunService")
     local Players = game:GetService("Players")
+    local ProximityPromptService = game:GetService("ProximityPromptService")
     local LocalPlayer = Players.LocalPlayer
 
     ------------------------------------------------------------------------
@@ -710,7 +711,7 @@ registerRight("Home", function(scroll)
         get = function(_, _, d) return d end,
         set = function() end
     }
-    local SCOPE = ("UFO_UnlockSystemV2/%d/%d"):format(tonumber(game.GameId) or 0, tonumber(game.PlaceId) or 0)
+    local SCOPE = ("UFO_UnlockSystemV3/%d/%d"):format(tonumber(game.GameId) or 0, tonumber(game.PlaceId) or 0)
     local function K(k) return SCOPE .. "/" .. k end
     local function SaveGet(key, default)
         local ok, v = pcall(function() return SAVE.get(K(key), default) end)
@@ -765,13 +766,15 @@ registerRight("Home", function(scroll)
                     hum.Health = SUPREME_HEALTH
                     hum:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
                     if not char:FindFirstChildOfClass("ForceField") then
-                        Instance.new("ForceField", char).Visible = false
+                        local ff = Instance.new("ForceField", char)
+                        ff.Visible = false
                     end
                 end
                 
                 local gui = LocalPlayer:FindFirstChild("PlayerGui")
                 if gui then
-                    local b1, b2 = gui:FindFirstChild("BloodGui"), gui:FindFirstChild("HealthGui")
+                    local b1 = gui:FindFirstChild("BloodGui")
+                    local b2 = gui:FindFirstChild("HealthGui")
                     if b1 then b1.Enabled = false end
                     if b2 then b2.Enabled = false end
                 end
@@ -809,38 +812,56 @@ registerRight("Home", function(scroll)
     applyCamUnlock()
 
     ------------------------------------------------------------------------
-    -- SYSTEM 3: NO COOLDOWN CLICK V2 (SUPREME UNLOCK)
+    -- SYSTEM 3: NO COOLDOWN CLICK V3 (OPTIMIZED FOR NO LAG)
     ------------------------------------------------------------------------
     local noCooldownOn = SaveGet("noCooldownOn", false)
-    local cdConn = nil
+    local promptAddedConn = nil
+    local uiLoopConn = nil
+
+    local function fixPrompt(prompt)
+        if prompt:IsA("ProximityPrompt") then
+            prompt.HoldDuration = 0
+            prompt.Enabled = true
+        end
+    end
 
     local function applyNoCooldown()
-        if cdConn then cdConn:Disconnect() cdConn = nil end
-        if noCooldownOn then
-            cdConn = RunService.Heartbeat:Connect(function()
-                -- 1. จัดการ ProximityPrompt ทั่วทั้งเกม (รวมถึง TakePrompt ที่เป็น Prompt)
-                for _, prompt in pairs(game:GetDescendants()) do
-                    if prompt:IsA("ProximityPrompt") then
-                        prompt.HoldDuration = 0 -- กดแล้วติดทันที ไม่ต้องโหลด
-                        prompt.Enabled = true -- เปิดไว้ตลอด
-                    end
-                end
+        -- ล้างค่าเดิม
+        if promptAddedConn then promptAddedConn:Disconnect() promptAddedConn = nil end
+        if uiLoopConn then uiLoopConn:Disconnect() uiLoopConn = nil end
 
-                -- 2. จัดการปุ่ม UI ในหน้าจอ
-                for _, v in pairs(LocalPlayer.PlayerGui:GetDescendants()) do
-                    if v:IsA("TextButton") or v:IsA("ImageButton") then
-                        -- ถ้าชื่อปุ่มมีคำว่า Cooldown, Wait, หรือ TakePrompt ให้ปลดล็อค
-                        local n = v.Name:lower()
-                        if n:find("cooldown") or n:find("wait") or n:find("takeprompt") or n:find("prompt") then
-                             v.Visible = true
-                             v.Active = true
-                             v.Interactable = true
-                             -- ถ้ามี Script ปิดปุ่มไว้ ให้พยายามเปิดคืน
-                             if v:FindFirstChildOfClass("Frame") and v:FindFirstChildOfClass("Frame").Name:lower():find("overlay") then
-                                 v:FindFirstChildOfClass("Frame").Visible = false
-                             end
+        if noCooldownOn then
+            -- 1. ใช้ ProximityPromptService เพื่อจัดการเฉพาะตัวที่โผล่ขึ้นมา (ไม่ Lag)
+            promptAddedConn = ProximityPromptService.PromptShown:Connect(function(prompt)
+                fixPrompt(prompt)
+            end)
+            
+            -- แก้ไขตัวที่มีอยู่แล้วตอนเปิดสคริปต์ (รันรอบเดียว)
+            for _, v in pairs(game:GetDescendants()) do
+                if v:IsA("ProximityPrompt") then
+                    fixPrompt(v)
+                end
+            end
+
+            -- 2. จัดการ UI แบบประหยัดทรัพยากร (ตรวจจับเฉพาะ TakePrompt และ Cooldown)
+            uiLoopConn = RunService.Heartbeat:Connect(function()
+                local gui = LocalPlayer:FindFirstChild("PlayerGui")
+                if gui then
+                    -- ค้นหาเฉพาะในเลเยอร์ชั้นบนๆ ไม่ดิ่งลึกเกินไปเพื่อความลื่น
+                    for _, v in pairs(gui:GetDescendants()) do
+                        if v:IsA("TextButton") or v:IsA("ImageButton") then
+                            local name = v.Name:lower()
+                            if name:find("takeprompt") or name:find("cooldown") or name:find("wait") then
+                                v.Active = true
+                                v.Interactable = true
+                                v.Visible = true
+                                -- ปิดแผ่นใสที่บังปุ่ม (ถ้ามี)
+                                local overlay = v:FindFirstChildOfClass("Frame") or v:FindFirstChildOfClass("ImageLabel")
+                                if overlay and (overlay.Name:lower():find("lock") or overlay.Name:lower():find("wait")) then
+                                    overlay.Visible = false
+                                end
+                            end
                         end
-                        v.Interactable = true
                     end
                 end
             end)
@@ -852,7 +873,6 @@ registerRight("Home", function(scroll)
     -- UI CONSTRUCTION (Model A V1 - LAYOUT ORDER 0 ALL)
     ------------------------------------------------------------------------
     
-    -- ส่วนหัว (Header)
     local header = Instance.new("TextLabel", scroll)
     header.Name = "Unlock_Header"
     header.BackgroundTransparency = 1
