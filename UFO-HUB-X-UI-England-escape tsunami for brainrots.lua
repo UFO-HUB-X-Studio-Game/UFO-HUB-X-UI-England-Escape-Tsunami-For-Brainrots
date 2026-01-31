@@ -691,7 +691,7 @@ end)
 
 registerRight("Home", function(scroll) end)
 registerRight("Settings", function(scroll) end)
---===== UFO HUB X • Move System (ULTIMATE SAVE & SPEED EDITION) =====
+--===== UFO HUB X • Move System (AAA1 + AA1 + AAA2 COMBO) – FULL NEON EDITION =====
 -- Target Map: Escape the tsunami and head to Brainrots
 -- Map ID: 131623223084840
 
@@ -704,17 +704,14 @@ registerRight("Home", function(scroll)
     local LocalPlayer = Players.LocalPlayer
 
     ------------------------------------------------------------------------
-    -- ระบบบันทึกข้อมูล (เจาะจงเฉพาะ MAP ID และชื่อแมพ)
+    -- AA1 SAVE SYSTEM (UFO HUB X / MAP FOLDER)
     ------------------------------------------------------------------------
     local MAIN_FOLDER = "UFO HUB X"
     local MAP_FOLDER = "Escape the tsunami and head to Brainrots"
     local SAVE_PATH = MAIN_FOLDER .. "/" .. MAP_FOLDER .. "/Settings.json"
 
-    -- สร้างโฟลเดอร์ย่อยใน UFO HUB X
     if makefolder then
-        pcall(function()
-            makefolder(MAIN_FOLDER .. "/" .. MAP_FOLDER)
-        end)
+        pcall(function() makefolder(MAIN_FOLDER .. "/" .. MAP_FOLDER) end)
     end
 
     local function SaveSettings(data)
@@ -744,12 +741,12 @@ registerRight("Home", function(scroll)
     ------------------------------------------------------------------------
     local THEME = {
         GREEN  = Color3.fromRGB(25, 255, 140),
+        NEON_GREEN = Color3.fromRGB(50, 255, 50),
         RED    = Color3.fromRGB(255, 40, 40),
         BLUE   = Color3.fromRGB(0, 170, 255),
         YELLOW = Color3.fromRGB(255, 220, 0),
         WHITE  = Color3.fromRGB(255, 255, 255),
         BLACK  = Color3.fromRGB(0, 0, 0),
-        GREY   = Color3.fromRGB(180, 180, 185)
     }
 
     local function corner(ui, r)
@@ -768,10 +765,19 @@ registerRight("Home", function(scroll)
     end
 
     ------------------------------------------------------------------------
-    -- FLY LOGIC (เพิ่มความไวแบบสะใจ)
+    -- FLY & NOCLIP LOGIC (AAA1 RE-INTEGRATED)
     ------------------------------------------------------------------------
     local isFlying = false
     local noclipConn = nil
+
+    local function stopNoclip()
+        if noclipConn then noclipConn:Disconnect(); noclipConn = nil end
+        if LocalPlayer.Character then
+            for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
+                if part:IsA("BasePart") then part.CanCollide = true end
+            end
+        end
+    end
 
     local function startNoclip()
         if noclipConn then noclipConn:Disconnect() end
@@ -794,32 +800,34 @@ registerRight("Home", function(scroll)
     local currentIdx = 0
 
     local function flyTo(pos)
-        if not pos or isFlying then return end
+        if not pos or isFlying then return end -- ระบบหยุดกดซ้ำขณะบิน
         local char = LocalPlayer.Character
         local hrp = char and char:FindFirstChild("HumanoidRootPart")
         if hrp then
             isFlying = true
             startNoclip()
-            -- เพิ่มความเร็วพื้นฐาน 1000 และคูณด้วยค่า Slider (สูงสุดประมาณ 6000 speed)
-            local baseSpeed = 1000 * math.max(0.1, config.FlySpeed)
+            
+            -- ปรับความไวสูง (Base 1200)
+            local baseSpeed = 1200 * math.max(0.1, config.FlySpeed)
             local duration = (hrp.Position - pos).Magnitude / baseSpeed
+            
             local tw = TweenService:Create(hrp, TweenInfo.new(duration, Enum.EasingStyle.Linear), {CFrame = CFrame.new(pos)})
             tw:Play()
             tw.Completed:Connect(function()
                 isFlying = false
-                if noclipConn then noclipConn:Disconnect(); noclipConn = nil end
+                stopNoclip() -- เมื่อถึงจุดหมาย ตัวละครจะหยุดทะลุทุกอย่าง
             end)
         end
     end
 
     ------------------------------------------------------------------------
-    -- EXTERNAL UI (Control Buttons)
+    -- EXTERNAL UI (Neon Border Buttons)
     ------------------------------------------------------------------------
-    local old = LocalPlayer.PlayerGui:FindFirstChild("UFO_Move_V7")
-    if old then old:Destroy() end
+    local oldControl = LocalPlayer.PlayerGui:FindFirstChild("UFO_Move_Control_V8")
+    if oldControl then oldControl:Destroy() end
 
     local sg = Instance.new("ScreenGui", LocalPlayer.PlayerGui)
-    sg.Name = "UFO_Move_V7"
+    sg.Name = "UFO_Move_Control_V8"
     sg.ResetOnSpawn = false
 
     local mainFrame = Instance.new("Frame", sg)
@@ -829,7 +837,7 @@ registerRight("Home", function(scroll)
     mainFrame.BackgroundTransparency = 1
     mainFrame.Visible = config.Enabled
 
-    local function createBtn(name, text, color, pos)
+    local function createBtn(name, text, pos)
         local b = Instance.new("TextButton", mainFrame)
         b.Name = name
         b.Size = UDim2.new(0, config.BtnSize, 0, config.BtnSize)
@@ -841,14 +849,15 @@ registerRight("Home", function(scroll)
         b.Text = text
         b.AutoButtonColor = false
         corner(b, 15)
-        stroke(b, 3.2, color)
+        -- ขอบสีเขียวเรืองแสงทั้งหมดตามคำสั่ง
+        stroke(b, 3.5, THEME.NEON_GREEN)
         return b
     end
 
-    local btnRed = createBtn("Btn_Red", "⬆️", THEME.RED, UDim2.new(0, 0, 0, 0))
-    local btnGreen = createBtn("Btn_Green", "0", THEME.GREEN, UDim2.new(0, 0, 0, config.BtnSize + 15))
-    local btnYellow = createBtn("Btn_Yellow", "⚙️", THEME.YELLOW, UDim2.new(0, config.BtnSize + 15, 0, config.BtnSize + 15))
-    local btnBlue = createBtn("Btn_Blue", "⬇️", THEME.BLUE, UDim2.new(0, 0, 0, (config.BtnSize + 15) * 2))
+    local btnRed = createBtn("Btn_Red", "⬆️", UDim2.new(0, 0, 0, 0))
+    local btnGreen = createBtn("Btn_Green", "0", UDim2.new(0, 0, 0, config.BtnSize + 15))
+    local btnYellow = createBtn("Btn_Yellow", "⚙️", UDim2.new(0, config.BtnSize + 15, 0, config.BtnSize + 15))
+    local btnBlue = createBtn("Btn_Blue", "⬇️", UDim2.new(0, 0, 0, (config.BtnSize + 15) * 2))
 
     local function refreshUI()
         btnRed.Size = UDim2.new(0, config.BtnSize, 0, config.BtnSize)
@@ -858,24 +867,17 @@ registerRight("Home", function(scroll)
         btnYellow.Position = UDim2.new(0, config.BtnSize + 15, 0, config.BtnSize + 15)
         btnBlue.Size = UDim2.new(0, config.BtnSize, 0, config.BtnSize)
         btnBlue.Position = UDim2.new(0, 0, 0, (config.BtnSize + 15) * 2)
-        
-        btnRed.TextSize = config.BtnSize * 0.45
-        btnGreen.TextSize = config.BtnSize * 0.45
-        btnYellow.TextSize = config.BtnSize * 0.45
-        btnBlue.TextSize = config.BtnSize * 0.45
+        btnRed.TextSize, btnGreen.TextSize, btnYellow.TextSize, btnBlue.TextSize = config.BtnSize*0.45, config.BtnSize*0.45, config.BtnSize*0.45, config.BtnSize*0.45
     end
 
     ------------------------------------------------------------------------
-    -- DRAG LOGIC (บันทึกตำแหน่ง)
+    -- DRAG & SAVE POSITION
     ------------------------------------------------------------------------
     local editMode, dragging, dragStart, startPos = false, false, nil, nil
-
     local function makeDraggable(b)
         b.InputBegan:Connect(function(input)
             if editMode and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
-                dragging = true
-                dragStart = input.Position
-                startPos = mainFrame.Position
+                dragging = true; dragStart = input.Position; startPos = mainFrame.Position
                 input.Changed:Connect(function()
                     if input.UserInputState == Enum.UserInputState.End then 
                         dragging = false 
@@ -915,7 +917,7 @@ registerRight("Home", function(scroll)
     end)
 
     ------------------------------------------------------------------------
-    -- MODEL AAA2 SLIDER (WITH TEXT STROKE)
+    -- MODEL AAA2 SLIDER (WITH BLACK STROKE & AA1 SAVE)
     ------------------------------------------------------------------------
     local function createAAA2Slider(parent, title, defaultRel, callback)
         local currentRel = defaultRel
@@ -939,13 +941,12 @@ registerRight("Home", function(scroll)
 
         local knobBtn = Instance.new("ImageButton", bar)
         knobBtn.Size = UDim2.fromOffset(16, 32); knobBtn.AnchorPoint = Vector2.new(0.5, 0.5)
-        knobBtn.Position = UDim2.new(currentRel, 0, 0.5, 0); knobBtn.BackgroundColor3 = THEME.GREY; knobBtn.AutoButtonColor = false
-        corner(knobBtn, 4); stroke(knobBtn, 1.2, Color3.fromRGB(210,210,215))
+        knobBtn.Position = UDim2.new(currentRel, 0, 0.5, 0); knobBtn.BackgroundColor3 = Color3.fromRGB(180,180,180); knobBtn.AutoButtonColor = false
+        corner(knobBtn, 4); stroke(knobBtn, 1.2, THEME.WHITE)
 
         local centerVal = Instance.new("TextLabel", bar)
         centerVal.BackgroundTransparency = 1; centerVal.Size = UDim2.fromScale(1, 1)
         centerVal.Font = Enum.Font.GothamBlack; centerVal.TextSize = 16; centerVal.TextColor3 = THEME.WHITE
-        -- ขอบตัวเลขสีดำตามสั่ง
         centerVal.TextStrokeTransparency = 0; centerVal.TextStrokeColor3 = Color3.new(0,0,0)
         centerVal.Text = math.floor(currentRel * 100) .. "%"
 
@@ -982,21 +983,21 @@ registerRight("Home", function(scroll)
         UserInputService.InputEnded:Connect(function(io)
             if io.UserInputType == Enum.UserInputType.MouseButton1 or io.UserInputType == Enum.UserInputType.Touch then
                 sDragging = false; sMaybeDrag = false; scroll.ScrollingEnabled = true
-                SaveSettings(config)
+                SaveSettings(config) -- บันทึกค่าลง AA1 ทันทีที่ปล่อยมือ
             end
         end)
         RunService.RenderStepped:Connect(function() sync(false) end)
     end
 
     ------------------------------------------------------------------------
-    -- MAIN HUB UI LIST
+    -- MAIN HUB UI CONSTRUCTION
     ------------------------------------------------------------------------
     local header = Instance.new("TextLabel", scroll)
     header.Size = UDim2.new(1, 0, 0, 36); header.BackgroundTransparency = 1; header.Font = Enum.Font.GothamBold
     header.TextSize = 16; header.TextColor3 = THEME.WHITE; header.TextXAlignment = Enum.TextXAlignment.Left
     header.Text = "》》》Move System 📍《《《"
 
-    -- 1. Enable Switch
+    -- 1. Enable Switch (AAA1 INTEGRATED)
     local row1 = Instance.new("Frame", scroll)
     row1.Size = UDim2.new(1, -6, 0, 46); row1.BackgroundColor3 = THEME.BLACK; corner(row1, 12); stroke(row1, 2.2, THEME.GREEN)
     local lab1 = Instance.new("TextLabel", row1)
@@ -1025,16 +1026,20 @@ registerRight("Home", function(scroll)
         SaveSettings(config)
     end)
 
-    -- 2. Adjust Fly Sensitivity
+    -- 2. Fly Speed Slider (Model AAA2)
     createAAA2Slider(scroll, "Adjust Fly Sensitivity", (config.FlySpeed - 0.1) / 4.9, function(rel)
         config.FlySpeed = 0.1 + (rel * 4.9)
     end)
 
-    -- 3. Adjust Button Scale
+    -- 3. Button Size Slider (Model AAA2)
     createAAA2Slider(scroll, "Adjust Button Scale", (config.BtnSize - 40) / 60, function(rel)
         config.BtnSize = 40 + (rel * 60)
         refreshUI()
     end)
+
+    -- Initial Load
+    updateSwitch(config.Enabled)
+    refreshUI()
 end)
 --===== UFO HUB X • SETTINGS — Smoother 🚀 (A V1 • fixed 3 rows) + Runner Save (per-map) + AA1 =====
 registerRight("Settings", function(scroll)
