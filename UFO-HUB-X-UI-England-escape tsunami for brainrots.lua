@@ -691,8 +691,9 @@ end)
 
 registerRight("Home", function(scroll) end)
 registerRight("Settings", function(scroll) end)
---===== UFO HUB X • Camera System (Model A V1 - NEON FIXED) =====
+--===== UFO HUB X • Camera System (Model A V1 - AUTHENTIC EDITION) =====
 -- Feature: Unlock Camera Zoom Distance
+-- UI Model: A V1 (Green Glow Border / Dynamic Switch)
 
 registerRight("Home", function(scroll)
     local Players = game:GetService("Players")
@@ -701,7 +702,7 @@ registerRight("Home", function(scroll)
     local Camera = workspace.CurrentCamera
 
     ------------------------------------------------------------------------
-    -- THEME & HELPERS
+    -- THEME & HELPERS (Model A V1 Standard)
     ------------------------------------------------------------------------
     local THEME = {
         GREEN  = Color3.fromRGB(25, 255, 140),
@@ -743,7 +744,7 @@ registerRight("Home", function(scroll)
     end
 
     ------------------------------------------------------------------------
-    -- UI CONSTRUCTION (Model A V1)
+    -- UI CONSTRUCTION (Model A V1 - EXACT SYSTEM)
     ------------------------------------------------------------------------
     local header = Instance.new("TextLabel", scroll)
     header.Size = UDim2.new(1, 0, 0, 36)
@@ -754,12 +755,12 @@ registerRight("Home", function(scroll)
     header.TextXAlignment = Enum.TextXAlignment.Left
     header.Text = "》》》Unlock Camera Distance 🎥《《《"
 
-    -- รายการที่ 1: Unlock Camera Distance
+    -- รายการที่ 1: Unlock Camera Distance (Model A V1)
     local row1 = Instance.new("Frame", scroll)
     row1.Size = UDim2.new(1, -6, 0, 46)
     row1.BackgroundColor3 = THEME.BLACK
     corner(row1)
-    -- แก้ไข: ปรับขอบเมนูให้เป็นสีเขียวเรืองแสงตลอดเวลา (เหมือน Model A V1)
+    -- สีขอบของโมเดล A V1: ต้องเป็นสีเขียวเรืองแสงเสมอ 
     stroke(row1, 2.2, THEME.NEON_GREEN) 
 
     local lab1 = Instance.new("TextLabel", row1)
@@ -772,14 +773,15 @@ registerRight("Home", function(scroll)
     lab1.Text = "Unlock Camera Distance" 
     lab1.TextXAlignment = Enum.TextXAlignment.Left
 
-    -- Switch UI (สวิตซ์เปิด-ปิด)
+    -- Switch UI (ระบบสวิตซ์ของ Model A V1)
     local sw = Instance.new("Frame", row1)
     sw.Size = UDim2.fromOffset(52, 26)
     sw.Position = UDim2.new(1, -12, 0.5, 0)
     sw.AnchorPoint = Vector2.new(1, 0.5)
-    sw.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+    sw.BackgroundColor3 = THEME.BLACK -- พื้นหลังสวิตซ์สีดำ
     corner(sw, 13)
-    local swStroke = stroke(sw, 1.8, THEME.RED) -- ขอบสวิตซ์เริ่มที่สีแดง
+    -- ขอบสวิตซ์จะเปลี่ยนตามสถานะ (Model A V1)
+    local swStroke = stroke(sw, 1.8, THEME.RED) 
 
     local knob = Instance.new("Frame", sw)
     knob.Size = UDim2.fromOffset(22, 22)
@@ -796,12 +798,12 @@ registerRight("Home", function(scroll)
         cameraUnlocked = not cameraUnlocked
         toggleCamera(cameraUnlocked)
         
-        -- อัปเดตเฉพาะสีของสวิตซ์และตำแหน่งปุ่ม
+        -- การทำงานของ Model A V1: อัปเดตเฉพาะสีขอบสวิตซ์และตำแหน่งลูกบิด
         local targetColor = cameraUnlocked and THEME.NEON_GREEN or THEME.RED
         local targetPos = cameraUnlocked and UDim2.new(1, -24, 0.5, -11) or UDim2.new(0, 2, 0.5, -11)
         
         swStroke.Color = targetColor
-        game:GetService("TweenService"):Create(knob, TweenInfo.new(0.2), {Position = targetPos}):Play()
+        game:GetService("TweenService"):Create(knob, TweenInfo.new(0.15), {Position = targetPos}):Play()
     end)
 end)
 --===== UFO HUB X • Move System (AAA1 + AA1 + AAA2 COMBO) – FULL NEON EDITION =====
