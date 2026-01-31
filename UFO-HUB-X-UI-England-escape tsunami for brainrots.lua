@@ -691,6 +691,120 @@ end)
 
 registerRight("Home", function(scroll) end)
 registerRight("Settings", function(scroll) end)
+--===== UFO HUB X • Camera System (Model A V1) =====
+-- Feature: Unlock Camera Zoom Distance
+
+registerRight("Home", function(scroll)
+    local Players = game:GetService("Players")
+    local RunService = game:GetService("RunService")
+    local LocalPlayer = Players.LocalPlayer
+    local Camera = workspace.CurrentCamera
+
+    ------------------------------------------------------------------------
+    -- THEME & HELPERS (Matching UFO HUB X Style)
+    ------------------------------------------------------------------------
+    local THEME = {
+        GREEN  = Color3.fromRGB(25, 255, 140),
+        RED    = Color3.fromRGB(255, 40, 40),
+        WHITE  = Color3.fromRGB(255, 255, 255),
+        BLACK  = Color3.fromRGB(0, 0, 0),
+    }
+
+    local function corner(ui, r)
+        local c = Instance.new("UICorner")
+        c.CornerRadius = UDim.new(0, r or 12)
+        c.Parent = ui
+    end
+
+    local function stroke(ui, th, col)
+        local s = Instance.new("UIStroke")
+        s.Thickness = th or 2.2
+        s.Color = col or THEME.GREEN
+        s.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+        s.Parent = ui
+        return s
+    end
+
+    ------------------------------------------------------------------------
+    -- CAMERA LOGIC (ปลดล็อกระยะซูม)
+    ------------------------------------------------------------------------
+    local cameraUnlocked = false
+    local DEFAULT_MAX_ZOOM = LocalPlayer.CameraMaxZoomDistance
+    local UNLOCK_MAX_ZOOM = 10000 -- ระยะซูมไกลแบบสะใจเห็นทั้งแมพ
+
+    local function toggleCamera(state)
+        cameraUnlocked = state
+        if cameraUnlocked then
+            LocalPlayer.CameraMaxZoomDistance = UNLOCK_MAX_ZOOM
+        else
+            LocalPlayer.CameraMaxZoomDistance = DEFAULT_MAX_ZOOM
+        end
+    end
+
+    ------------------------------------------------------------------------
+    -- UI CONSTRUCTION (Model A V1)
+    ------------------------------------------------------------------------
+    local header = Instance.new("TextLabel", scroll)
+    header.Size = UDim2.new(1, 0, 0, 36)
+    header.BackgroundTransparency = 1
+    header.Font = Enum.Font.GothamBold
+    header.TextSize = 16
+    header.TextColor3 = THEME.WHITE
+    header.TextXAlignment = Enum.TextXAlignment.Left
+    header.Text = "》》》Unlock Camera Distance 🎥《《《"
+
+    -- รายการที่ 1: Unlock Camera Distance (Model A V1)
+    local row1 = Instance.new("Frame", scroll)
+    row1.Size = UDim2.new(1, -6, 0, 46)
+    row1.BackgroundColor3 = THEME.BLACK
+    corner(row1)
+    local rowStroke = stroke(row1, 2.2, THEME.RED) -- เริ่มต้นเป็นสีแดง (ปิด)
+
+    local lab1 = Instance.new("TextLabel", row1)
+    lab1.Size = UDim2.new(1, -160, 1, 0)
+    lab1.Position = UDim2.new(0, 16, 0, 0)
+    lab1.BackgroundTransparency = 1
+    lab1.Font = Enum.Font.GothamBold
+    lab1.TextSize = 13
+    lab1.TextColor3 = THEME.WHITE
+    lab1.Text = "Unlock Camera Distance" -- ชื่อภาษาอังกฤษไม่มีอีโมจิ
+    lab1.TextXAlignment = Enum.TextXAlignment.Left
+
+    -- Switch UI
+    local sw = Instance.new("Frame", row1)
+    sw.Size = UDim2.fromOffset(52, 26)
+    sw.Position = UDim2.new(1, -12, 0.5, 0)
+    sw.AnchorPoint = Vector2.new(1, 0.5)
+    sw.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+    corner(sw, 13)
+    local swStroke = stroke(sw, 1.8, THEME.RED)
+
+    local knob = Instance.new("Frame", sw)
+    knob.Size = UDim2.fromOffset(22, 22)
+    knob.Position = UDim2.new(0, 2, 0.5, -11)
+    knob.BackgroundColor3 = THEME.WHITE
+    corner(knob, 11)
+
+    local swBtn = Instance.new("TextButton", sw)
+    swBtn.Size = UDim2.fromScale(1, 1)
+    swBtn.BackgroundTransparency = 1
+    swBtn.Text = ""
+
+    -- สลับสถานะ (Model A V1 Toggle)
+    swBtn.MouseButton1Click:Connect(function()
+        cameraUnlocked = not cameraUnlocked
+        toggleCamera(cameraUnlocked)
+        
+        -- อัปเดต UI สีเขียว/แดง
+        local targetColor = cameraUnlocked and THEME.GREEN or THEME.RED
+        local targetPos = cameraUnlocked and UDim2.new(1, -24, 0.5, -11) or UDim2.new(0, 2, 0.5, -11)
+        
+        rowStroke.Color = targetColor
+        swStroke.Color = targetColor
+        game:GetService("TweenService"):Create(knob, TweenInfo.new(0.2), {Position = targetPos}):Play()
+    end)
+
+end)
 --===== UFO HUB X • Move System (AAA1 + AA1 + AAA2 COMBO) – FULL NEON EDITION =====
 -- Target Map: Escape the tsunami and head to Brainrots
 -- Map ID: 131623223084840
