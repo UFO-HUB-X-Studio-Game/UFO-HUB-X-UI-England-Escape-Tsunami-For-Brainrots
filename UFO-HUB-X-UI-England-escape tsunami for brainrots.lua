@@ -725,7 +725,7 @@ local function SaveSet(k,v)
 end
 
 ------------------------------------------------------------------------
--- THEME + HELPERS (Model A V1)
+-- THEME + HELPERS
 ------------------------------------------------------------------------
 local THEME = {
     GREEN = Color3.fromRGB(25,255,125),
@@ -750,7 +750,7 @@ local function stroke(ui,t,col)
 end
 
 ------------------------------------------------------------------------
--- CLEANUP (A V1 ONLY)
+-- CLEANUP
 ------------------------------------------------------------------------
 for _,n in ipairs({"A_Header","A_Row1"}) do
     local o = scroll:FindFirstChild(n)
@@ -758,13 +758,12 @@ for _,n in ipairs({"A_Header","A_Row1"}) do
 end
 
 ------------------------------------------------------------------------
--- UIListLayout (A V1 RULE)
+-- UI LIST
 ------------------------------------------------------------------------
 local vlist = scroll:FindFirstChildOfClass("UIListLayout")
 if not vlist then
     vlist = Instance.new("UIListLayout",scroll)
     vlist.Padding = UDim.new(0,12)
-    vlist.SortOrder = Enum.SortOrder.LayoutOrder
 end
 scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
 
@@ -776,13 +775,13 @@ for _,ch in ipairs(scroll:GetChildren()) do
 end
 
 ------------------------------------------------------------------------
--- HEADER (A V1)
+-- HEADER
 ------------------------------------------------------------------------
 local header = Instance.new("TextLabel")
 header.Name = "A_Header"
 header.Parent = scroll
-header.BackgroundTransparency = 1
 header.Size = UDim2.new(1,0,0,36)
+header.BackgroundTransparency = 1
 header.Font = Enum.Font.GothamBold
 header.TextSize = 16
 header.TextColor3 = THEME.WHITE
@@ -791,36 +790,35 @@ header.Text = "Position Move 🚀"
 header.LayoutOrder = base + 1
 
 ------------------------------------------------------------------------
--- POSITIONS (1–9)
+-- POSITIONS
 ------------------------------------------------------------------------
 local POSITIONS = {
-    Vector3.new(200.000, -2.742,  0.000),
-    Vector3.new(284.000, -2.742,  0.000),
-    Vector3.new(398.000, -2.742,  0.000),
-    Vector3.new(542.000, -2.742,  0.000),
-    Vector3.new(756.000, -2.742,  0.000),
-    Vector3.new(1074.004,-2.742,  0.002),
-    Vector3.new(1546.773,-2.742,  0.812),
-    Vector3.new(2247.060,-2.734,  2.466),
-    Vector3.new(2602.500,-2.742, -2.176),
+    Vector3.new(200,-2.742,0),
+    Vector3.new(284,-2.742,0),
+    Vector3.new(398,-2.742,0),
+    Vector3.new(542,-2.742,0),
+    Vector3.new(756,-2.742,0),
+    Vector3.new(1074.004,-2.742,0.002),
+    Vector3.new(1546.773,-2.742,0.812),
+    Vector3.new(2247.060,-2.734,2.466),
+    Vector3.new(2602.500,-2.742,-2.176),
 }
 
 ------------------------------------------------------------------------
--- MOVE (FLY ONLY)
+-- MOVE
 ------------------------------------------------------------------------
 local currentIndex = 0
 local moving = false
 
 local function flyTo(i)
     if moving then return end
-    local char = LP.Character
-    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    local hrp = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
     if not hrp or not POSITIONS[i] then return end
 
     moving = true
     TweenService:Create(
         hrp,
-        TweenInfo.new(0.6, Enum.EasingStyle.Linear),
+        TweenInfo.new(0.6,Enum.EasingStyle.Linear),
         {CFrame = CFrame.new(POSITIONS[i])}
     ):Play()
 
@@ -830,7 +828,7 @@ local function flyTo(i)
 end
 
 ------------------------------------------------------------------------
--- WORLD BUTTONS (LEFT SIDE • ORIGINAL STYLE)
+-- WORLD BUTTONS (LEFT • ADJUSTED)
 ------------------------------------------------------------------------
 local gui
 
@@ -845,16 +843,15 @@ local function createButtons()
     local holder = Instance.new("Frame",gui)
     holder.Size = UDim2.fromOffset(72,220)
 
-    -- ✅ อยู่ฝั่งซ้ายเหมือน UI เดิม
-    holder.Position = UDim2.new(0,20,0.5,-110)
-
+    -- ซ้ายเหมือนเดิม แต่ขวา + ลงนิดหน่อย
+    holder.Position = UDim2.new(0,36,0.5,-90)
     holder.BackgroundTransparency = 1
 
     local list = Instance.new("UIListLayout",holder)
     list.Padding = UDim.new(0,12)
     list.HorizontalAlignment = Enum.HorizontalAlignment.Center
 
-    -- 🔴 FORWARD
+    -- 🔴 FORWARD (1)
     local f = Instance.new("TextButton",holder)
     f.Size = UDim2.fromOffset(64,64)
     f.BackgroundColor3 = THEME.BLACK
@@ -870,16 +867,17 @@ local function createButtons()
         end
     end)
 
-    -- 🟢 INDEX
+    -- 🟢 INDEX (2)
     local mid = Instance.new("TextLabel",holder)
     mid.Size = UDim2.fromOffset(64,64)
     mid.BackgroundColor3 = THEME.BLACK
     mid.Font = Enum.Font.GothamBold
     mid.TextSize = 22
     mid.TextColor3 = THEME.GREEN
+    mid.Text = "0"
     corner(mid); stroke(mid)
 
-    -- 🔵 BACK
+    -- 🔵 BACK (3)
     local b = Instance.new("TextButton",holder)
     b.Size = UDim2.fromOffset(64,64)
     b.BackgroundColor3 = THEME.BLACK
@@ -896,9 +894,7 @@ local function createButtons()
     end)
 
     RunService.Heartbeat:Connect(function()
-        if mid then
-            mid.Text = tostring(currentIndex)
-        end
+        mid.Text = tostring(currentIndex)
     end)
 end
 
@@ -908,7 +904,7 @@ local function destroyButtons()
 end
 
 ------------------------------------------------------------------------
--- ROW 1 : SWITCH (Model A V1)
+-- ROW SWITCH
 ------------------------------------------------------------------------
 local enabled = SaveGet("enabled", false)
 
@@ -956,17 +952,12 @@ local hit = Instance.new("TextButton",sw)
 hit.BackgroundTransparency = 1
 hit.Size = UDim2.fromScale(1,1)
 hit.Text = ""
-hit.AutoButtonColor = false
 
 hit.MouseButton1Click:Connect(function()
     enabled = not enabled
     SaveSet("enabled", enabled)
     refresh()
-    if enabled then
-        createButtons()
-    else
-        destroyButtons()
-    end
+    if enabled then createButtons() else destroyButtons() end
 end)
 
 refresh()
