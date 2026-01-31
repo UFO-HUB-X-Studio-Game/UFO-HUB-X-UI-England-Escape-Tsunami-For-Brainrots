@@ -691,16 +691,17 @@ end)
 
 registerRight("Home", function(scroll) end)
 registerRight("Settings", function(scroll) end)
---===== UFO HUB X • Move System (Model A V1 + AA1) – Complete & Final (With Button Lock) =====
+--===== UFO HUB X • Move System (Model A V1 + AA1) – Complete & Drag System (100% Match) =====
 
 registerRight("Home", function(scroll)
     local TweenService = game:GetService("TweenService")
     local RunService = game:GetService("RunService")
+    local UserInputService = game:GetService("UserInputService")
     local Players = game:GetService("Players")
     local LocalPlayer = Players.LocalPlayer
 
     ------------------------------------------------------------------------
-    -- AA1 SAVE SYSTEM (เป๊ะตาม Model AA1)
+    -- AA1 SAVE SYSTEM
     ------------------------------------------------------------------------
     local SYSTEM_NAME = "MoveSystem"
     local SAVE = (getgenv and getgenv().UFOX_SAVE) or {
@@ -713,14 +714,15 @@ registerRight("Home", function(scroll)
     local function SaveSet(f, v) pcall(function() SAVE.set(K(f), v) end) end
 
     ------------------------------------------------------------------------
-    -- THEME & HELPERS (เป๊ะตาม Model A V1)
+    -- THEME & HELPERS
     ------------------------------------------------------------------------
     local THEME = {
-        GREEN = Color3.fromRGB(25, 255, 140),
-        RED   = Color3.fromRGB(255, 40, 40),
-        BLUE  = Color3.fromRGB(0, 170, 255),
-        WHITE = Color3.fromRGB(255, 255, 255),
-        BLACK = Color3.fromRGB(0, 0, 0),
+        GREEN  = Color3.fromRGB(25, 255, 140),
+        RED    = Color3.fromRGB(255, 40, 40),
+        BLUE   = Color3.fromRGB(0, 170, 255),
+        YELLOW = Color3.fromRGB(255, 220, 0), -- สีเหลืองสำหรับปุ่มตั้งค่า
+        WHITE  = Color3.fromRGB(255, 255, 255),
+        BLACK  = Color3.fromRGB(0, 0, 0),
     }
 
     local function corner(ui, r)
@@ -739,23 +741,10 @@ registerRight("Home", function(scroll)
     end
 
     ------------------------------------------------------------------------
-    -- NOCLIP & FLY LOGIC (ล็อคปุ่มจนกว่าจะถึงที่หมาย)
+    -- FLY & NOCLIP LOGIC
     ------------------------------------------------------------------------
     local isFlying = false
     local noclipConn = nil
-
-    local function startNoclip()
-        if noclipConn then noclipConn:Disconnect() end
-        noclipConn = RunService.Stepped:Connect(function()
-            if isFlying and LocalPlayer.Character then
-                for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
-                    if part:IsA("BasePart") and part.CanCollide then
-                        part.CanCollide = false
-                    end
-                end
-            end
-        end)
-    end
 
     local function stopNoclip()
         if noclipConn then noclipConn:Disconnect(); noclipConn = nil end
@@ -766,46 +755,40 @@ registerRight("Home", function(scroll)
         end
     end
 
-    ------------------------------------------------------------------------
-    -- POSITIONS (9 Points)
-    ------------------------------------------------------------------------
+    local function startNoclip()
+        if noclipConn then noclipConn:Disconnect() end
+        noclipConn = RunService.Stepped:Connect(function()
+            if isFlying and LocalPlayer.Character then
+                for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
+                    if part:IsA("BasePart") then part.CanCollide = false end
+                end
+            end
+        end)
+    end
+
     local Positions = {
-        [1] = Vector3.new(200.000, -2.742, -0.000),
-        [2] = Vector3.new(284.000, -2.742, -0.000),
-        [3] = Vector3.new(398.000, -2.742, -0.000),
-        [4] = Vector3.new(542.000, -2.742, -0.000),
-        [5] = Vector3.new(756.000, -2.742, -0.000),
-        [6] = Vector3.new(1074.004, -2.742, 0.002),
-        [7] = Vector3.new(1546.773, -2.742, 0.812),
-        [8] = Vector3.new(2247.060, -2.734, 2.466),
-        [9] = Vector3.new(2602.500, -2.742, -2.176)
+        [1] = Vector3.new(200, -2.742, 0), [2] = Vector3.new(284, -2.742, 0),
+        [3] = Vector3.new(398, -2.742, 0), [4] = Vector3.new(542, -2.742, 0),
+        [5] = Vector3.new(756, -2.742, 0), [6] = Vector3.new(1074.004, -2.742, 0.002),
+        [7] = Vector3.new(1546.773, -2.742, 0.812), [8] = Vector3.new(2247.06, -2.734, 2.466),
+        [9] = Vector3.new(2602.5, -2.742, -2.176)
     }
     local currentIdx = 0
 
-    local function flyTo(pos, callback)
-        if not pos or isFlying then return end -- ถ้ากำลังบินอยู่ จะไม่รันซ้อน
-        
+    local function flyTo(pos)
+        if not pos or isFlying then return end
         local char = LocalPlayer.Character
         local hrp = char and char:FindFirstChild("HumanoidRootPart")
         if hrp then
-            isFlying = true
-            startNoclip()
-            
-            local dist = (hrp.Position - pos).Magnitude
-            local duration = dist / 100
-            local tw = TweenService:Create(hrp, TweenInfo.new(duration, Enum.EasingStyle.Linear), {CFrame = CFrame.new(pos)})
-            
+            isFlying = true; startNoclip()
+            local tw = TweenService:Create(hrp, TweenInfo.new((hrp.Position - pos).Magnitude/100, Enum.EasingStyle.Linear), {CFrame = CFrame.new(pos)})
             tw:Play()
-            tw.Completed:Connect(function()
-                isFlying = false
-                stopNoclip()
-                if callback then callback() end
-            end)
+            tw.Completed:Connect(function() isFlying = false; stopNoclip() end)
         end
     end
 
     ------------------------------------------------------------------------
-    -- EXTERNAL UI (Vertical Left - 60px)
+    -- EXTERNAL UI (Vertical Left + Drag System)
     ------------------------------------------------------------------------
     local oldControl = LocalPlayer.PlayerGui:FindFirstChild("UFO_Move_Control_Final")
     if oldControl then oldControl:Destroy() end
@@ -818,8 +801,8 @@ registerRight("Home", function(scroll)
     local sideFrame = Instance.new("Frame")
     sideFrame.Name = "VerticalControl"
     sideFrame.Parent = sg
-    sideFrame.Size = UDim2.new(0, 80, 0, 240)
-    sideFrame.Position = UDim2.new(0, 30, 0.5, -120)
+    sideFrame.Size = UDim2.new(0, 80, 0, 310) -- เพิ่มขนาดรองรับ 4 ปุ่ม
+    sideFrame.Position = UDim2.new(0, 30, 0.5, -155)
     sideFrame.BackgroundTransparency = 1
     sideFrame.Visible = false
 
@@ -843,17 +826,64 @@ registerRight("Home", function(scroll)
         return b
     end
 
-    local btnRed   = makeBtn("⬆️", THEME.RED)
-    local btnGreen = makeBtn("0", THEME.GREEN)
-    local btnBlue  = makeBtn("⬇️", THEME.BLUE)
+    -- เรียงลำดับ: แดง (บน) -> เขียว -> ฟ้า -> เหลือง (ล่างสุด)
+    local btnRed    = makeBtn("⬆️", THEME.RED)
+    local btnGreen  = makeBtn("0", THEME.GREEN)
+    local btnBlue   = makeBtn("⬇️", THEME.BLUE)
+    local btnYellow = makeBtn("⚙️", THEME.YELLOW) -- ปุ่มตั้งค่าฟันเฟือง
 
-    btnRed.Parent   = sideFrame
-    btnGreen.Parent = sideFrame
-    btnBlue.Parent  = sideFrame
+    btnRed.Parent = sideFrame; btnGreen.Parent = sideFrame; btnBlue.Parent = sideFrame; btnYellow.Parent = sideFrame
 
-    -- [ล็อคปุ่ม] จะกดได้เมื่อ isFlying เป็น false เท่านั้น
+    ------------------------------------------------------------------------
+    -- DRAG LOGIC (ระบบย้ายตำแหน่ง)
+    ------------------------------------------------------------------------
+    local dragging = false
+    local editMode = false
+    local dragInput, dragStart, startPos
+
+    local function update(input)
+        local delta = input.Position - dragStart
+        sideFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+
+    sideFrame.InputBegan:Connect(function(input)
+        if editMode and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
+            dragging = true
+            dragStart = input.Position
+            startPos = sideFrame.Position
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then dragging = false end
+            end)
+        end
+    end)
+
+    sideFrame.InputChanged:Connect(function(input)
+        if editMode and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            dragInput = input
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if input == dragInput and dragging then update(input) end
+    end)
+
+    -- ปุ่มเหลือง สลับโหมด
+    btnYellow.MouseButton1Click:Connect(function()
+        editMode = not editMode
+        if editMode then
+            btnYellow.Text = "❌" -- เป็นกากบาทเพื่อเสร็จสิ้น/ยกเลิก
+            btnYellow.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+        else
+            btnYellow.Text = "⚙️" -- กลับเป็นฟันเฟือง
+            btnYellow.BackgroundColor3 = THEME.BLACK
+        end
+    end)
+
+    ------------------------------------------------------------------------
+    -- BUTTON ACTIONS
+    ------------------------------------------------------------------------
     btnRed.MouseButton1Click:Connect(function()
-        if not isFlying and currentIdx < 9 then
+        if not isFlying and not editMode and currentIdx < 9 then
             currentIdx = currentIdx + 1
             btnGreen.Text = tostring(currentIdx)
             flyTo(Positions[currentIdx])
@@ -861,103 +891,57 @@ registerRight("Home", function(scroll)
     end)
 
     btnBlue.MouseButton1Click:Connect(function()
-        if not isFlying and currentIdx > 0 then
+        if not isFlying and not editMode and currentIdx > 0 then
             currentIdx = currentIdx - 1
             btnGreen.Text = tostring(currentIdx)
-            if currentIdx == 0 then
-                -- อยู่ที่จุด 0 ไม่ต้องบิน
-            else
-                flyTo(Positions[currentIdx])
-            end
+            if currentIdx ~= 0 then flyTo(Positions[currentIdx]) end
         end
     end)
 
     ------------------------------------------------------------------------
-    -- DEATH RESET
+    -- DEATH RESET & UI SWITCH
     ------------------------------------------------------------------------
-    local function onDeath(char)
-        local hum = char:WaitForChild("Humanoid", 5)
-        if hum then
-            hum.Died:Connect(function()
-                currentIdx = 0
-                btnGreen.Text = "0"
-                isFlying = false
-                stopNoclip()
-            end)
-        end
-    end
-    LocalPlayer.CharacterAdded:Connect(onDeath)
-    if LocalPlayer.Character then onDeath(LocalPlayer.Character) end
+    LocalPlayer.CharacterAdded:Connect(function(char)
+        char:WaitForChild("Humanoid").Died:Connect(function()
+            currentIdx = 0; btnGreen.Text = "0"; isFlying = false; stopNoclip()
+        end)
+    end)
 
-    ------------------------------------------------------------------------
-    -- UI MAIN SWITCH & HEADER (Model A V1)
-    ------------------------------------------------------------------------
-    local header = Instance.new("TextLabel")
-    header.Parent = scroll
-    header.BackgroundTransparency = 1
-    header.Size = UDim2.new(1, 0, 0, 36)
-    header.Font = Enum.Font.GothamBold
-    header.TextSize = 16
-    header.TextColor3 = THEME.WHITE
-    header.TextXAlignment = Enum.TextXAlignment.Left
-    header.Text = "》》》Move System 📍《《《"
-    header.LayoutOrder = 1
+    local header = Instance.new("TextLabel", scroll)
+    header.Size = UDim2.new(1, 0, 0, 36); header.BackgroundTransparency = 1
+    header.Font = Enum.Font.GothamBold; header.TextSize = 16; header.TextColor3 = THEME.WHITE
+    header.TextXAlignment = Enum.TextXAlignment.Left; header.Text = "》》》Move System 📍《《《"
 
-    local moveEnabled = SaveGet("MoveEnabled", false)
+    local row = Instance.new("Frame", scroll)
+    row.Size = UDim2.new(1, -6, 0, 46); row.BackgroundColor3 = THEME.BLACK
+    corner(row, 12); stroke(row, 2.2, THEME.GREEN)
 
-    local row = Instance.new("Frame")
-    row.Parent = scroll
-    row.Size = UDim2.new(1, -6, 0, 46)
-    row.BackgroundColor3 = THEME.BLACK
-    row.LayoutOrder = 2
-    corner(row, 12)
-    stroke(row, 2.2, THEME.GREEN)
+    local lab = Instance.new("TextLabel", row)
+    lab.Size = UDim2.new(1, -160, 1, 0); lab.Position = UDim2.new(0, 16, 0, 0)
+    lab.BackgroundTransparency = 1; lab.Font = Enum.Font.GothamBold; lab.TextSize = 13
+    lab.TextColor3 = THEME.WHITE; lab.Text = "Enable Move Position"; lab.TextXAlignment = Enum.TextXAlignment.Left
 
-    local lab = Instance.new("TextLabel")
-    lab.Parent = row
-    lab.BackgroundTransparency = 1
-    lab.Size = UDim2.new(1, -160, 1, 0)
-    lab.Position = UDim2.new(0, 16, 0, 0)
-    lab.Font = Enum.Font.GothamBold
-    lab.TextSize = 13
-    lab.TextColor3 = THEME.WHITE
-    lab.Text = "Enable Move Position"
-    lab.TextXAlignment = Enum.TextXAlignment.Left
-
-    local sw = Instance.new("Frame")
-    sw.Parent = row
-    sw.AnchorPoint = Vector2.new(1, 0.5)
-    sw.Position = UDim2.new(1, -12, 0.5, 0)
-    sw.Size = UDim2.fromOffset(52, 26)
-    sw.BackgroundColor3 = THEME.BLACK
-    corner(sw, 13)
-    local swStroke = stroke(sw, 1.8, moveEnabled and THEME.GREEN or THEME.RED)
+    local sw = Instance.new("Frame", row)
+    sw.Size = UDim2.fromOffset(52, 26); sw.Position = UDim2.new(1, -12, 0.5, 0); sw.AnchorPoint = Vector2.new(1, 0.5)
+    sw.BackgroundColor3 = THEME.BLACK; corner(sw, 13)
+    local swStroke = stroke(sw, 1.8, SaveGet("MoveEnabled", false) and THEME.GREEN or THEME.RED)
     
-    local knob = Instance.new("Frame")
-    knob.Parent = sw
-    knob.Size = UDim2.fromOffset(22, 22)
-    knob.BackgroundColor3 = THEME.WHITE
-    knob.Position = UDim2.new(moveEnabled and 1 or 0, moveEnabled and -24 or 2, 0.5, -11)
-    corner(knob, 11)
+    local knob = Instance.new("Frame", sw)
+    knob.Size = UDim2.fromOffset(22, 22); knob.BackgroundColor3 = THEME.WHITE
+    knob.Position = SaveGet("MoveEnabled", false) and UDim2.new(1, -24, 0.5, -11) or UDim2.new(0, 2, 0.5, -11); corner(knob, 11)
 
     local function updateUI(on)
         swStroke.Color = on and THEME.GREEN or THEME.RED
-        TweenService:Create(knob, TweenInfo.new(0.08), {Position = UDim2.new(on and 1 or 0, on and -24 or 2, 0.5, -11)}):Play()
+        TweenService:Create(knob, TweenInfo.new(0.08), {Position = on and UDim2.new(1, -24, 0.5, -11) or UDim2.new(0, 2, 0.5, -11)}):Play()
         sideFrame.Visible = on
     end
 
-    local btn = Instance.new("TextButton")
-    btn.Parent = sw
-    btn.BackgroundTransparency = 1
-    btn.Size = UDim2.fromScale(1, 1)
-    btn.Text = ""
-    btn.MouseButton1Click:Connect(function()
-        moveEnabled = not moveEnabled
-        SaveSet("MoveEnabled", moveEnabled)
-        updateUI(moveEnabled)
+    Instance.new("TextButton", sw).Size = UDim2.fromScale(1,1).BackgroundTransparency = 1 .MouseButton1Click:Connect(function()
+        local on = not sideFrame.Visible
+        SaveSet("MoveEnabled", on); updateUI(on)
     end)
 
-    updateUI(moveEnabled)
+    updateUI(SaveGet("MoveEnabled", false))
 end)
 --===== UFO HUB X • SETTINGS — Smoother 🚀 (A V1 • fixed 3 rows) + Runner Save (per-map) + AA1 =====
 registerRight("Settings", function(scroll)
