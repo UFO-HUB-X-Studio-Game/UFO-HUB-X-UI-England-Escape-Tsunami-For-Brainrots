@@ -862,7 +862,7 @@ registerRight("Home", function(scroll)
 end)
 --===== UFO HUB X • Move System (AAA1 + AA1 + AAA2 COMBO) – FULL NEON EDITION =====
 -- Target Map: Escape the tsunami and head to Brainrots
--- Fix: Force Reset Index to 0 on Death (ทำงาน 100%)
+-- Fix: Force Reset to 0 even if Immortal is ON (ตรวจจับการเกิดใหม่โดยตรง)
 -- LayoutOrder: 0
 
 registerRight("Home", function(scroll)
@@ -874,13 +874,15 @@ registerRight("Home", function(scroll)
     local LocalPlayer = Players.LocalPlayer
 
     ------------------------------------------------------------------------
-    -- AA1 SAVE SYSTEM
+    -- AA1 SAVE SYSTEM (UFO HUB X / MAP FOLDER)
     ------------------------------------------------------------------------
     local MAIN_FOLDER = "UFO HUB X"
     local MAP_FOLDER = "Escape the tsunami and head to Brainrots"
     local SAVE_PATH = MAIN_FOLDER .. "/" .. MAP_FOLDER .. "/Settings.json"
 
-    if makefolder then pcall(function() makefolder(MAIN_FOLDER .. "/" .. MAP_FOLDER) end) end
+    if makefolder then
+        pcall(function() makefolder(MAIN_FOLDER .. "/" .. MAP_FOLDER) end)
+    end
 
     local function SaveSettings(data)
         if writefile then
@@ -904,6 +906,9 @@ registerRight("Home", function(scroll)
         Pos = {X = 30, Y = 150}
     }
 
+    ------------------------------------------------------------------------
+    -- THEME & HELPERS
+    ------------------------------------------------------------------------
     local THEME = {
         GREEN  = Color3.fromRGB(25, 255, 140),
         NEON_GREEN = Color3.fromRGB(50, 255, 50),
@@ -930,7 +935,7 @@ registerRight("Home", function(scroll)
     end
 
     ------------------------------------------------------------------------
-    -- FLY & NOCLIP LOGIC
+    -- FLY & NOCLIP LOGIC (AAA1 RE-INTEGRATED)
     ------------------------------------------------------------------------
     local isFlying = false
     local noclipConn = nil
@@ -1028,25 +1033,27 @@ registerRight("Home", function(scroll)
         btnYellow.Position = UDim2.new(0, config.BtnSize + 15, 0, config.BtnSize + 15)
         btnBlue.Size = UDim2.new(0, config.BtnSize, 0, config.BtnSize)
         btnBlue.Position = UDim2.new(0, 0, 0, (config.BtnSize + 15) * 2)
-        local ts = config.BtnSize * 0.45
-        btnRed.TextSize, btnGreen.TextSize, btnYellow.TextSize, btnBlue.TextSize = ts, ts, ts, ts
+        btnRed.TextSize, btnGreen.TextSize, btnYellow.TextSize, btnBlue.TextSize = config.BtnSize*0.45, config.BtnSize*0.45, config.BtnSize*0.45, config.BtnSize*0.45
     end
 
-    -- ระบบรีเซ็ตเป็น 0 เมื่อตาย (ปรับปรุงให้ทำงานแน่นอน)
-    local function setupCharReset(char)
-        local humanoid = char:WaitForChild("Humanoid", 15)
-        if humanoid then
-            humanoid.Died:Connect(function()
+    -- ระบบ Reset ใหม่: ตรวจจับเมื่อตัวละคร "ใหม่" ถูกโหลดเข้ามา (ใช้แก้ปัญหาเปิดอมตะแล้วเลขไม่รี)
+    LocalPlayer.CharacterAdded:Connect(function(char)
+        currentIdx = 0
+        btnGreen.Text = "0"
+        isFlying = false
+        stopNoclip()
+        
+        -- เผื่อไว้กรณีตายธรรมดา
+        local hum = char:WaitForChild("Humanoid", 10)
+        if hum then
+            hum.Died:Connect(function()
                 currentIdx = 0
                 btnGreen.Text = "0"
                 isFlying = false
                 stopNoclip()
             end)
         end
-    end
-
-    if LocalPlayer.Character then setupCharReset(LocalPlayer.Character) end
-    LocalPlayer.CharacterAdded:Connect(setupCharReset)
+    end)
 
     local editMode, dragging, dragStart, startPos = false, false, nil, nil
     local function makeDraggable(b)
