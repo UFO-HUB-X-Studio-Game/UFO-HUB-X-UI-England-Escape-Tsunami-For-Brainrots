@@ -701,10 +701,11 @@ registerRight("Home", function(scroll)
     local Camera = workspace.CurrentCamera
 
     ------------------------------------------------------------------------
-    -- THEME & HELPERS (Matching UFO HUB X Style)
+    -- THEME & HELPERS
     ------------------------------------------------------------------------
     local THEME = {
         GREEN  = Color3.fromRGB(25, 255, 140),
+        NEON_GREEN = Color3.fromRGB(50, 255, 50),
         RED    = Color3.fromRGB(255, 40, 40),
         WHITE  = Color3.fromRGB(255, 255, 255),
         BLACK  = Color3.fromRGB(0, 0, 0),
@@ -726,11 +727,11 @@ registerRight("Home", function(scroll)
     end
 
     ------------------------------------------------------------------------
-    -- CAMERA LOGIC (ปลดล็อกระยะซูม)
+    -- CAMERA LOGIC
     ------------------------------------------------------------------------
     local cameraUnlocked = false
     local DEFAULT_MAX_ZOOM = LocalPlayer.CameraMaxZoomDistance
-    local UNLOCK_MAX_ZOOM = 10000 -- ระยะซูมไกลแบบสะใจเห็นทั้งแมพ
+    local UNLOCK_MAX_ZOOM = 10000 
 
     local function toggleCamera(state)
         cameraUnlocked = state
@@ -753,12 +754,13 @@ registerRight("Home", function(scroll)
     header.TextXAlignment = Enum.TextXAlignment.Left
     header.Text = "》》》Unlock Camera Distance 🎥《《《"
 
-    -- รายการที่ 1: Unlock Camera Distance (Model A V1)
+    -- รายการที่ 1: Unlock Camera Distance
     local row1 = Instance.new("Frame", scroll)
     row1.Size = UDim2.new(1, -6, 0, 46)
     row1.BackgroundColor3 = THEME.BLACK
     corner(row1)
-    local rowStroke = stroke(row1, 2.2, THEME.RED) -- เริ่มต้นเป็นสีแดง (ปิด)
+    -- ปรับขอบรายการให้เป็นสีเขียวเรืองแสงปกติ ไม่เปลี่ยนเป็นสีแดง
+    stroke(row1, 2.2, THEME.NEON_GREEN) 
 
     local lab1 = Instance.new("TextLabel", row1)
     lab1.Size = UDim2.new(1, -160, 1, 0)
@@ -767,17 +769,17 @@ registerRight("Home", function(scroll)
     lab1.Font = Enum.Font.GothamBold
     lab1.TextSize = 13
     lab1.TextColor3 = THEME.WHITE
-    lab1.Text = "Unlock Camera Distance" -- ชื่อภาษาอังกฤษไม่มีอีโมจิ
+    lab1.Text = "Unlock Camera Distance" 
     lab1.TextXAlignment = Enum.TextXAlignment.Left
 
-    -- Switch UI
+    -- Switch UI (เฉพาะส่วนนี้ที่จะเปลี่ยนสีแดง/เขียว)
     local sw = Instance.new("Frame", row1)
     sw.Size = UDim2.fromOffset(52, 26)
     sw.Position = UDim2.new(1, -12, 0.5, 0)
     sw.AnchorPoint = Vector2.new(1, 0.5)
     sw.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
     corner(sw, 13)
-    local swStroke = stroke(sw, 1.8, THEME.RED)
+    local swStroke = stroke(sw, 1.8, THEME.RED) -- สวิตซ์เริ่มต้นเป็นสีแดง
 
     local knob = Instance.new("Frame", sw)
     knob.Size = UDim2.fromOffset(22, 22)
@@ -790,20 +792,17 @@ registerRight("Home", function(scroll)
     swBtn.BackgroundTransparency = 1
     swBtn.Text = ""
 
-    -- สลับสถานะ (Model A V1 Toggle)
     swBtn.MouseButton1Click:Connect(function()
         cameraUnlocked = not cameraUnlocked
         toggleCamera(cameraUnlocked)
         
-        -- อัปเดต UI สีเขียว/แดง
-        local targetColor = cameraUnlocked and THEME.GREEN or THEME.RED
+        -- อัปเดตเฉพาะสีของ Switch
+        local targetColor = cameraUnlocked and THEME.NEON_GREEN or THEME.RED
         local targetPos = cameraUnlocked and UDim2.new(1, -24, 0.5, -11) or UDim2.new(0, 2, 0.5, -11)
         
-        rowStroke.Color = targetColor
         swStroke.Color = targetColor
         game:GetService("TweenService"):Create(knob, TweenInfo.new(0.2), {Position = targetPos}):Play()
     end)
-
 end)
 --===== UFO HUB X • Move System (AAA1 + AA1 + AAA2 COMBO) – FULL NEON EDITION =====
 -- Target Map: Escape the tsunami and head to Brainrots
