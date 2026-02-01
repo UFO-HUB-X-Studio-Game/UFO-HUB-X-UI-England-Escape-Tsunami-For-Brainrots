@@ -1531,21 +1531,26 @@ registerRight("Home", function(scroll)
     end)
 
 end)
---===== UFO HUB X • Home • Auto Money Collect 💰 (Model A V1 + V A2 REAL 100%) =====
+--===== UFO HUB X • Home • Auto Money Collect 💰 (Model A V1 + Model A V2 FULL) =====
 
 registerRight("Home", function(scroll)
-    local UserInputService = game:GetService("UserInputService")
+
+    ------------------------------------------------------------------------
+    -- SERVICES
+    ------------------------------------------------------------------------
+    local Players = game:GetService("Players")
     local ReplicatedStorage = game:GetService("ReplicatedStorage")
+    local RunService = game:GetService("RunService")
+    local UserInputService = game:GetService("UserInputService")
 
     ------------------------------------------------------------------------
     -- THEME + HELPERS (Model A V1)
     ------------------------------------------------------------------------
     local THEME = {
-        GREEN       = Color3.fromRGB(25,255,125),
-        GREEN_DARK  = Color3.fromRGB(0,120,60),
-        WHITE       = Color3.fromRGB(255,255,255),
-        BLACK       = Color3.fromRGB(0,0,0),
-        RED         = Color3.fromRGB(255,80,80),
+        GREEN      = Color3.fromRGB(25,255,125),
+        GREEN_DARK = Color3.fromRGB(0,120,60),
+        WHITE      = Color3.fromRGB(255,255,255),
+        BLACK      = Color3.fromRGB(0,0,0),
     }
 
     local function corner(ui, r)
@@ -1564,22 +1569,12 @@ registerRight("Home", function(scroll)
     end
 
     ------------------------------------------------------------------------
-    -- CLEANUP (V A2 ONLY)
-    ------------------------------------------------------------------------
-    for _, name in ipairs({"VA2_Header","VA2_Row1","VA2_OptionsPanel"}) do
-        local o = scroll:FindFirstChild(name)
-            or scroll.Parent:FindFirstChild(name)
-            or (scroll:FindFirstAncestorOfClass("ScreenGui")
-                and scroll:FindFirstAncestorOfClass("ScreenGui"):FindFirstChild(name))
-        if o then o:Destroy() end
-    end
-
-    ------------------------------------------------------------------------
     -- UIListLayout (Model A V1)
     ------------------------------------------------------------------------
     local vlist = scroll:FindFirstChildOfClass("UIListLayout")
     if not vlist then
-        vlist = Instance.new("UIListLayout", scroll)
+        vlist = Instance.new("UIListLayout")
+        vlist.Parent = scroll
         vlist.Padding = UDim.new(0, 12)
         vlist.SortOrder = Enum.SortOrder.LayoutOrder
     end
@@ -1596,7 +1591,6 @@ registerRight("Home", function(scroll)
     -- HEADER
     ------------------------------------------------------------------------
     local header = Instance.new("TextLabel")
-    header.Name = "VA2_Header"
     header.Parent = scroll
     header.BackgroundTransparency = 1
     header.Size = UDim2.new(1,0,0,36)
@@ -1608,229 +1602,218 @@ registerRight("Home", function(scroll)
     header.LayoutOrder = base + 1
 
     ------------------------------------------------------------------------
-    -- BASE ROW
+    -- STATE
     ------------------------------------------------------------------------
-    local row = Instance.new("Frame")
-    row.Name = "VA2_Row1"
-    row.Parent = scroll
-    row.Size = UDim2.new(1,-6,0,46)
-    row.BackgroundColor3 = THEME.BLACK
-    corner(row,12)
-    stroke(row,2.2,THEME.GREEN)
-    row.LayoutOrder = base + 2
-
-    local lab = Instance.new("TextLabel")
-    lab.Parent = row
-    lab.BackgroundTransparency = 1
-    lab.Size = UDim2.new(0,220,1,0)
-    lab.Position = UDim2.new(0,16,0,0)
-    lab.Font = Enum.Font.GothamBold
-    lab.TextSize = 13
-    lab.TextColor3 = THEME.WHITE
-    lab.TextXAlignment = Enum.TextXAlignment.Left
-    lab.Text = "Auto Money Collect"
+    local autoEnabled = false
+    local selectedSlots = {} -- [number] = true
+    local selectAll = false
 
     ------------------------------------------------------------------------
-    -- Select Options Button
+    -- INVOKE FUNCTION
     ------------------------------------------------------------------------
-    local panelParent = scroll.Parent
-
-    local selectBtn = Instance.new("TextButton")
-    selectBtn.Parent = row
-    selectBtn.AnchorPoint = Vector2.new(1,0.5)
-    selectBtn.Position = UDim2.new(1,-16,0.5,0)
-    selectBtn.Size = UDim2.new(0,220,0,28)
-    selectBtn.BackgroundColor3 = THEME.BLACK
-    selectBtn.AutoButtonColor = false
-    selectBtn.Font = Enum.Font.GothamBold
-    selectBtn.TextSize = 13
-    selectBtn.TextColor3 = THEME.WHITE
-    selectBtn.Text = "🔍 Select Options"
-    corner(selectBtn,8)
-
-    local selectStroke = stroke(selectBtn,1.8,THEME.GREEN_DARK)
-    selectStroke.Transparency = 0.4
-
-    local function updateSelectVisual(on)
-        if on then
-            selectStroke.Color = THEME.GREEN
-            selectStroke.Thickness = 2.4
-            selectStroke.Transparency = 0
-        else
-            selectStroke.Color = THEME.GREEN_DARK
-            selectStroke.Thickness = 1.8
-            selectStroke.Transparency = 0.4
-        end
-    end
-
-    local arrow = Instance.new("TextLabel")
-    arrow.Parent = selectBtn
-    arrow.AnchorPoint = Vector2.new(1,0.5)
-    arrow.Position = UDim2.new(1,-6,0.5,0)
-    arrow.Size = UDim2.new(0,18,0,18)
-    arrow.BackgroundTransparency = 1
-    arrow.Font = Enum.Font.GothamBold
-    arrow.TextSize = 18
-    arrow.TextColor3 = THEME.WHITE
-    arrow.Text = "▼"
-
-    ------------------------------------------------------------------------
-    -- MONEY LOGIC
-    ------------------------------------------------------------------------
-    local RF = ReplicatedStorage
-        :WaitForChild("Packages")
-        :WaitForChild("Net")
-        :WaitForChild("RF/Plot.PlotAction")
-
-    local selected = {} -- [slot]=true
-
     local function collect(slot)
         local args = {
             "Collect Money",
             "{2939bd1f-4d65-46ec-9683-c9da73409427}",
             tostring(slot)
         }
-        RF:InvokeServer(unpack(args))
+        ReplicatedStorage:WaitForChild("Packages")
+            :WaitForChild("Net")
+            :WaitForChild("RF/Plot.PlotAction")
+            :InvokeServer(unpack(args))
     end
 
-    local function collectSelected()
-        for slot in pairs(selected) do
-            collect(slot)
+    ------------------------------------------------------------------------
+    -- AUTO LOOP
+    ------------------------------------------------------------------------
+    task.spawn(function()
+        while true do
+            task.wait(1)
+            if autoEnabled then
+                if selectAll then
+                    for i = 1, 30 do
+                        collect(i)
+                    end
+                else
+                    for slot in pairs(selectedSlots) do
+                        collect(slot)
+                    end
+                end
+            end
         end
+    end)
+
+    ------------------------------------------------------------------------
+    -- ROW HELPER
+    ------------------------------------------------------------------------
+    local function makeRow(order, text)
+        local row = Instance.new("Frame")
+        row.Parent = scroll
+        row.Size = UDim2.new(1,-6,0,46)
+        row.BackgroundColor3 = THEME.BLACK
+        corner(row,12)
+        stroke(row,2.2,THEME.GREEN)
+        row.LayoutOrder = order
+
+        local lab = Instance.new("TextLabel")
+        lab.Parent = row
+        lab.BackgroundTransparency = 1
+        lab.Position = UDim2.new(0,16,0,0)
+        lab.Size = UDim2.new(1,-32,1,0)
+        lab.Font = Enum.Font.GothamBold
+        lab.TextSize = 13
+        lab.TextColor3 = THEME.WHITE
+        lab.TextXAlignment = Enum.TextXAlignment.Left
+        lab.Text = text
+
+        return row
     end
 
     ------------------------------------------------------------------------
-    -- OPTIONS PANEL (V A2 REAL)
+    -- ROW 1 : AUTO MONEY COLLECT
     ------------------------------------------------------------------------
-    local optionsPanel
-    local inputConn
-    local opened = false
-    local allButtons = {}
+    local row1 = makeRow(base + 2, "Auto Money Collect")
+
+    local toggle = Instance.new("TextButton")
+    toggle.Parent = row1
+    toggle.AnchorPoint = Vector2.new(1,0.5)
+    toggle.Position = UDim2.new(1,-16,0.5,0)
+    toggle.Size = UDim2.new(0,80,0,26)
+    toggle.BackgroundColor3 = THEME.BLACK
+    toggle.Text = "OFF"
+    toggle.Font = Enum.Font.GothamBold
+    toggle.TextSize = 13
+    toggle.TextColor3 = THEME.WHITE
+    corner(toggle,8)
+
+    local tStroke = stroke(toggle,1.8,THEME.GREEN_DARK)
+    tStroke.Transparency = 0.4
+
+    toggle.MouseButton1Click:Connect(function()
+        autoEnabled = not autoEnabled
+        toggle.Text = autoEnabled and "ON" or "OFF"
+        tStroke.Color = autoEnabled and THEME.GREEN or THEME.GREEN_DARK
+        tStroke.Transparency = autoEnabled and 0 or 0.4
+    end)
+
+    ------------------------------------------------------------------------
+    -- ROW 2 : MODEL A V2 (SELECT OPTIONS)
+    ------------------------------------------------------------------------
+    local row2 = makeRow(base + 3, "Money Slots")
+
+    local panelParent = scroll.Parent
+    local opened, optionsPanel
+
+    local selectBtn = Instance.new("TextButton")
+    selectBtn.Parent = row2
+    selectBtn.AnchorPoint = Vector2.new(1,0.5)
+    selectBtn.Position = UDim2.new(1,-16,0.5,0)
+    selectBtn.Size = UDim2.new(0,220,0,28)
+    selectBtn.BackgroundColor3 = THEME.BLACK
+    selectBtn.Text = "🔍 Select Options"
+    selectBtn.Font = Enum.Font.GothamBold
+    selectBtn.TextSize = 13
+    selectBtn.TextColor3 = THEME.WHITE
+    corner(selectBtn,8)
+
+    local sbStroke = stroke(selectBtn,1.8,THEME.GREEN_DARK)
+    sbStroke.Transparency = 0.4
+
+    local function updateBtn(v)
+        sbStroke.Color = v and THEME.GREEN or THEME.GREEN_DARK
+        sbStroke.Transparency = v and 0 or 0.4
+    end
 
     local function closePanel()
-        if optionsPanel then optionsPanel:Destroy() optionsPanel=nil end
-        if inputConn then inputConn:Disconnect() inputConn=nil end
+        if optionsPanel then optionsPanel:Destroy() end
+        optionsPanel = nil
         opened = false
-        updateSelectVisual(false)
+        updateBtn(false)
     end
 
     local function openPanel()
         closePanel()
 
-        local pw, ph = panelParent.AbsoluteSize.X, panelParent.AbsoluteSize.Y
-        local leftX = math.floor(pw * 0.645)
-        local topY  = math.floor(ph * 0.02)
-        local w = pw - leftX - 8
-        local h = ph - topY - math.floor(ph * 0.02)
-
-        optionsPanel = Instance.new("Frame", panelParent)
-        optionsPanel.Name = "VA2_OptionsPanel"
+        optionsPanel = Instance.new("Frame")
+        optionsPanel.Parent = panelParent
         optionsPanel.BackgroundColor3 = THEME.BLACK
-        optionsPanel.Position = UDim2.new(0,leftX,0,topY)
-        optionsPanel.Size = UDim2.new(0,w,0,h)
+        optionsPanel.Position = UDim2.new(0.645,0,0.02,0)
+        optionsPanel.Size = UDim2.new(0.33,-8,0.96,-8)
         optionsPanel.ZIndex = 50
         corner(optionsPanel,12)
         stroke(optionsPanel,2.4,THEME.GREEN)
 
-        local body = Instance.new("Frame",optionsPanel)
+        local body = Instance.new("ScrollingFrame")
+        body.Parent = optionsPanel
         body.BackgroundTransparency = 1
-        body.Position = UDim2.new(0,4,0,4)
         body.Size = UDim2.new(1,-8,1,-8)
+        body.Position = UDim2.new(0,4,0,4)
+        body.ScrollBarThickness = 0
+        body.AutomaticCanvasSize = Enum.AutomaticSize.Y
 
-        local list = Instance.new("ScrollingFrame",body)
-        list.ScrollBarThickness = 0
-        list.AutomaticCanvasSize = Enum.AutomaticSize.Y
-        list.Size = UDim2.new(1,0,1,0)
-        list.CanvasSize = UDim2.new()
-        list.BackgroundColor3 = THEME.BLACK
-
-        local layout = Instance.new("UIListLayout",list)
+        local layout = Instance.new("UIListLayout")
+        layout.Parent = body
         layout.Padding = UDim.new(0,8)
         layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 
-        local function makeBtn(text, slot)
-            local b = Instance.new("TextButton",list)
-            b.Size = UDim2.new(1,0,0,28)
-            b.BackgroundColor3 = THEME.BLACK
-            b.AutoButtonColor = false
-            b.Font = Enum.Font.GothamBold
-            b.TextSize = 14
-            b.TextColor3 = THEME.WHITE
-            b.Text = text
-            corner(b,6)
+        local function makeBtn(text, id)
+            local btn = Instance.new("TextButton")
+            btn.Parent = body
+            btn.Size = UDim2.new(1,0,0,28)
+            btn.BackgroundColor3 = THEME.BLACK
+            btn.Text = text
+            btn.Font = Enum.Font.GothamBold
+            btn.TextSize = 14
+            btn.TextColor3 = THEME.WHITE
+            corner(btn,6)
 
-            local st = stroke(b,1.6,THEME.GREEN_DARK)
+            local st = stroke(btn,1.6,THEME.GREEN_DARK)
             st.Transparency = 0.4
 
-            local bar = Instance.new("Frame",b)
+            local bar = Instance.new("Frame")
+            bar.Parent = btn
             bar.Size = UDim2.new(0,3,1,0)
             bar.BackgroundColor3 = THEME.GREEN
             bar.Visible = false
 
-            local function refresh()
-                if selected[slot] then
-                    st.Color = THEME.GREEN
-                    st.Thickness = 2.4
-                    st.Transparency = 0
-                    bar.Visible = true
+            btn.MouseButton1Click:Connect(function()
+                if id == "ALL" then
+                    selectAll = true
+                    table.clear(selectedSlots)
                 else
-                    st.Color = THEME.GREEN_DARK
-                    st.Thickness = 1.6
-                    st.Transparency = 0.4
-                    bar.Visible = false
+                    selectAll = false
+                    selectedSlots[id] = not selectedSlots[id]
                 end
-            end
-
-            b.MouseButton1Click:Connect(function()
-                if slot == 0 then
-                    selected = {[0]=true}
-                else
-                    selected[0] = nil
-                    selected[slot] = not selected[slot]
-                end
-                for _,bb in ipairs(allButtons) do bb.refresh() end
             end)
-
-            b.refresh = refresh
-            table.insert(allButtons,b)
-            refresh()
         end
 
-        makeBtn("Collect All Money",0)
-        for i=1,30 do
-            makeBtn("Collect Slot "..i,i)
+        makeBtn("Collect All Money","ALL")
+        for i = 1,30 do
+            makeBtn("Collect Slot "..i, i)
         end
 
-        inputConn = UserInputService.InputBegan:Connect(function(i,gp)
-            if gp then return end
-            if not optionsPanel then return end
-            local p = i.Position
-            local o = optionsPanel.AbsolutePosition
-            local s = optionsPanel.AbsoluteSize
-            if p.X<o.X or p.X>o.X+s.X or p.Y<o.Y or p.Y>o.Y+s.Y then
-                closePanel()
+        UserInputService.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                if not optionsPanel then return end
+                local p,s = optionsPanel.AbsolutePosition, optionsPanel.AbsoluteSize
+                local m = input.Position
+                if m.X < p.X or m.X > p.X+s.X or m.Y < p.Y or m.Y > p.Y+s.Y then
+                    closePanel()
+                end
             end
         end)
-
-        opened = true
-        updateSelectVisual(true)
     end
 
     selectBtn.MouseButton1Click:Connect(function()
-        if opened then closePanel() else openPanel() end
-    end)
-
-    ------------------------------------------------------------------------
-    -- AUTO COLLECT LOOP
-    ------------------------------------------------------------------------
-    task.spawn(function()
-        while true do
-            task.wait(1)
-            if next(selected) then
-                collectSelected()
-            end
+        if opened then
+            closePanel()
+        else
+            openPanel()
+            opened = true
+            updateBtn(true)
         end
     end)
+
 end)
 --===== UFO HUB X • SETTINGS — Smoother 🚀 (A V1 • fixed 3 rows) + Runner Save (per-map) + AA1 =====
 registerRight("Settings", function(scroll)
