@@ -699,6 +699,7 @@ registerRight("Home", function(scroll)
 end)
 
 registerRight("Home", function(scroll) end)
+registerRight("Shop", function(scroll) end)
 registerRight("Settings", function(scroll) end)
 --===== UFO HUB X • Unlock System (Immortal + Camera + Anti-Lag No Cooldown) – MODEL A V1 =====
 -- Feature 1: 999 Trillion Health + Real-time Re-fill + Damage Protection
