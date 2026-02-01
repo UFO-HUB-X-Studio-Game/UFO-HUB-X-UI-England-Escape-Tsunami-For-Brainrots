@@ -521,6 +521,7 @@ local function makeTabButton(parent, label, iconId)
 end
 
 local btnHome,setHomeActive = makeTabButton(LeftScroll, "Home",ICON_HOME)
+local btnShop,setShopActive = makeTabButton(LeftScroll, "Shop",ICON_SHOP)
 local btnSettings,setSettingsActive = makeTabButton(LeftScroll, "Settings",ICON_SETTINGS)
 
 -- ========== RIGHT ==========
