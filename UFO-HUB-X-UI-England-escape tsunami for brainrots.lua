@@ -1531,95 +1531,92 @@ registerRight("Home", function(scroll)
     end)
 
 end)
---===== UFO HUB X • Auto Collect System (Model A V1 + A V2 FULL) =====
--- Target Map: Escape the tsunami and head to Brainrots
--- Feature: Auto Collect Money with Smart Selection (31 Buttons)
--- Status: Separate Module
+--===== UFO HUB X • Auto Collect System (Model A V1 + A V2 FULL & AUTO ID) =====
+-- Item 1: Auto Collect Money (V1 Toggle)
+-- Item 2: Select Slots (V2 Overlay with 31 Buttons)
+-- Feature: Auto Plot ID Detection & Smart Selection Logic
 
 registerRight("Home", function(scroll)
-    local TweenService = game:GetService("TweenService")
-    local RunService = game:GetService("RunService")
+    local Players          = game:GetService("Players")
+    local TweenService     = game:GetService("TweenService")
+    local RunService       = game:GetService("RunService")
     local UserInputService = game:GetService("UserInputService")
-    local Players = game:GetService("Players")
-    local HttpService = game:GetService("HttpService")
     local ReplicatedStorage = game:GetService("ReplicatedStorage")
-    local LocalPlayer = Players.LocalPlayer
+    local Workspace        = game:GetService("Workspace")
+    local lp               = Players.LocalPlayer
 
     ------------------------------------------------------------------------
-    -- AA1 SAVE SYSTEM (Module Specific)
-    ------------------------------------------------------------------------
-    local MAIN_FOLDER = "UFO HUB X"
-    local MAP_FOLDER = "Escape the tsunami and head to Brainrots"
-    local SAVE_PATH = MAIN_FOLDER .. "/" .. MAP_FOLDER .. "/AutoCollectSettings.json"
-
-    if makefolder then pcall(function() makefolder(MAIN_FOLDER .. "/" .. MAP_FOLDER) end) end
-
-    local function SaveSettings(data)
-        if writefile then
-            local success, str = pcall(function() return HttpService:JSONEncode(data) end)
-            if success then writefile(SAVE_PATH, str) end
-        end
-    end
-
-    local function LoadSettings()
-        if isfile and isfile(SAVE_PATH) then
-            local success, data = pcall(function() return HttpService:JSONDecode(readfile(SAVE_PATH)) end)
-            if success then return data end
-        end
-        return nil
-    end
-
-    -- เริ่มต้นระบบด้วยการเลือก "All" เป็นค่า Default
-    local config = LoadSettings() or {
-        AutoCollect = false,
-        SelectedSlots = {["All"] = true}
-    }
-
-    -- Sync ค่า All กับปุ่ม 1-30 เพื่อให้เริ่มงานได้ทันที
-    if config.SelectedSlots["All"] then
-        for i = 1, 30 do config.SelectedSlots[tostring(i)] = true end
-    end
-
-    ------------------------------------------------------------------------
-    -- THEME & HELPERS
+    -- THEME + HELPERS (ตามสไตล์ UFO HUB X)
     ------------------------------------------------------------------------
     local THEME = {
-        GREEN       = Color3.fromRGB(25, 255, 125),
-        GREEN_DARK  = Color3.fromRGB(0, 120, 60),
-        WHITE       = Color3.fromRGB(255, 255, 255),
-        BLACK       = Color3.fromRGB(0, 0, 0),
-        RED         = Color3.fromRGB(255, 40, 40),
+        GREEN      = Color3.fromRGB(25,255,125),
+        GREEN_DARK = Color3.fromRGB(0,120,60),
+        RED        = Color3.fromRGB(255,40,40),
+        WHITE      = Color3.fromRGB(255,255,255),
+        BLACK      = Color3.fromRGB(0,0,0),
+        DARK       = Color3.fromRGB(10,10,10),
     }
 
-    local function corner(ui, r)
+    local function corner(ui,r)
         local c = Instance.new("UICorner")
-        c.CornerRadius = UDim.new(0, r or 12)
-        c.Parent = ui
+        c.CornerRadius = UDim.new(0,r or 12); c.Parent = ui
     end
 
-    local function stroke(ui, th, col)
+    local function stroke(ui,th,col)
         local s = Instance.new("UIStroke")
-        s.Thickness = th or 2.2
-        s.Color = col or THEME.GREEN
-        s.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-        s.Parent = ui
+        s.Thickness = th or 2.2; s.Color = col or THEME.GREEN
+        s.ApplyStrokeMode = Enum.ApplyStrokeMode.Border; s.Parent = ui
         return s
     end
 
+    local function tween(o,p,d)
+        TweenService:Create(o, TweenInfo.new(d or 0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), p):Play()
+    end
+
     ------------------------------------------------------------------------
-    -- AUTO COLLECT EXECUTION (Loop)
+    -- DYNAMIC PLOT ID DETECTION (แก้ปัญหาเลขเปลี่ยนตอนเข้าแมพ)
     ------------------------------------------------------------------------
+    local function getMyPlotID()
+        -- พยายามหา Plot ID จาก Attributes หรือ Folder ของผู้เล่น
+        local plotFolder = Workspace:FindFirstChild("Plots") -- ปรับตามโครงสร้างแมพ
+        if plotFolder then
+            for _, plot in ipairs(plotFolder:GetChildren()) do
+                if plot:GetAttribute("Owner") == lp.UserId or plot.Name == lp.Name then
+                    return plot:GetAttribute("PlotID") or plot.Name
+                end
+            end
+        end
+        -- ถ้าหาไม่เจอ ให้ใช้เลขเดิมที่คุณให้มาเป็นค่าเริ่มต้น
+        return "{2939bd1f-4d65-46ec-9683-c9da73409427}"
+    end
+
+    ------------------------------------------------------------------------
+    -- GLOBAL STATE & LOOP
+    ------------------------------------------------------------------------
+    _G.UFOX_COLLECT = _G.UFOX_COLLECT or {
+        Enabled = false,
+        SelectedSlots = {["All"] = true}
+    }
+    local STATE = _G.UFOX_COLLECT
+
+    -- เริ่มต้นให้ติ๊ก 1-30 ไว้ถ้า All เป็น True
+    if STATE.SelectedSlots["All"] then
+        for i = 1, 30 do STATE.SelectedSlots[tostring(i)] = true end
+    end
+
     task.spawn(function()
         while task.wait(0.5) do
-            if config.AutoCollect then
+            if STATE.Enabled then
                 local rf = ReplicatedStorage:FindFirstChild("Packages") and 
                            ReplicatedStorage.Packages:FindFirstChild("Net") and 
                            ReplicatedStorage.Packages.Net:FindFirstChild("RF/Plot.PlotAction")
+                
                 if rf then
-                    for slotId, isEnabled in pairs(config.SelectedSlots) do
-                        if slotId ~= "All" and isEnabled then
+                    local currentPlotID = getMyPlotID()
+                    for slot, active in pairs(STATE.SelectedSlots) do
+                        if slot ~= "All" and active then
                             pcall(function()
-                                rf:InvokeServer("Collect Money", "{2939bd1f-4d65-46ec-9683-c9da73409427}", tostring(slotId))
+                                rf:InvokeServer("Collect Money", currentPlotID, tostring(slot))
                             end)
                         end
                     end
@@ -1629,248 +1626,156 @@ registerRight("Home", function(scroll)
     end)
 
     ------------------------------------------------------------------------
-    -- UI: HEADER (Model A V1 Style)
+    -- UI BUILDER
     ------------------------------------------------------------------------
+    -- Cleanup
+    for _,n in ipairs({"COLLECT_Header", "COLLECT_Row1", "COLLECT_Row2", "VA2_CollectPanel"}) do
+        local o = scroll:FindFirstChild(n) or scroll.Parent:FindFirstChild(n)
+        if o then o:Destroy() end
+    end
+
+    local vlist = scroll:FindFirstChildOfClass("UIListLayout")
+    if not vlist then
+        vlist = Instance.new("UIListLayout")
+        vlist.Parent = scroll; vlist.Padding = UDim.new(0,12); vlist.SortOrder = Enum.SortOrder.LayoutOrder
+    end
+    scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+
+    local base = 0
+    for _,ch in ipairs(scroll:GetChildren()) do
+        if ch:IsA("GuiObject") and ch ~= vlist then base = math.max(base, ch.LayoutOrder or 0) end
+    end
+
     local header = Instance.new("TextLabel", scroll)
-    header.Name = "AutoCollect_Header"
-    header.BackgroundTransparency = 1
-    header.Size = UDim2.new(1, 0, 0, 36)
-    header.Font = Enum.Font.GothamBold
-    header.TextSize = 16
-    header.TextColor3 = THEME.WHITE
-    header.TextXAlignment = Enum.TextXAlignment.Left
-    header.Text = "Auto Collect Money 💰"
+    header.Name = "COLLECT_Header"; header.BackgroundTransparency = 1; header.Size = UDim2.new(1,0,0,36)
+    header.Font = Enum.Font.GothamBold; header.TextSize = 16; header.TextColor3 = THEME.WHITE
+    header.TextXAlignment = Enum.TextXAlignment.Left; header.Text = "》》》Auto Collect Money 💰《《《"; header.LayoutOrder = base + 1
+
+    local function makeRow(name, order, labelText)
+        local row = Instance.new("Frame", scroll)
+        row.Name = name; row.Size = UDim2.new(1,-6,0,46); row.BackgroundColor3 = THEME.BLACK; row.LayoutOrder = order
+        corner(row,12); stroke(row,2.2,THEME.GREEN)
+
+        local lab = Instance.new("TextLabel", row)
+        lab.BackgroundTransparency = 1; lab.Size = UDim2.new(0,180,1,0); lab.Position = UDim2.new(0,16,0,0)
+        lab.Font = Enum.Font.GothamBold; lab.TextSize = 13; lab.TextColor3 = THEME.WHITE
+        lab.TextXAlignment = Enum.TextXAlignment.Left; lab.Text = labelText
+        return row, lab
+    end
 
     ------------------------------------------------------------------------
-    -- UI: MAIN ROW (Model A V1 Structure)
+    -- รายการที่ 1 : Auto Collect Money (Model A V1 - Switch)
     ------------------------------------------------------------------------
-    local row = Instance.new("Frame", scroll)
-    row.Name = "AutoCollect_Row"
-    row.Size = UDim2.new(1, -6, 0, 46)
-    row.BackgroundColor3 = THEME.BLACK
-    corner(row, 12)
-    stroke(row, 2.2, THEME.GREEN)
-
-    local lab = Instance.new("TextLabel", row)
-    lab.BackgroundTransparency = 1
-    lab.Size = UDim2.new(0, 150, 1, 0)
-    lab.Position = UDim2.new(0, 16, 0, 0)
-    lab.Font = Enum.Font.GothamBold
-    lab.TextSize = 13
-    lab.TextColor3 = THEME.WHITE
-    lab.Text = "Auto Collect Money"
-    lab.TextXAlignment = Enum.TextXAlignment.Left
-
-    ------------------------------------------------------------------------
-    -- UI: SWITCH (Model A V1)
-    ------------------------------------------------------------------------
-    local sw = Instance.new("Frame", row)
-    sw.Size = UDim2.fromOffset(52, 26)
-    sw.Position = UDim2.new(0, 155, 0.5, 0)
-    sw.AnchorPoint = Vector2.new(0, 0.5)
-    sw.BackgroundColor3 = THEME.BLACK
-    corner(sw, 13)
-    local swStroke = stroke(sw, 1.8, config.AutoCollect and THEME.GREEN or THEME.RED)
+    local row1, _ = makeRow("COLLECT_Row1", base + 2, "Auto Collect Money")
     
+    local sw = Instance.new("Frame", row1)
+    sw.AnchorPoint = Vector2.new(1,0.5); sw.Position = UDim2.new(1,-12,0.5,0); sw.Size = UDim2.fromOffset(52,26); sw.BackgroundColor3 = THEME.BLACK; corner(sw,13)
+    local swStroke = Instance.new("UIStroke", sw); swStroke.Thickness = 1.8
     local knob = Instance.new("Frame", sw)
-    knob.Size = UDim2.fromOffset(22, 22)
-    knob.BackgroundColor3 = THEME.WHITE
-    corner(knob, 11)
-    knob.Position = config.AutoCollect and UDim2.new(1, -24, 0.5, -11) or UDim2.new(0, 2, 0.5, -11)
+    knob.Size = UDim2.fromOffset(22,22); knob.BackgroundColor3 = THEME.WHITE; corner(knob,11)
 
-    local function updateSwitch(on)
-        config.AutoCollect = on
+    local function updateSwitchVisual(on)
         swStroke.Color = on and THEME.GREEN or THEME.RED
-        TweenService:Create(knob, TweenInfo.new(0.15), {Position = on and UDim2.new(1, -24, 0.5, -11) or UDim2.new(0, 2, 0.5, -11)}):Play()
-        SaveSettings(config)
+        tween(knob, {Position = UDim2.new(on and 1 or 0, on and -24 or 2, 0.5,-11)}, 0.08)
     end
 
     local swBtn = Instance.new("TextButton", sw)
-    swBtn.Size = UDim2.fromScale(1, 1)
-    swBtn.BackgroundTransparency = 1
-    swBtn.Text = ""
-    swBtn.MouseButton1Click:Connect(function() updateSwitch(not config.AutoCollect) end)
+    swBtn.Size = UDim2.fromScale(1,1); swBtn.BackgroundTransparency = 1; swBtn.Text = ""
+    swBtn.MouseButton1Click:Connect(function()
+        STATE.Enabled = not STATE.Enabled
+        updateSwitchVisual(STATE.Enabled)
+    end)
+    updateSwitchVisual(STATE.Enabled)
 
     ------------------------------------------------------------------------
-    -- UI: SELECT BUTTON (Trigger for Model A V2)
+    -- รายการที่ 2 : Select Collect Slots (Model A V2 เต็มระบบ)
     ------------------------------------------------------------------------
-    local selectBtn = Instance.new("TextButton", row)
-    selectBtn.Name = "VA2_Select"
-    selectBtn.AnchorPoint = Vector2.new(1, 0.5)
-    selectBtn.Position = UDim2.new(1, -12, 0.5, 0)
-    selectBtn.Size = UDim2.new(0, 130, 0, 30)
-    selectBtn.BackgroundColor3 = THEME.BLACK
-    selectBtn.AutoButtonColor = false
-    selectBtn.Text = "🔍 Select Slots"
-    selectBtn.Font = Enum.Font.GothamBold
-    selectBtn.TextSize = 12
-    selectBtn.TextColor3 = THEME.WHITE
-    corner(selectBtn, 8)
-    local selectStroke = stroke(selectBtn, 1.8, THEME.GREEN_DARK)
-    selectStroke.Transparency = 0.4
+    local panelParent = scroll.Parent
+    local row2, _ = makeRow("COLLECT_Row2", base + 3, "Select Collect Slots")
 
-    ------------------------------------------------------------------------
-    -- UI: MODEL A V2 PANEL (FULL EDITION)
-    ------------------------------------------------------------------------
-    local panelParent = scroll.Parent -- ใช้กรอบหลักของ Hub
+    local selectBtn = Instance.new("TextButton", row2)
+    selectBtn.AnchorPoint = Vector2.new(1,0.5); selectBtn.Position = UDim2.new(1,-16,0.5,0); selectBtn.Size = UDim2.new(0,220,0,28)
+    selectBtn.BackgroundColor3 = THEME.BLACK; selectBtn.Font = Enum.Font.GothamBold; selectBtn.TextSize = 13; selectBtn.TextColor3 = THEME.WHITE; selectBtn.Text = "🔎 Search Slot"
+    corner(selectBtn,8); local selectStroke = stroke(selectBtn,1.8,THEME.GREEN_DARK); selectStroke.Transparency = 0.4
+
+    local arrow = Instance.new("TextLabel", selectBtn)
+    arrow.AnchorPoint = Vector2.new(1,0.5); arrow.Position = UDim2.new(1,-6,0.5,0); arrow.Size = UDim2.new(0,18,0,18); arrow.BackgroundTransparency = 1; arrow.Font = Enum.Font.GothamBold; arrow.TextSize = 18; arrow.TextColor3 = THEME.WHITE; arrow.Text = "▼"
+
+    -- Overlay Panel
     local optionsPanel, inputConn, opened = nil, nil, false
 
     local function closePanel()
         if optionsPanel then optionsPanel:Destroy(); optionsPanel = nil end
         if inputConn then inputConn:Disconnect(); inputConn = nil end
-        opened = false
-        selectStroke.Color = THEME.GREEN_DARK
-        selectStroke.Thickness = 1.8
-        selectStroke.Transparency = 0.4
+        opened = false; selectStroke.Color = THEME.GREEN_DARK; selectStroke.Thickness = 1.8; selectStroke.Transparency = 0.4
     end
 
     local function openPanel()
         closePanel()
-        opened = true
-        selectStroke.Color = THEME.GREEN
-        selectStroke.Thickness = 2.4
-        selectStroke.Transparency = 0
-
+        opened = true; selectStroke.Color = THEME.GREEN; selectStroke.Thickness = 2.4; selectStroke.Transparency = 0
+        
         local pw, ph = panelParent.AbsoluteSize.X, panelParent.AbsoluteSize.Y
         optionsPanel = Instance.new("Frame", panelParent)
-        optionsPanel.Name = "VA2_OptionsPanel"
-        optionsPanel.BackgroundColor3 = THEME.BLACK
-        optionsPanel.Position = UDim2.new(0, pw * 0.645, 0, ph * 0.02)
-        optionsPanel.Size = UDim2.new(0, pw * 0.34, 0, ph * 0.96)
-        optionsPanel.ZIndex = 100
-        corner(optionsPanel, 12)
-        stroke(optionsPanel, 2.4, THEME.GREEN)
+        optionsPanel.Name = "VA2_CollectPanel"; optionsPanel.BackgroundColor3 = THEME.BLACK; optionsPanel.Position = UDim2.new(0, math.floor(pw * 0.645), 0, math.floor(ph * 0.02)); optionsPanel.Size = UDim2.new(0, pw - math.floor(pw * 0.645) - 8, 0, ph - math.floor(ph * 0.04)); optionsPanel.ZIndex = 50; corner(optionsPanel,12); stroke(optionsPanel,2.4,THEME.GREEN)
 
-        -- Body Container
-        local body = Instance.new("Frame", optionsPanel)
-        body.BackgroundTransparency = 1
-        body.Position = UDim2.new(0, 6, 0, 6)
-        body.Size = UDim2.new(1, -12, 1, -12)
-        body.ZIndex = 101
+        local body = Instance.new("Frame", optionsPanel); body.BackgroundTransparency = 1; body.Position = UDim2.new(0,4,0,4); body.Size = UDim2.new(1,-8,1,-8); body.ZIndex = 51
 
-        -- Search Box
-        local searchBox = Instance.new("TextBox", body)
-        searchBox.Size = UDim2.new(1, 0, 0, 32)
-        searchBox.BackgroundColor3 = THEME.BLACK
-        searchBox.PlaceholderText = "🔍 Search Slot"
-        searchBox.Text = ""
-        searchBox.Font = Enum.Font.GothamBold
-        searchBox.TextSize = 14
-        searchBox.TextColor3 = THEME.WHITE
-        searchBox.ZIndex = 102
-        corner(searchBox, 8)
-        local sbStroke = stroke(searchBox, 1.8, THEME.GREEN)
+        local searchBox = Instance.new("TextBox", body); searchBox.Size = UDim2.new(1,0,0,32); searchBox.BackgroundColor3 = THEME.BLACK; searchBox.PlaceholderText = "🔎 Search Slot"; searchBox.Font = Enum.Font.GothamBold; searchBox.TextSize = 14; searchBox.TextColor3 = THEME.WHITE; searchBox.ZIndex = 52; corner(searchBox,8); local sbStroke = stroke(searchBox,1.8,THEME.GREEN); sbStroke.ZIndex = 53
 
-        -- Scrolling List
-        local listHolder = Instance.new("ScrollingFrame", body)
-        listHolder.Size = UDim2.new(1, 0, 1, -42)
-        listHolder.Position = UDim2.new(0, 0, 0, 42)
-        listHolder.BackgroundTransparency = 1
-        listHolder.ScrollBarThickness = 0
-        listHolder.CanvasSize = UDim2.new(0, 0, 0, 0)
-        listHolder.AutomaticCanvasSize = Enum.AutomaticSize.Y
-        listHolder.ZIndex = 102
-
-        local layout = Instance.new("UIListLayout", listHolder)
-        layout.Padding = UDim.new(0, 8)
-        layout.SortOrder = Enum.SortOrder.LayoutOrder
-        layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+        local listHolder = Instance.new("ScrollingFrame", body); listHolder.Size = UDim2.new(1,0,1,-46); listHolder.Position = UDim2.new(0,0,0,42); listHolder.BackgroundTransparency = 1; listHolder.ScrollBarThickness = 0; listHolder.AutomaticCanvasSize = Enum.AutomaticSize.Y; listHolder.ZIndex = 52
+        local layout = Instance.new("UIListLayout", listHolder); layout.Padding = UDim.new(0,8); layout.SortOrder = Enum.SortOrder.LayoutOrder; layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 
         local allButtons = {}
 
-        -- Function Create Glow Button
-        local function createGlowBtn(id, labelText)
-            local btn = Instance.new("TextButton", listHolder)
-            btn.Name = "Slot_" .. id
-            btn.Size = UDim2.new(1, -4, 0, 30)
-            btn.BackgroundColor3 = THEME.BLACK
-            btn.AutoButtonColor = false
-            btn.Font = Enum.Font.GothamBold
-            btn.TextSize = 13
-            btn.TextColor3 = THEME.WHITE
-            btn.Text = labelText
-            btn.ZIndex = 103
-            corner(btn, 6)
-
-            local st = stroke(btn, 1.6, THEME.GREEN_DARK)
-            st.Transparency = 0.4
-
-            local glowBar = Instance.new("Frame", btn)
-            glowBar.Name = "GlowBar"
-            glowBar.BackgroundColor3 = THEME.GREEN
-            glowBar.BorderSizePixel = 0
-            glowBar.Size = UDim2.new(0, 4, 1, 0)
-            glowBar.ZIndex = 104
-            glowBar.Visible = false
+        local function createSlotBtn(id, label)
+            local btn = Instance.new("TextButton", listHolder); btn.Size = UDim2.new(1,0,0,28); btn.BackgroundColor3 = THEME.BLACK; btn.Font = Enum.Font.GothamBold; btn.TextSize = 13; btn.TextColor3 = THEME.WHITE; btn.Text = label; btn.ZIndex = 53; corner(btn,6)
+            local st = stroke(btn,1.6,THEME.GREEN_DARK); st.Transparency = 0.4
+            local glow = Instance.new("Frame", btn); glow.Size = UDim2.new(0,3,1,0); glow.BackgroundColor3 = THEME.GREEN; glow.BorderSizePixel = 0; glow.Visible = false; glow.ZIndex = 54
 
             local function refresh()
-                local active = config.SelectedSlots[tostring(id)]
-                st.Color = active and THEME.GREEN or THEME.GREEN_DARK
-                st.Thickness = active and 2.4 or 1.6
-                st.Transparency = active and 0 or 0.4
-                glowBar.Visible = active
+                local on = STATE.SelectedSlots[tostring(id)]
+                st.Color = on and THEME.GREEN or THEME.GREEN_DARK; st.Thickness = on and 2.4 or 1.6; st.Transparency = on and 0 or 0.4; glow.Visible = on
             end
 
             btn.MouseButton1Click:Connect(function()
                 if id == "All" then
-                    local isAlreadyAll = config.SelectedSlots["All"]
-                    config.SelectedSlots = {} -- ล้างค่าทิ้งเพื่อเริ่มใหม่
-                    if not isAlreadyAll then
-                        config.SelectedSlots["All"] = true
-                        for i = 1, 30 do config.SelectedSlots[tostring(i)] = true end
+                    local isAll = STATE.SelectedSlots["All"]
+                    STATE.SelectedSlots = {}
+                    if not isAll then
+                        STATE.SelectedSlots["All"] = true
+                        for i = 1, 30 do STATE.SelectedSlots[tostring(i)] = true end
                     end
                 else
-                    -- ถ้ากดเลขแยก ให้ยกเลิกสถานะ All
-                    config.SelectedSlots["All"] = false
-                    config.SelectedSlots[tostring(id)] = not config.SelectedSlots[tostring(id)]
+                    STATE.SelectedSlots["All"] = false
+                    STATE.SelectedSlots[tostring(id)] = not STATE.SelectedSlots[tostring(id)]
                 end
-                
-                -- อัปเดต UI ทุกปุ่มในลิสต์
                 for _, item in pairs(allButtons) do item.Update() end
-                SaveSettings(config)
             end)
-
             refresh()
             allButtons[id] = {Btn = btn, Update = refresh}
             return btn
         end
 
-        -- สร้างปุ่มที่ 1: COLLECT ALL
-        createGlowBtn("All", "COLLECT ALL")
+        -- สร้างปุ่มที่ 1: Collect All
+        createSlotBtn("All", "COLLECT ALL")
+        -- สร้างปุ่มที่ 2-31: Slot 1-30
+        for i = 1, 30 do createSlotBtn(i, "COLLECT SLOT " .. i).LayoutOrder = i end
 
-        -- สร้างปุ่มที่ 2-31: COLLECT SLOT 1-30
-        for i = 1, 30 do
-            local b = createGlowBtn(i, "COLLECT SLOT " .. i)
-            b.LayoutOrder = i
-        end
-
-        -- Search Functionality
         searchBox:GetPropertyChangedSignal("Text"):Connect(function()
-            local query = searchBox.Text:lower()
-            for id, item in pairs(allButtons) do
-                item.Btn.Visible = item.Btn.Text:lower():find(query) ~= nil
-            end
+            local q = searchBox.Text:lower()
+            for id, item in pairs(allButtons) do item.Btn.Visible = (q == "" or item.Btn.Text:lower():find(q)) end
         end)
 
-        -- Click Outside to Close
         inputConn = UserInputService.InputBegan:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                local mPos = input.Position
-                local pPos = optionsPanel.AbsolutePosition
-                local pSize = optionsPanel.AbsoluteSize
-                if mPos.X < pPos.X or mPos.X > pPos.X + pSize.X or mPos.Y < pPos.Y or mPos.Y > pPos.Y + pSize.Y then
-                    closePanel()
-                end
+                local pos = input.Position
+                local op, os = optionsPanel.AbsolutePosition, optionsPanel.AbsoluteSize
+                if pos.X < op.X or pos.X > op.X + os.X or pos.Y < op.Y or pos.Y > op.Y + os.Y then closePanel() end
             end
         end)
     end
 
-    selectBtn.MouseButton1Click:Connect(function()
-        if opened then closePanel() else openPanel() end
-    end)
-
-    -- Initial UI State
-    updateSwitch(config.AutoCollect)
+    selectBtn.MouseButton1Click:Connect(function() if opened then closePanel() else openPanel() end end)
 end)
 --===== UFO HUB X • SETTINGS — Smoother 🚀 (A V1 • fixed 3 rows) + Runner Save (per-map) + AA1 =====
 registerRight("Settings", function(scroll)
