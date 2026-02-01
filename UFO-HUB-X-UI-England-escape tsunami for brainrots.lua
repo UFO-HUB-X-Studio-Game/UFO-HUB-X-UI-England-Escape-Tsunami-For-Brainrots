@@ -2288,7 +2288,8 @@ registerRight("Settings", function(scroll)
 end)
 ---- ========== ผูกปุ่มแท็บ + เปิดแท็บแรก ==========
 local tabs = {
-    {btn = btnHome,     set = setHomeActive,     name = "Home",     icon = ICON_HOME},
+    {btn = btnHome, set = setHomeActive, name = "Home", icon = ICON_HOME},
+    {btn = btnShop, set = setShopActive, name = "Shop", icon = ICON_SHOP},
     {btn = btnSettings, set = setSettingsActive, name = "Settings", icon = ICON_SETTINGS},
 }
 
