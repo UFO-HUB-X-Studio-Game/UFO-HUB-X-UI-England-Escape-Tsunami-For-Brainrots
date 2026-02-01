@@ -1533,8 +1533,9 @@ registerRight("Home", function(scroll)
 end)
 --===== UFO HUB X • Auto Collect Money (Model A V1 + V A2 Overlay + AA1 FULL SYSTEM) =====
 -- Tab: Home
--- [ AAA2 SYSTEM ]: Auto Upgrade + Speed Adjustment
--- [ COLLECT SYSTEM ]: Dynamic GUID Plot Detection (Fixed Server Change)
+-- FIXED: Auto Detect Plot GUID from Workspace.Bases
+-- Row1 (Model A V1): Enable Auto Collect (Switch)
+-- Row2 (Model A V2): 🔍 Select Slots (31 Buttons: All + 1-30)
 
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
@@ -1551,202 +1552,263 @@ local SAVE = (getgenv and getgenv().UFOX_SAVE) or {
     set = function() end,
 }
 
-local BASE_PATH = "AA1/UFOX/" .. game.PlaceId
-local function SaveGet(f, d) return SAVE.get(BASE_PATH .. "/" .. f, d) end
-local function SaveSet(f, v) pcall(function() SAVE.set(BASE_PATH .. "/" .. f, v) end) end
+local GAME_ID = tonumber(game.GameId) or 0
+local PLACE_ID = tonumber(game.PlaceId) or 0
+local BASE_PATH = ("AA1/AutoCollectSystem/%d/%d"):format(GAME_ID, PLACE_ID)
+
+local function K(field) return BASE_PATH .. "/" .. field end
+
+local function SaveGet(field, default)
+    local ok, v = pcall(function() return SAVE.get(K(field), default) end)
+    return ok and v or default
+end
+
+local function SaveSet(field, value)
+    pcall(function() SaveSet(K(field), value) end)
+end
 
 _G.UFOX_AA1 = _G.UFOX_AA1 or {}
-_G.UFOX_AA1["Main"] = _G.UFOX_AA1["Main"] or {
+_G.UFOX_AA1["AutoCollect"] = _G.UFOX_AA1["AutoCollect"] or {}
+local SYS = _G.UFOX_AA1["AutoCollect"]
+
+SYS.STATE = SYS.STATE or {
     Enabled = SaveGet("Enabled", false),
     Selected = SaveGet("Selected", {["All"] = true}),
-    AutoUpgrade = SaveGet("AutoUpgrade", false),
-    UpgradeSpeed = SaveGet("UpgradeSpeed", 0.5)
 }
-local STATE = _G.UFOX_AA1["Main"]
+local STATE = SYS.STATE
 
 ------------------------------------------------------------------
--- [ THE "DYNAMIC GUID" LOGIC (FIXED) ]
+-- [ THE "NET 100%" REMOTE LOGIC (FIXED GUID DETECTION) ]
 ------------------------------------------------------------------
 local function getMyPlotID()
-    -- สแกนหา Plot ที่เป็นของเราเพื่อดึง GUID ล่าสุด
-    local plots = Workspace:FindFirstChild("Plots") or Workspace:FindFirstChild("Tycoons")
-    if plots then
-        for _, plot in ipairs(plots:GetChildren()) do
-            -- เช็คจาก Attribute "Owner" (ต้องตรงกับ UserId ของเรา)
-            if plot:GetAttribute("Owner") == lp.UserId then
-                local guid = plot:GetAttribute("PlotID")
-                if guid then
-                    return (guid:find("{") and guid or "{" .. guid .. "}")
-                end
+    local foundID = nil
+    -- ตรวจสอบใน Workspace.Bases ตามที่คุณแจ้งมา
+    local bases = Workspace:FindFirstChild("Bases") or Workspace:FindFirstChild("Plots")
+    if bases then
+        for _, plot in ipairs(bases:GetChildren()) do
+            -- ค้นหา Plot ที่เราเป็นเจ้าของจาก Attribute หรือ Value
+            local ownerAttr = plot:GetAttribute("Owner")
+            local ownerVal = plot:FindFirstChild("Owner")
+            
+            if ownerAttr == lp.UserId or (ownerVal and (ownerVal.Value == lp.Name or ownerVal.Value == tostring(lp.UserId))) then
+                -- ดึงค่า GUID จาก Attribute "PlotID" (ถ้าไม่มีให้ใช้ชื่อโฟลเดอร์)
+                foundID = plot:GetAttribute("PlotID") or plot.Name
+                break
             end
         end
     end
-    -- Fallback: ถ้าหาไม่เจอจริงๆ ให้ใช้เลขล่าสุดที่คุณส่งมา
-    return "{111ca355-1e72-4928-b0d6-139100f2f215}"
+    
+    -- ถ้าหาไม่เจอจริงๆ ให้ใช้ค่าสำรอง (Fallback)
+    local finalID = foundID or "111ca355-1e72-4928-b0d6-139100f2f215"
+    
+    -- ใส่ปีกกาครอบ GUID ให้ตรงตามโครงสร้าง SimpleSpy (Args[2])
+    if not finalID:find("{") then finalID = "{" .. finalID .. "}" end
+    return finalID
 end
 
-local function getRemote()
-    return ReplicatedStorage:WaitForChild("Packages"):WaitForChild("Net"):WaitForChild("RF/Plot.PlotAction")
+local function callCollectRemote(plotId, slotNumber)
+    local ok, rf = pcall(function()
+        return ReplicatedStorage:WaitForChild("Packages"):WaitForChild("Net"):WaitForChild("RF/Plot.PlotAction")
+    end)
+    
+    if ok and rf then
+        -- Arguments: ActionName, PlotGUID, SlotString
+        local args = {
+            "Collect Money",
+            tostring(plotId),
+            tostring(slotNumber)
+        }
+        task.spawn(function()
+            pcall(function()
+                rf:InvokeServer(unpack(args))
+            end)
+        end)
+    end
 end
 
--- [ LOOP: AUTO COLLECT ]
+-- ลูปหลักสำหรับเก็บเงินอัตโนมัติ (Continuous Loop)
 task.spawn(function()
     while true do
         if STATE.Enabled then
-            local currentGUID = getMyPlotID()
-            local rf = getRemote()
+            local myID = getMyPlotID()
             
             if STATE.Selected["All"] then
                 for i = 1, 30 do
                     if not STATE.Enabled or not STATE.Selected["All"] then break end
-                    pcall(function()
-                        rf:InvokeServer("Collect Money", currentGUID, tostring(i))
-                    end)
-                    task.wait(0.02)
+                    callCollectRemote(myID, i)
+                    task.wait(0.015) -- ความเร็วระดับ Optimize
                 end
             else
                 for slot, active in pairs(STATE.Selected) do
                     if not STATE.Enabled then break end
-                    if slot ~= "All" and active then
-                        pcall(function()
-                            rf:InvokeServer("Collect Money", currentGUID, tostring(slot))
-                        end)
-                        task.wait(0.02)
+                    if slot ~= "All" and active == true then
+                        callCollectRemote(myID, slot)
+                        task.wait(0.015)
                     end
                 end
             end
-        end
-        task.wait(0.3)
-    end
-end)
-
--- [ LOOP: AUTO UPGRADE (Model AAA2) ]
-task.spawn(function()
-    while true do
-        if STATE.AutoUpgrade then
-            local currentGUID = getMyPlotID()
-            pcall(function()
-                getRemote():InvokeServer("Upgrade", currentGUID)
-            end)
-            task.wait(STATE.UpgradeSpeed)
+            task.wait(0.2)
         else
             task.wait(0.5)
         end
     end
 end)
 
+-- [ ACTIONS ]
+SYS.setEnabled = function(v)
+    STATE.Enabled = v
+    -- SaveSet("Enabled", v) -- ปิดไว้ชั่วคราวเผื่อต้องการให้รันใหม่ทุกครั้ง
+end
+
+SYS.setSelected = function(id, v)
+    if id == "All" then
+        STATE.Selected = {["All"] = v}
+        if v then for i = 1, 30 do STATE.Selected[tostring(i)] = true end end
+    else
+        STATE.Selected["All"] = false
+        STATE.Selected[tostring(id)] = v
+    end
+end
+
 ------------------------------------------------------------------
--- [ UI REGISTER (UFO STYLE) ]
+-- [ UI REGISTER (Model A V1 + V A2 Style) ]
 ------------------------------------------------------------------
 registerRight("Home", function(scroll)
+
     local THEME = {
-        GREEN = Color3.fromRGB(25,255,125),
-        RED = Color3.fromRGB(255,40,40),
-        WHITE = Color3.fromRGB(255,255,255),
-        BLACK = Color3.fromRGB(10,10,10),
+        GREEN      = Color3.fromRGB(25,255,125),
+        GREEN_DARK = Color3.fromRGB(0,120,60),
+        RED        = Color3.fromRGB(255,40,40),
+        WHITE      = Color3.fromRGB(255,255,255),
+        BLACK      = Color3.fromRGB(0,0,0),
     }
 
-    local function corner(u, r) Instance.new("UICorner", u).CornerRadius = UDim.new(0, r or 12) end
-    local function stroke(u, c)
-        local s = Instance.new("UIStroke", u)
-        s.Color = c or THEME.GREEN; s.Thickness = 2; s.ApplyStrokeMode = "Border"
+    local function corner(ui, r)
+        local c = Instance.new("UICorner", ui)
+        c.CornerRadius = UDim.new(0, r or 12)
+    end
+
+    local function stroke(ui, th, col)
+        local s = Instance.new("UIStroke", ui)
+        s.Thickness = th or 2.2; s.Color = col or THEME.GREEN
+        s.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
         return s
     end
 
-    for _, v in ipairs(scroll:GetChildren()) do if v.Name:find("UFO_") then v:Destroy() end end
-
-    scroll.AutomaticCanvasSize = "Y"
-    local list = Instance.new("UIListLayout", scroll); list.Padding = UDim.new(0, 12); list.SortOrder = "LayoutOrder"
-
-    local function makeRow(name, txt, order)
-        local f = Instance.new("Frame", scroll); f.Name = "UFO_"..name; f.Size = UDim2.new(1, -6, 0, 48); f.BackgroundColor3 = THEME.BLACK; f.LayoutOrder = order
-        corner(f); stroke(f)
-        local l = Instance.new("TextLabel", f); l.Size = UDim2.new(0, 200, 1, 0); l.Position = UDim2.new(0, 15, 0, 0); l.BackgroundTransparency = 1; l.Font = "GothamBold"; l.TextColor3 = THEME.WHITE; l.TextSize = 13; l.Text = txt; l.TextXAlignment = "Left"
-        return f
+    local function tween(o, p, d)
+        TweenService:Create(o, TweenInfo.new(d or 0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), p):Play()
     end
 
-    -- 1. Auto Upgrade (Model AAA2)
-    local rowUp = makeRow("RowUp", "Upgrade Base Auto", 1)
-    local swUp = Instance.new("Frame", rowUp); swUp.AnchorPoint = Vector2.new(1, 0.5); swUp.Position = UDim2.new(1, -15, 0.5, 0); swUp.Size = UDim2.new(0, 48, 0, 24); swUp.BackgroundColor3 = THEME.BLACK; corner(swUp, 12); local stUp = stroke(swUp, THEME.RED)
-    local knUp = Instance.new("Frame", swUp); knUp.Size = UDim2.new(0, 18, 0, 18); knUp.Position = UDim2.new(0, 3, 0.5, -9); knUp.BackgroundColor3 = THEME.WHITE; corner(knUp, 9)
-    local btnUp = Instance.new("TextButton", swUp); btnUp.Size = UDim2.fromScale(1,1); btnUp.BackgroundTransparency = 1; btnUp.Text = ""
+    -- Cleanup
+    for _, name in ipairs({"COL_Header", "COL_Row_Enable", "COL_Row_Select", "COL_Overlay_Panel"}) do
+        local old = scroll:FindFirstChild(name) or scroll.Parent:FindFirstChild(name)
+        if old then old:Destroy() end
+    end
+
+    local vlist = scroll:FindFirstChildOfClass("UIListLayout") or Instance.new("UIListLayout", scroll)
+    vlist.Padding = UDim.new(0, 12); vlist.SortOrder = Enum.SortOrder.LayoutOrder
+    scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
     
-    local function upVisual(on)
-        STATE.AutoUpgrade = on; SaveSet("AutoUpgrade", on)
-        stUp.Color = on and THEME.GREEN or THEME.RED
-        TweenService:Create(knUp, TweenInfo.new(0.1), {Position = on and UDim2.new(1, -21, 0.5, -9) or UDim2.new(0, 3, 0.5, -9)}):Play()
+    local baseOrder = 0
+    for _, ch in ipairs(scroll:GetChildren()) do
+        if ch:IsA("GuiObject") and ch ~= vlist then baseOrder = math.max(baseOrder, ch.LayoutOrder or 0) end
     end
-    btnUp.MouseButton1Click:Connect(function() upVisual(not STATE.AutoUpgrade) end)
-    upVisual(STATE.AutoUpgrade)
 
-    -- 2. Upgrade Speed Slider
-    local rowSld = Instance.new("Frame", scroll); rowSld.Name = "UFO_Sld"; rowSld.Size = UDim2.new(1, -6, 0, 65); rowSld.BackgroundColor3 = THEME.BLACK; rowSld.LayoutOrder = 2; corner(rowSld); stroke(rowSld)
-    local sLabel = Instance.new("TextLabel", rowSld); sLabel.Size = UDim2.new(1, 0, 0, 25); sLabel.Position = UDim2.new(0, 15, 0, 5); sLabel.BackgroundTransparency = 1; sLabel.Font = "GothamBold"; sLabel.Text = "Adjust Upgrade Speed"; sLabel.TextColor3 = THEME.WHITE; sLabel.TextSize = 12; sLabel.TextXAlignment = "Left"
-    local sVal = Instance.new("TextLabel", rowSld); sVal.Size = UDim2.new(0, 50, 0, 20); sVal.Position = UDim2.new(1, -60, 0, 35); sVal.BackgroundTransparency = 1; sVal.Font = "GothamBold"; sVal.TextColor3 = THEME.WHITE; sVal.TextSize = 13; sVal.Text = string.format("%.2fs", STATE.UpgradeSpeed)
-    local sBg = Instance.new("Frame", rowSld); sBg.Size = UDim2.new(1, -80, 0, 6); sBg.Position = UDim2.new(0, 15, 0, 45); sBg.BackgroundColor3 = Color3.fromRGB(40,40,40); corner(sBg, 3)
-    local sKnob = Instance.new("Frame", sBg); sKnob.AnchorPoint = Vector2.new(0.5, 0.5); sKnob.Position = UDim2.fromScale(STATE.UpgradeSpeed/2, 0.5); sKnob.Size = UDim2.new(0, 14, 0, 20); sKnob.BackgroundColor3 = THEME.WHITE; corner(sKnob, 4)
+    -- HEADER
+    local head = Instance.new("TextLabel", scroll)
+    head.Name = "COL_Header"; head.BackgroundTransparency = 1; head.Size = UDim2.new(1, 0, 0, 36)
+    head.Font = Enum.Font.GothamBold; head.TextSize = 16; head.TextColor3 = THEME.WHITE
+    head.TextXAlignment = Enum.TextXAlignment.Left; head.Text = "》》》Auto Collect System 💰《《《"
+    head.LayoutOrder = baseOrder + 1
 
-    sKnob.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            local conn; conn = UserInputService.InputChanged:Connect(function(i)
-                if i.UserInputType == Enum.UserInputType.MouseMovement then
-                    local p = math.clamp((i.Position.X - sBg.AbsolutePosition.X) / sBg.AbsoluteSize.X, 0, 1)
-                    STATE.UpgradeSpeed = math.max(0.1, p * 2); SaveSet("UpgradeSpeed", STATE.UpgradeSpeed)
-                    sKnob.Position = UDim2.fromScale(p, 0.5); sVal.Text = string.format("%.2fs", STATE.UpgradeSpeed)
-                end
+    local function makeRow(name, order, labelText)
+        local row = Instance.new("Frame", scroll)
+        row.Name = name; row.Size = UDim2.new(1, -6, 0, 46); row.BackgroundColor3 = THEME.BLACK; row.LayoutOrder = order
+        corner(row, 12); stroke(row, 2.2, THEME.GREEN)
+        local lab = Instance.new("TextLabel", row)
+        lab.BackgroundTransparency = 1; lab.Size = UDim2.new(0, 220, 1, 0); lab.Position = UDim2.new(0, 16, 0, 0)
+        lab.Font = Enum.Font.GothamBold; lab.TextSize = 13; lab.TextColor3 = THEME.WHITE; lab.Text = labelText; lab.TextXAlignment = Enum.TextXAlignment.Left
+        return row
+    end
+
+    -- ROW 1: SWITCH
+    local rowEnable = makeRow("COL_Row_Enable", baseOrder + 2, "Enable Auto Collect")
+    local sw = Instance.new("Frame", rowEnable)
+    sw.AnchorPoint = Vector2.new(1, 0.5); sw.Position = UDim2.new(1, -16, 0.5, 0); sw.Size = UDim2.fromOffset(52, 26); sw.BackgroundColor3 = THEME.BLACK; corner(sw, 13)
+    local swStr = stroke(sw, 1.8, THEME.RED)
+    local knob = Instance.new("Frame", sw)
+    knob.Size = UDim2.fromOffset(22, 22); knob.BackgroundColor3 = THEME.WHITE; corner(knob, 11)
+
+    local function updateSw(on)
+        swStr.Color = on and THEME.GREEN or THEME.RED
+        tween(knob, {Position = UDim2.new(on and 1 or 0, on and -24 or 2, 0.5, -11)}, 0.08)
+    end
+
+    local swBtn = Instance.new("TextButton", sw)
+    swBtn.Size = UDim2.fromScale(1,1); swBtn.BackgroundTransparency = 1; swBtn.Text = ""
+    swBtn.MouseButton1Click:Connect(function()
+        SYS.setEnabled(not STATE.Enabled)
+        updateSw(STATE.Enabled)
+    end)
+    updateSw(STATE.Enabled)
+
+    -- ROW 2: SELECT OPTIONS
+    local rowSelect = makeRow("COL_Row_Select", baseOrder + 3, "Select Target Slots")
+    local panelParent = scroll.Parent
+
+    local selBtn = Instance.new("TextButton", rowSelect)
+    selBtn.AnchorPoint = Vector2.new(1, 0.5); selBtn.Position = UDim2.new(1, -16, 0.5, 0); selBtn.Size = UDim2.new(0, 180, 0, 28)
+    selBtn.BackgroundColor3 = THEME.BLACK; selBtn.Font = Enum.Font.GothamBold; selBtn.TextSize = 13; selBtn.TextColor3 = THEME.WHITE; selBtn.Text = "🔍 Select Options"
+    corner(selBtn, 8); local selStr = stroke(selBtn, 1.8, THEME.GREEN_DARK); selStr.Transparency = 0.4
+
+    local overlay, opened = nil, false
+
+    local function closeOverlay()
+        if overlay then overlay:Destroy(); overlay = nil end
+        opened = false; selStr.Color = THEME.GREEN_DARK; selStr.Thickness = 1.8; selStr.Transparency = 0.4
+    end
+
+    local function openOverlay()
+        closeOverlay()
+        opened = true; selStr.Color = THEME.GREEN; selStr.Thickness = 2.4; selStr.Transparency = 0
+        
+        local pw, ph = panelParent.AbsoluteSize.X, panelParent.AbsoluteSize.Y
+        overlay = Instance.new("Frame", panelParent)
+        overlay.Name = "COL_Overlay_Panel"; overlay.BackgroundColor3 = THEME.BLACK; overlay.Position = UDim2.new(1, 10, 0, 0); overlay.Size = UDim2.new(0, 210, 0, 360); overlay.ZIndex = 100; corner(overlay, 12); stroke(overlay, 2.4, THEME.GREEN)
+        
+        -- Animation Open
+        TweenService:Create(overlay, TweenInfo.new(0.2), {Position = UDim2.new(1, -220, 0, 0)}):Play()
+
+        local scroller = Instance.new("ScrollingFrame", overlay); scroller.Size = UDim2.new(1, -8, 1, -42); scroller.Position = UDim2.new(0, 4, 0, 42); scroller.BackgroundTransparency = 1; scroller.ScrollBarThickness = 2; scroller.AutomaticCanvasSize = Enum.AutomaticSize.Y; scroller.ZIndex = 102
+        local lay = Instance.new("UIListLayout", scroller); lay.Padding = UDim.new(0, 6); lay.SortOrder = Enum.SortOrder.LayoutOrder; lay.HorizontalAlignment = Enum.HorizontalAlignment.Center
+        
+        local search = Instance.new("TextBox", overlay); search.Size = UDim2.new(1, -10, 0, 32); search.Position = UDim2.new(0, 5, 0, 5); search.BackgroundColor3 = Color3.fromRGB(15,15,15); search.PlaceholderText = "🔍 Search Slot"; search.Font = Enum.Font.GothamBold; search.TextSize = 13; search.TextColor3 = THEME.WHITE; search.ZIndex = 102; corner(search, 8); stroke(search, 1.5, THEME.GREEN).ZIndex = 103
+
+        local slotButtons = {}
+        local function makeSlot(id, txt)
+            local b = Instance.new("TextButton", scroller); b.Size = UDim2.new(1, -10, 0, 30); b.BackgroundColor3 = THEME.BLACK; b.Font = Enum.Font.GothamBold; b.TextSize = 13; b.TextColor3 = THEME.WHITE; b.Text = txt; b.ZIndex = 103; corner(b, 6)
+            local st = stroke(b, 1.6, THEME.GREEN_DARK); st.Transparency = 0.4
+            local function up()
+                local on = STATE.Selected[tostring(id)]
+                st.Color = on and THEME.GREEN or THEME.GREEN_DARK; st.Thickness = on and 2.2 or 1.6; st.Transparency = on and 0 or 0.4
+            end
+            b.MouseButton1Click:Connect(function()
+                SYS.setSelected(id, not STATE.Selected[tostring(id)])
+                for _, btn in pairs(slotButtons) do btn.Update() end
             end)
-            input.Changed:Connect(function() if input.UserInputState == Enum.UserInputState.End then conn:Disconnect() end end)
+            up(); slotButtons[tostring(id)] = {Btn = b, Update = up}
         end
-    end)
 
-    -- 3. Header
-    local h = Instance.new("TextLabel", scroll); h.Name = "UFO_H"; h.Size = UDim2.new(1, 0, 0, 30); h.BackgroundTransparency = 1; h.Font = "GothamBold"; h.Text = "》》》Auto Collect System 💰《《《"; h.TextColor3 = THEME.WHITE; h.TextSize = 14; h.LayoutOrder = 3
+        makeSlot("All", "COLLECT ALL")
+        for i = 1, 30 do makeSlot(i, "SLOT " .. i) end
 
-    -- 4. Enable Collect
-    local rowEn = makeRow("RowEn", "Enable Auto Collect", 4)
-    local swEn = Instance.new("Frame", rowEn); swEn.AnchorPoint = Vector2.new(1, 0.5); swEn.Position = UDim2.new(1, -15, 0.5, 0); swEn.Size = UDim2.new(0, 48, 0, 24); swEn.BackgroundColor3 = THEME.BLACK; corner(swEn, 12); local stEn = stroke(swEn, THEME.RED)
-    local knEn = Instance.new("Frame", swEn); knEn.Size = UDim2.new(0, 18, 0, 18); knEn.Position = UDim2.new(0, 3, 0.5, -9); knEn.BackgroundColor3 = THEME.WHITE; corner(knEn, 9)
-    local btnEn = Instance.new("TextButton", swEn); btnEn.Size = UDim2.fromScale(1,1); btnEn.BackgroundTransparency = 1; btnEn.Text = ""
-    
-    local function enVisual(on)
-        STATE.Enabled = on; SaveSet("Enabled", on)
-        stEn.Color = on and THEME.GREEN or THEME.RED
-        TweenService:Create(knEn, TweenInfo.new(0.1), {Position = on and UDim2.new(1, -21, 0.5, -9) or UDim2.new(0, 3, 0.5, -9)}):Play()
-    end
-    btnEn.MouseButton1Click:Connect(function() enVisual(not STATE.Enabled) end)
-    enVisual(STATE.Enabled)
-
-    -- 5. Select Options
-    local rowSel = makeRow("RowSel", "Select Target Slots", 5)
-    local optBtn = Instance.new("TextButton", rowSel); optBtn.AnchorPoint = Vector2.new(1, 0.5); optBtn.Position = UDim2.new(1, -15, 0.5, 0); optBtn.Size = UDim2.new(0, 160, 0, 30); optBtn.BackgroundColor3 = THEME.BLACK; optBtn.Font = "GothamBold"; optBtn.Text = "🔍 Select Options"; optBtn.TextColor3 = THEME.WHITE; optBtn.TextSize = 12; corner(optBtn, 8); stroke(optBtn, Color3.fromRGB(40,40,40))
-
-    -- Overlay Panel (Model A V2)
-    local overlay = Instance.new("Frame", scroll.Parent); overlay.Name = "UFO_Overlay"; overlay.Size = UDim2.new(0, 200, 0, 350); overlay.Position = UDim2.new(1, 10, 0, 0); overlay.BackgroundColor3 = THEME.BLACK; overlay.Visible = false; corner(overlay); stroke(overlay)
-    local scroller = Instance.new("ScrollingFrame", overlay); scroller.Size = UDim2.new(1, -10, 1, -20); scroller.Position = UDim2.new(0, 5, 0, 10); scroller.BackgroundTransparency = 1; scroller.ScrollBarThickness = 2; scroller.AutomaticCanvasSize = "Y"
-    Instance.new("UIListLayout", scroller).Padding = UDim.new(0, 5)
-
-    local function makeSlot(id, txt)
-        local b = Instance.new("TextButton", scroller); b.Size = UDim2.new(1, -5, 0, 30); b.BackgroundColor3 = THEME.BLACK; b.Font = "GothamBold"; b.Text = txt; b.TextColor3 = THEME.WHITE; b.TextSize = 11; corner(b, 6); local st = stroke(b, Color3.fromRGB(40,40,40))
-        local function refresh()
-            local on = STATE.Selected[tostring(id)]
-            st.Color = on and THEME.GREEN or Color3.fromRGB(40,40,40); st.Thickness = on and 2 or 1
-        end
-        b.MouseButton1Click:Connect(function()
-            if id == "All" then STATE.Selected = {["All"] = not STATE.Selected["All"]} if STATE.Selected["All"] then for i=1,30 do STATE.Selected[tostring(i)]=true end end
-            else STATE.Selected["All"] = false; STATE.Selected[tostring(id)] = not STATE.Selected[tostring(id)] end
-            SaveSet("Selected", STATE.Selected)
-            for _, v in ipairs(scroller:GetChildren()) do if v:IsA("TextButton") then v.Name = v.Name end end
+        search:GetPropertyChangedSignal("Text"):Connect(function()
+            local q = search.Text:lower()
+            for _, item in pairs(slotButtons) do item.Btn.Visible = (q == "" or item.Btn.Text:lower():find(q)) end
         end)
-        b:GetPropertyChangedSignal("Name"):Connect(refresh); refresh()
     end
 
-    makeSlot("All", "COLLECT ALL")
-    for i=1,30 do makeSlot(i, "SLOT " .. i) end
-
-    optBtn.MouseButton1Click:Connect(function() 
-        overlay.Visible = not overlay.Visible 
-        if overlay.Visible then overlay.Position = UDim2.new(1, -210, 0, 0) end
-    end)
+    selBtn.MouseButton1Click:Connect(function() if opened then closeOverlay() else openOverlay() end end)
 end)
 --===== UFO HUB X • SETTINGS — Smoother 🚀 (A V1 • fixed 3 rows) + Runner Save (per-map) + AA1 =====
 registerRight("Settings", function(scroll)
