@@ -1532,9 +1532,7 @@ registerRight("Home", function(scroll)
 
 end)
 --===== UFO HUB X • Auto Collect System (Model A V1 + Model A V2 + Speed Slider) =====
--- Item 1: Auto Collect Money (Save AA1)
--- Item 2: Select Target Slots (Model A V2 Overlay)
--- Item 3: Auto Collect Speed (Slider for Delay)
+-- FIXED: UI Crash Error & Logic Improvements
 
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
@@ -1563,7 +1561,7 @@ _G.UFOX_AA1 = _G.UFOX_AA1 or {}
 _G.UFOX_AA1["AutoCollect"] = _G.UFOX_AA1["AutoCollect"] or {
     Enabled = SaveGet("Enabled", false),
     Selected = SaveGet("Selected", {["All"] = true}),
-    Speed = SaveGet("Speed", 0.02), -- ค่าเริ่มต้น 0.02 วินาที
+    Speed = SaveGet("Speed", 0.02),
 }
 local STATE = _G.UFOX_AA1["AutoCollect"]
 
@@ -1590,7 +1588,7 @@ local function getMyPlotID()
     return foundID or "7aa9fb6a-ebb4-40b5-af4d-bbf68d798324"
 end
 
--- ระบบเก็บเงิน (ปรับปรุงให้เก็บพร้อมกันเมื่อเลือก All)
+-- ระบบเก็บเงิน (พร้อมกันทั้งหมดเมื่อเลือก All)
 task.spawn(function()
     while true do
         if STATE.Enabled then
@@ -1599,14 +1597,12 @@ task.spawn(function()
             local rf = ReplicatedStorage:WaitForChild("Packages"):WaitForChild("Net"):WaitForChild("RF/Plot.PlotAction")
             
             if STATE.Selected["All"] then
-                -- เก็บพร้อมกันทั้งหมดทันที (No Wait between slots)
                 for i = 1, 30 do
                     task.spawn(function()
                         pcall(function() rf:InvokeServer("Collect Money", myID, tostring(i)) end)
                     end)
                 end
             else
-                -- เก็บเฉพาะที่เลือกตามลำดับพร้อม Delay
                 for slot, active in pairs(STATE.Selected) do
                     if not STATE.Enabled or STATE.Selected["All"] then break end
                     if slot ~= "All" and active then
@@ -1664,7 +1660,7 @@ registerRight("Home", function(scroll)
         return row
     end
 
-    -- ROW 1: Auto Collect Money
+    -- ITEM 1: Auto Collect Money
     local row1 = makeRow("VA2_Row1", "Auto Collect Money", 2)
     local sw = Instance.new("Frame", row1); sw.AnchorPoint = Vector2.new(1, 0.5); sw.Position = UDim2.new(1, -16, 0.5, 0); sw.Size = UDim2.new(0, 52, 0, 26); sw.BackgroundColor3 = THEME.BLACK; corner(sw, 13)
     local swStr = stroke(sw, 1.8, THEME.RED)
@@ -1674,12 +1670,16 @@ registerRight("Home", function(scroll)
         swStr.Color = on and THEME.GREEN or THEME.RED
         TweenService:Create(knob, TweenInfo.new(0.15), {Position = on and UDim2.new(1, -24, 0.5, -11) or UDim2.new(0, 2, 0.5, -11)}):Play()
     end
-    Instance.new("TextButton", sw).Size = UDim2.fromScale(1,1).BackgroundTransparency = 1.MouseButton1Click:Connect(function()
-        STATE.Enabled = not STATE.Enabled; SaveSet("Enabled", STATE.Enabled); updateSw(STATE.Enabled)
+
+    local swBtn = Instance.new("TextButton", sw); swBtn.Size = UDim2.fromScale(1,1); swBtn.BackgroundTransparency = 1; swBtn.Text = ""
+    swBtn.MouseButton1Click:Connect(function()
+        STATE.Enabled = not STATE.Enabled
+        SaveSet("Enabled", STATE.Enabled)
+        updateSw(STATE.Enabled)
     end)
     updateSw(STATE.Enabled)
 
-    -- ROW 2: Select Target Slots (Model A V2 Overlay)
+    -- ITEM 2: Select Target Slots
     local row2 = makeRow("VA2_Row2", "Select Target Slots", 3)
     local selectBtn = Instance.new("TextButton", row2)
     selectBtn.AnchorPoint = Vector2.new(1, 0.5); selectBtn.Position = UDim2.new(1, -16, 0.5, 0); selectBtn.Size = UDim2.new(0, 180, 0, 28); selectBtn.BackgroundColor3 = THEME.BLACK; selectBtn.Text = "🔍 Select Options"; selectBtn.Font = "GothamBold"; selectBtn.TextSize = 13; selectBtn.TextColor3 = THEME.WHITE; corner(selectBtn, 8)
@@ -1701,7 +1701,7 @@ registerRight("Home", function(scroll)
         local search = Instance.new("TextBox", optionsPanel); search.Size = UDim2.new(1, -16, 0, 30); search.Position = UDim2.new(0, 8, 0, 8); search.BackgroundColor3 = Color3.fromRGB(20,20,20); search.PlaceholderText = "🔍 Search Slot"; search.Text = ""; search.Font = "GothamBold"; search.TextSize = 12; search.TextColor3 = THEME.WHITE; corner(search, 6); stroke(search, 1.2, THEME.GREEN)
 
         local scroller = Instance.new("ScrollingFrame", optionsPanel); scroller.Size = UDim2.new(1, -10, 1, -50); scroller.Position = UDim2.new(0, 5, 0, 45); scroller.BackgroundTransparency = 1; scroller.ScrollBarThickness = 0; scroller.AutomaticCanvasSize = "Y"
-        Instance.new("UIListLayout", scroller).Padding = UDim.new(0, 6); scroller.UIListLayout.HorizontalAlignment = "Center"
+        local lay = Instance.new("UIListLayout", scroller); lay.Padding = UDim.new(0, 6); lay.HorizontalAlignment = "Center"
         local pad = Instance.new("UIPadding", scroller); pad.PaddingTop = UDim.new(0, 8); pad.PaddingBottom = UDim.new(0, 35)
 
         local allButtons = {}
@@ -1737,29 +1737,30 @@ registerRight("Home", function(scroll)
         end)
     end)
 
-    -- ROW 3: Auto Collect Speed (Slider)
+    -- ITEM 3: Auto Collect Speed (Slider)
     local row3 = makeRow("VA2_Row3", "Auto Collect Speed", 4)
-    local sliderFrame = Instance.new("Frame", row3); sliderFrame.AnchorPoint = Vector2.new(1, 0.5); sliderFrame.Position = UDim2.new(1, -16, 0.5, 0); sliderFrame.Size = UDim2.new(0, 180, 0, 6); sliderFrame.BackgroundColor3 = THEME.GREEN_DARK; corner(sliderFrame, 3)
+    local sliderFrame = Instance.new("Frame", row3); sliderFrame.AnchorPoint = Vector2.new(1, 0.5); sliderFrame.Position = UDim2.new(1, -16, 0.5, 0); sliderFrame.Size = UDim2.new(0, 150, 0, 6); sliderFrame.BackgroundColor3 = THEME.GREEN_DARK; corner(sliderFrame, 3)
     local fill = Instance.new("Frame", sliderFrame); fill.Size = UDim2.new(0, 0, 1, 0); fill.BackgroundColor3 = THEME.GREEN; corner(fill, 3)
     local handle = Instance.new("Frame", fill); handle.AnchorPoint = Vector2.new(0.5, 0.5); handle.Position = UDim2.new(1, 0, 0.5, 0); handle.Size = UDim2.new(0, 14, 0, 14); handle.BackgroundColor3 = THEME.WHITE; corner(handle, 7); stroke(handle, 2, THEME.GREEN)
-    local valLab = Instance.new("TextLabel", row3); valLab.Size = UDim2.new(0, 40, 1, 0); valLab.Position = UDim2.new(1, -215, 0, 0); valLab.BackgroundTransparency = 1; valLab.Font = "GothamBold"; valLab.TextSize = 12; valLab.TextColor3 = THEME.WHITE; valLab.TextXAlignment = "Right"
+    local valLab = Instance.new("TextLabel", row3); valLab.Size = UDim2.new(0, 50, 1, 0); valLab.Position = UDim2.new(1, -215, 0, 0); valLab.BackgroundTransparency = 1; valLab.Font = "GothamBold"; valLab.TextSize = 12; valLab.TextColor3 = THEME.WHITE; valLab.TextXAlignment = "Right"
 
     local function updateSlider(v)
         v = math.clamp(v, 0, 1)
-        STATE.Speed = 0.01 + (v * 0.99) -- 0.01s - 1.0s
+        STATE.Speed = 0.01 + (v * 0.99)
         fill.Size = UDim2.new(v, 0, 1, 0)
         valLab.Text = string.format("%.2fs", STATE.Speed)
         SaveSet("Speed", STATE.Speed)
     end
 
     local dragging = false
-    local function move(input)
-        local pos = (input.Position.X - sliderFrame.AbsolutePosition.X) / sliderFrame.AbsoluteSize.X
-        updateSlider(pos)
-    end
     handle.InputBegan:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then dragging = true end end)
     UserInputService.InputEnded:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then dragging = false end end)
-    UserInputService.InputChanged:Connect(function(input) if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then move(input) end end)
+    UserInputService.InputChanged:Connect(function(input)
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            local pos = math.clamp((input.Position.X - sliderFrame.AbsolutePosition.X) / sliderFrame.AbsoluteSize.X, 0, 1)
+            updateSlider(pos)
+        end
+    end)
 
     updateSlider((STATE.Speed - 0.01) / 0.99)
 end)
