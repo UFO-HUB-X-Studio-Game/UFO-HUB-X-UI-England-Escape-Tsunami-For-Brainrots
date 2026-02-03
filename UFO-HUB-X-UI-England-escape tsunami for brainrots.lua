@@ -1531,10 +1531,8 @@ registerRight("Home", function(scroll)
     end)
 
 end)
---===== UFO HUB X • Auto Collect System (Model A V1 + Model A V2 + Model A Slider) =====
--- Item 1: Auto Collect Money (Save AA1)
--- Item 2: Select Target Slots (Model A V2 Overlay)
--- Item 3: Auto Collect Speed (Metal Slider Model - Save AA1)
+--===== UFO HUB X • Auto Collect System (Model A V1 + Model A V2 + Model A Slider FIXED) =====
+-- FIXED: Slider เลื่อนเองตอนกดที่อื่น + Collect All พร้อมกัน + Search System
 
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
@@ -1564,7 +1562,7 @@ _G.UFOX_AA1 = _G.UFOX_AA1 or {}
 _G.UFOX_AA1["AutoCollect"] = _G.UFOX_AA1["AutoCollect"] or {
     Enabled = SaveGet("Enabled", false),
     Selected = SaveGet("Selected", {["All"] = true}),
-    SpeedRel = SaveGet("SpeedRel", 0.5), -- เก็บค่า 0-1 สำหรับ Slider
+    SpeedRel = SaveGet("SpeedRel", 0.5), 
 }
 local STATE = _G.UFOX_AA1["AutoCollect"]
 
@@ -1591,7 +1589,7 @@ local function getMyPlotID()
     return foundID or "7aa9fb6a-ebb4-40b5-af4d-bbf68d798324"
 end
 
--- ลูปการทำงาน
+-- ระบบเก็บเงิน (พร้อมกันทั้งหมดเมื่อเลือก All)
 task.spawn(function()
     while true do
         if STATE.Enabled then
@@ -1599,7 +1597,7 @@ task.spawn(function()
             if not myID:find("{") then myID = "{" .. myID .. "}" end
             local rf = ReplicatedStorage:WaitForChild("Packages"):WaitForChild("Net"):WaitForChild("RF/Plot.PlotAction")
             
-            -- คำนวณความเร็ว: 1.0s (0%) ถึง 0.01s (100%)
+            -- ความเร็ว: 1.0s (0%) ถึง 0.01s (100%)
             local waitTime = 1.0 - (STATE.SpeedRel * 0.99)
             
             if STATE.Selected["All"] then
@@ -1637,8 +1635,7 @@ registerRight("Home", function(scroll)
 
     local function corner(ui, r) Instance.new("UICorner", ui).CornerRadius = UDim.new(0, r or 12) end
     local function stroke(ui, th, col)
-        local s = Instance.new("UIStroke", ui)
-        s.Thickness = th or 2.2; s.Color = col or THEME.GREEN; s.ApplyStrokeMode = "Border"
+        local s = Instance.new("UIStroke", ui); s.Thickness = th or 2.2; s.Color = col or THEME.GREEN; s.ApplyStrokeMode = "Border"
         return s
     end
 
@@ -1695,50 +1692,75 @@ registerRight("Home", function(scroll)
         inputConn = UserInputService.InputBegan:Connect(function(input) if (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then local op, os = optionsPanel.AbsolutePosition, optionsPanel.AbsoluteSize if not (input.Position.X >= op.X and input.Position.X <= op.X + os.X and input.Position.Y >= op.Y and input.Position.Y <= op.Y + os.Y) then closePanel() end end end)
     end)
 
-    -- ITEM 3: Adjust Sensitivity (Metal Slider Model)
-    local visRel = 0
+    -- ITEM 3: Adjust Speed (FIXED Metal Slider)
+    local currentRel = STATE.SpeedRel
+    local visRel = STATE.SpeedRel
     local dragging = false
     local maybeDrag = false
     local downX
     local DRAG_THRESHOLD = 5
     local RSdragConn, EndDragConn
-    local sliderCenterLabel
 
     local sRow = Instance.new("Frame", scroll); sRow.Name = "Row_Sens"; sRow.Size = UDim2.new(1, -6, 0, 70); sRow.BackgroundColor3 = THEME.BLACK; sRow.LayoutOrder = 4; corner(sRow, 12); stroke(sRow, 2.2, THEME.GREEN)
     local sLab = Instance.new("TextLabel", sRow); sLab.BackgroundTransparency = 1; sLab.Position = UDim2.new(0, 16, 0, 4); sLab.Size = UDim2.new(1, -32, 0, 24); sLab.Font = "GothamBold"; sLab.TextSize = 13; sLab.TextColor3 = THEME.WHITE; sLab.TextXAlignment = "Left"; sLab.Text = "Adjust Collect Speed"
     local bar = Instance.new("Frame", sRow); bar.Position = UDim2.new(0, 16, 0, 34); bar.Size = UDim2.new(1, -32, 0, 16); bar.BackgroundColor3 = THEME.BLACK; bar.Active = true; corner(bar, 8); stroke(bar, 1.8, THEME.GREEN)
-    local fill = Instance.new("Frame", bar); fill.BackgroundColor3 = THEME.GREEN; fill.Size = UDim2.fromScale(0, 1); corner(fill, 8)
-    local knobShadow = Instance.new("Frame", bar); knobShadow.Size = UDim2.fromOffset(18, 34); knobShadow.AnchorPoint = Vector2.new(0.5, 0.5); knobShadow.Position = UDim2.new(0, 0, 0.5, 2); knobShadow.BackgroundColor3 = THEME.DARK; knobShadow.BackgroundTransparency = 0.45; knobShadow.BorderSizePixel = 0; knobShadow.ZIndex = 2
-    local knobBtn = Instance.new("ImageButton", bar); knobBtn.AutoButtonColor = false; knobBtn.BackgroundColor3 = THEME.GREY; knobBtn.Size = UDim2.fromOffset(16, 32); knobBtn.AnchorPoint = Vector2.new(0.5, 0.5); knobBtn.Position = UDim2.new(0, 0, 0.5, 0); knobBtn.BorderSizePixel = 0; knobBtn.ZIndex = 3
+    local fill = Instance.new("Frame", bar); fill.BackgroundColor3 = THEME.GREEN; fill.Size = UDim2.fromScale(visRel, 1); corner(fill, 8)
+    local knobShadow = Instance.new("Frame", bar); knobShadow.Size = UDim2.fromOffset(18, 34); knobShadow.AnchorPoint = Vector2.new(0.5, 0.5); knobShadow.Position = UDim2.new(visRel, 0, 0.5, 2); knobShadow.BackgroundColor3 = THEME.DARK; knobShadow.BackgroundTransparency = 0.45; knobShadow.ZIndex = 2
+    local knobBtn = Instance.new("ImageButton", bar); knobBtn.AutoButtonColor = false; knobBtn.BackgroundColor3 = THEME.GREY; knobBtn.Size = UDim2.fromOffset(16, 32); knobBtn.AnchorPoint = Vector2.new(0.5, 0.5); knobBtn.Position = UDim2.new(visRel, 0, 0.5, 0); knobBtn.ZIndex = 3
     Instance.new("UIStroke", knobBtn).Thickness = 1.2; knobBtn.UIStroke.Color = Color3.fromRGB(210,210,215); local kGrad = Instance.new("UIGradient", knobBtn); kGrad.Color = ColorSequence.new{ColorSequenceKeypoint.new(0.00, Color3.fromRGB(236,236,240)), ColorSequenceKeypoint.new(0.50, Color3.fromRGB(182,182,188)), ColorSequenceKeypoint.new(1.00, Color3.fromRGB(216,216,222))}; kGrad.Rotation = 90
-    local centerVal = Instance.new("TextLabel", bar); centerVal.BackgroundTransparency = 1; centerVal.Size = UDim2.fromScale(1,1); centerVal.Font = "GothamBlack"; centerVal.TextSize = 16; centerVal.TextColor3 = THEME.WHITE; centerVal.TextStrokeTransparency = 0.2; centerVal.Text = "0%"; sliderCenterLabel = centerVal
+    local centerVal = Instance.new("TextLabel", bar); centerVal.BackgroundTransparency = 1; centerVal.Size = UDim2.fromScale(1,1); centerVal.Font = "GothamBlack"; centerVal.TextSize = 16; centerVal.TextColor3 = THEME.WHITE; centerVal.TextStrokeTransparency = 0.2; centerVal.Text = math.floor(visRel * 100 + 0.5) .. "%"
 
     local function applyRel(rel)
         rel = math.clamp(rel, 0, 1)
+        currentRel = rel
         STATE.SpeedRel = rel
         SaveSet("SpeedRel", rel)
-        if sliderCenterLabel then sliderCenterLabel.Text = string.format("%d%%", math.floor(rel * 100 + 0.5)) end
     end
-    local function relFrom(x) return (x - bar.AbsolutePosition.X) / math.max(1, bar.AbsoluteSize.X) end
-    local function syncVisual(now)
-        if now then visRel = STATE.SpeedRel else visRel = visRel + (STATE.SpeedRel - visRel) * 0.3 end
-        visRel = math.clamp(visRel, 0, 1)
+    
+    local function syncVisual(instant)
+        if instant then visRel = currentRel else visRel = visRel + (currentRel - visRel) * 0.3 end
         fill.Size = UDim2.fromScale(visRel, 1)
-        knobBtn.Position = UDim2.new(visRel, 0, 0.5, 0); knobShadow.Position = UDim2.new(visRel, 0, 0.5, 2)
-        centerVal.Text = string.format("%d%%", math.floor(visRel * 100 + 0.5))
+        knobBtn.Position = UDim2.new(visRel, 0, 0.5, 0)
+        knobShadow.Position = UDim2.new(visRel, 0, 0.5, 2)
+        centerVal.Text = math.floor(visRel * 100 + 0.5) .. "%"
     end
-    local function stopDrag() dragging = false; maybeDrag = false; if RSdragConn then RSdragConn:Disconnect() RSdragConn = nil end if EndDragConn then EndDragConn:Disconnect() EndDragConn = nil end scroll.ScrollingEnabled = true end
+
+    local function relFrom(x) return (x - bar.AbsolutePosition.X) / math.max(1, bar.AbsoluteSize.X) end
+    
+    local function stopDrag()
+        dragging = false; maybeDrag = false; if RSdragConn then RSdragConn:Disconnect() RSdragConn = nil end
+        if EndDragConn then EndDragConn:Disconnect() EndDragConn = nil end
+        scroll.ScrollingEnabled = true
+    end
+
     local function beginDrag()
         dragging = true; maybeDrag = false
-        RSdragConn = RunService.RenderStepped:Connect(function() applyRel(relFrom(UserInputService:GetMouseLocation().X)) syncVisual(false) end)
-        EndDragConn = UserInputService.InputEnded:Connect(function(io) if io.UserInputType == Enum.UserInputType.MouseButton1 or io.UserInputType == Enum.UserInputType.Touch then stopDrag() end end)
+        RSdragConn = RunService.RenderStepped:Connect(function() 
+            applyRel(relFrom(UserInputService:GetMouseLocation().X)) 
+            syncVisual(false) 
+        end)
+        EndDragConn = UserInputService.InputEnded:Connect(function(io)
+            if io.UserInputType == Enum.UserInputType.MouseButton1 or io.UserInputType == Enum.UserInputType.Touch then stopDrag() end
+        end)
     end
-    local function onPress(px) maybeDrag = true; downX = px; scroll.ScrollingEnabled = false; applyRel(relFrom(px)); syncVisual(true) end
-    bar.InputBegan:Connect(function(io) if io.UserInputType == Enum.UserInputType.MouseButton1 or io.UserInputType == Enum.UserInputType.Touch then onPress(io.Position.X) end end)
-    knobBtn.InputBegan:Connect(function(io) if io.UserInputType == Enum.UserInputType.MouseButton1 or io.UserInputType == Enum.UserInputType.Touch then onPress(io.Position.X) end end)
-    UserInputService.InputChanged:Connect(function(io) if maybeDrag and (io.UserInputType == Enum.UserInputType.MouseMovement or io.UserInputType == Enum.UserInputType.Touch) then if math.abs(io.Position.X - downX) >= DRAG_THRESHOLD then beginDrag() end end end)
-    
-    syncVisual(true)
+
+    -- FIXED: ต้องกดโดนพื้นที่ของ Slider เท่านั้น
+    local function onPress(io)
+        maybeDrag = true
+        downX = io.Position.X
+        scroll.ScrollingEnabled = false
+        applyRel(relFrom(io.Position.X))
+        syncVisual(true)
+    end
+
+    bar.InputBegan:Connect(function(io) if io.UserInputType == Enum.UserInputType.MouseButton1 or io.UserInputType == Enum.UserInputType.Touch then onPress(io) end end)
+    knobBtn.InputBegan:Connect(function(io) if io.UserInputType == Enum.UserInputType.MouseButton1 or io.UserInputType == Enum.UserInputType.Touch then onPress(io) end end)
+
+    UserInputService.InputChanged:Connect(function(io)
+        if maybeDrag and (io.UserInputType == Enum.UserInputType.MouseMovement or io.UserInputType == Enum.UserInputType.Touch) then
+            if math.abs(io.Position.X - downX) >= DRAG_THRESHOLD then beginDrag() end
+        end
+    end)
 end)
 --===== UFO HUB X • SETTINGS — Smoother 🚀 (A V1 • fixed 3 rows) + Runner Save (per-map) + AA1 =====
 registerRight("Settings", function(scroll)
