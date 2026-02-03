@@ -1531,13 +1531,16 @@ registerRight("Home", function(scroll)
     end)
 
 end)
---===== UFO HUB X • Auto Collect System (Model A V1 + Model A V2 + Speed Slider) =====
--- FIXED: UI Crash Error & Logic Improvements
+--===== UFO HUB X • Auto Collect System (Model A V1 + Model A V2 + Model A Slider) =====
+-- Item 1: Auto Collect Money (Save AA1)
+-- Item 2: Select Target Slots (Model A V2 Overlay)
+-- Item 3: Auto Collect Speed (Metal Slider Model - Save AA1)
 
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 local lp = Players.LocalPlayer
 
@@ -1561,7 +1564,7 @@ _G.UFOX_AA1 = _G.UFOX_AA1 or {}
 _G.UFOX_AA1["AutoCollect"] = _G.UFOX_AA1["AutoCollect"] or {
     Enabled = SaveGet("Enabled", false),
     Selected = SaveGet("Selected", {["All"] = true}),
-    Speed = SaveGet("Speed", 0.02),
+    SpeedRel = SaveGet("SpeedRel", 0.5), -- เก็บค่า 0-1 สำหรับ Slider
 }
 local STATE = _G.UFOX_AA1["AutoCollect"]
 
@@ -1588,7 +1591,7 @@ local function getMyPlotID()
     return foundID or "7aa9fb6a-ebb4-40b5-af4d-bbf68d798324"
 end
 
--- ระบบเก็บเงิน (พร้อมกันทั้งหมดเมื่อเลือก All)
+-- ลูปการทำงาน
 task.spawn(function()
     while true do
         if STATE.Enabled then
@@ -1596,24 +1599,25 @@ task.spawn(function()
             if not myID:find("{") then myID = "{" .. myID .. "}" end
             local rf = ReplicatedStorage:WaitForChild("Packages"):WaitForChild("Net"):WaitForChild("RF/Plot.PlotAction")
             
+            -- คำนวณความเร็ว: 1.0s (0%) ถึง 0.01s (100%)
+            local waitTime = 1.0 - (STATE.SpeedRel * 0.99)
+            
             if STATE.Selected["All"] then
                 for i = 1, 30 do
-                    task.spawn(function()
-                        pcall(function() rf:InvokeServer("Collect Money", myID, tostring(i)) end)
-                    end)
+                    task.spawn(function() pcall(function() rf:InvokeServer("Collect Money", myID, tostring(i)) end) end)
                 end
             else
                 for slot, active in pairs(STATE.Selected) do
                     if not STATE.Enabled or STATE.Selected["All"] then break end
                     if slot ~= "All" and active then
-                        task.spawn(function()
-                            pcall(function() rf:InvokeServer("Collect Money", myID, tostring(slot)) end)
-                        end)
+                        task.spawn(function() pcall(function() rf:InvokeServer("Collect Money", myID, tostring(slot)) end) end)
                     end
                 end
             end
+            task.wait(math.max(waitTime, 0.01))
+        else
+            task.wait(0.5)
         end
-        task.wait(STATE.Speed or 0.1)
     end
 end)
 
@@ -1626,6 +1630,8 @@ registerRight("Home", function(scroll)
         GREEN_DARK = Color3.fromRGB(0,120,60),
         WHITE = Color3.fromRGB(255,255,255),
         BLACK = Color3.fromRGB(0,0,0),
+        DARK = Color3.fromRGB(15,15,15),
+        GREY = Color3.fromRGB(200,200,205),
         RED = Color3.fromRGB(255,40,40)
     }
 
@@ -1637,7 +1643,7 @@ registerRight("Home", function(scroll)
     end
 
     -- Cleanup
-    for _, name in ipairs({"VA2_Header","VA2_Row1","VA2_Row2","VA2_Row3","VA2_OptionsPanel"}) do
+    for _, name in ipairs({"VA2_Header","VA2_Row1","VA2_Row2","Row_Sens","VA2_OptionsPanel"}) do
         local o = scroll:FindFirstChild(name) or scroll.Parent:FindFirstChild(name)
         if o then o:Destroy() end
     end
@@ -1648,121 +1654,91 @@ registerRight("Home", function(scroll)
 
     -- HEADER
     local header = Instance.new("TextLabel", scroll)
-    header.Name = "VA2_Header"; header.BackgroundTransparency = 1; header.Size = UDim2.new(1, 0, 0, 30)
-    header.Font = "GothamBold"; header.TextSize = 16; header.TextColor3 = THEME.WHITE
-    header.TextXAlignment = "Left"; header.Text = "Auto Collect System"; header.LayoutOrder = 1
-
-    local function makeRow(name, labelText, order)
-        local row = Instance.new("Frame", scroll); row.Name = name; row.Size = UDim2.new(1, -6, 0, 46); row.BackgroundColor3 = THEME.BLACK; row.LayoutOrder = order
-        corner(row); stroke(row)
-        local lab = Instance.new("TextLabel", row); lab.BackgroundTransparency = 1; lab.Size = UDim2.new(0, 200, 1, 0); lab.Position = UDim2.new(0, 16, 0, 0)
-        lab.Font = "GothamBold"; lab.TextSize = 13; lab.TextColor3 = THEME.WHITE; lab.TextXAlignment = "Left"; lab.Text = labelText
-        return row
-    end
+    header.Name = "VA2_Header"; header.BackgroundTransparency = 1; header.Size = UDim2.new(1, 0, 0, 30); header.Font = "GothamBold"; header.TextSize = 16; header.TextColor3 = THEME.WHITE; header.TextXAlignment = "Left"; header.Text = "Auto Collect System"; header.LayoutOrder = 1
 
     -- ITEM 1: Auto Collect Money
-    local row1 = makeRow("VA2_Row1", "Auto Collect Money", 2)
+    local row1 = Instance.new("Frame", scroll); row1.Name = "VA2_Row1"; row1.Size = UDim2.new(1, -6, 0, 46); row1.BackgroundColor3 = THEME.BLACK; row1.LayoutOrder = 2; corner(row1); stroke(row1)
+    local lab1 = Instance.new("TextLabel", row1); lab1.BackgroundTransparency = 1; lab1.Size = UDim2.new(0, 200, 1, 0); lab1.Position = UDim2.new(0, 16, 0, 0); lab1.Font = "GothamBold"; lab1.TextSize = 13; lab1.TextColor3 = THEME.WHITE; lab1.TextXAlignment = "Left"; lab1.Text = "Auto Collect Money"
     local sw = Instance.new("Frame", row1); sw.AnchorPoint = Vector2.new(1, 0.5); sw.Position = UDim2.new(1, -16, 0.5, 0); sw.Size = UDim2.new(0, 52, 0, 26); sw.BackgroundColor3 = THEME.BLACK; corner(sw, 13)
-    local swStr = stroke(sw, 1.8, THEME.RED)
-    local knob = Instance.new("Frame", sw); knob.Size = UDim2.new(0, 22, 0, 22); knob.Position = UDim2.new(0, 2, 0.5, -11); knob.BackgroundColor3 = THEME.WHITE; corner(knob, 11)
-    
+    local swStr = stroke(sw, 1.8, THEME.RED); local knob = Instance.new("Frame", sw); knob.Size = UDim2.new(0, 22, 0, 22); knob.Position = UDim2.new(0, 2, 0.5, -11); knob.BackgroundColor3 = THEME.WHITE; corner(knob, 11)
     local function updateSw(on)
         swStr.Color = on and THEME.GREEN or THEME.RED
         TweenService:Create(knob, TweenInfo.new(0.15), {Position = on and UDim2.new(1, -24, 0.5, -11) or UDim2.new(0, 2, 0.5, -11)}):Play()
     end
-
-    local swBtn = Instance.new("TextButton", sw); swBtn.Size = UDim2.fromScale(1,1); swBtn.BackgroundTransparency = 1; swBtn.Text = ""
-    swBtn.MouseButton1Click:Connect(function()
-        STATE.Enabled = not STATE.Enabled
-        SaveSet("Enabled", STATE.Enabled)
-        updateSw(STATE.Enabled)
-    end)
+    local swBtn = Instance.new("TextButton", sw); swBtn.Size = UDim2.fromScale(1,1); swBtn.BackgroundTransparency = 1; swBtn.Text = ""; swBtn.MouseButton1Click:Connect(function() STATE.Enabled = not STATE.Enabled; SaveSet("Enabled", STATE.Enabled); updateSw(STATE.Enabled) end)
     updateSw(STATE.Enabled)
 
     -- ITEM 2: Select Target Slots
-    local row2 = makeRow("VA2_Row2", "Select Target Slots", 3)
-    local selectBtn = Instance.new("TextButton", row2)
-    selectBtn.AnchorPoint = Vector2.new(1, 0.5); selectBtn.Position = UDim2.new(1, -16, 0.5, 0); selectBtn.Size = UDim2.new(0, 180, 0, 28); selectBtn.BackgroundColor3 = THEME.BLACK; selectBtn.Text = "🔍 Select Options"; selectBtn.Font = "GothamBold"; selectBtn.TextSize = 13; selectBtn.TextColor3 = THEME.WHITE; corner(selectBtn, 8)
-    local selectStroke = stroke(selectBtn, 1.8, THEME.GREEN_DARK); selectStroke.Transparency = 0.4
-
+    local row2 = Instance.new("Frame", scroll); row2.Name = "VA2_Row2"; row2.Size = UDim2.new(1, -6, 0, 46); row2.BackgroundColor3 = THEME.BLACK; row2.LayoutOrder = 3; corner(row2); stroke(row2)
+    local lab2 = Instance.new("TextLabel", row2); lab2.BackgroundTransparency = 1; lab2.Size = UDim2.new(0, 200, 1, 0); lab2.Position = UDim2.new(0, 16, 0, 0); lab2.Font = "GothamBold"; lab2.TextSize = 13; lab2.TextColor3 = THEME.WHITE; lab2.TextXAlignment = "Left"; lab2.Text = "Select Target Slots"
+    local selectBtn = Instance.new("TextButton", row2); selectBtn.AnchorPoint = Vector2.new(1, 0.5); selectBtn.Position = UDim2.new(1, -16, 0.5, 0); selectBtn.Size = UDim2.new(0, 180, 0, 28); selectBtn.BackgroundColor3 = THEME.BLACK; selectBtn.Text = "🔍 Select Options"; selectBtn.Font = "GothamBold"; selectBtn.TextSize = 13; selectBtn.TextColor3 = THEME.WHITE; corner(selectBtn, 8); local selectStroke = stroke(selectBtn, 1.8, THEME.GREEN_DARK); selectStroke.Transparency = 0.4
+    
     local optionsPanel, inputConn, opened = nil, nil, false
-    local function closePanel()
-        if optionsPanel then optionsPanel:Destroy(); optionsPanel = nil end
-        if inputConn then inputConn:Disconnect(); inputConn = nil end
-        opened = false; selectStroke.Color = THEME.GREEN_DARK; selectStroke.Transparency = 0.4
-    end
-
+    local function closePanel() if optionsPanel then optionsPanel:Destroy(); optionsPanel = nil end if inputConn then inputConn:Disconnect(); inputConn = nil end opened = false; selectStroke.Color = THEME.GREEN_DARK; selectStroke.Transparency = 0.4 end
     selectBtn.MouseButton1Click:Connect(function()
         if opened then closePanel() return end
         opened = true; selectStroke.Color = THEME.GREEN; selectStroke.Transparency = 0
         local pw, ph = scroll.Parent.AbsoluteSize.X, scroll.Parent.AbsoluteSize.Y
         optionsPanel = Instance.new("Frame", scroll.Parent); optionsPanel.Name = "VA2_OptionsPanel"; optionsPanel.BackgroundColor3 = THEME.BLACK; optionsPanel.Position = UDim2.new(0, math.floor(pw * 0.65), 0, 10); optionsPanel.Size = UDim2.new(0, math.floor(pw * 0.33), 0, ph - 20); optionsPanel.ZIndex = 100; corner(optionsPanel); stroke(optionsPanel, 2, THEME.GREEN)
-
         local search = Instance.new("TextBox", optionsPanel); search.Size = UDim2.new(1, -16, 0, 30); search.Position = UDim2.new(0, 8, 0, 8); search.BackgroundColor3 = Color3.fromRGB(20,20,20); search.PlaceholderText = "🔍 Search Slot"; search.Text = ""; search.Font = "GothamBold"; search.TextSize = 12; search.TextColor3 = THEME.WHITE; corner(search, 6); stroke(search, 1.2, THEME.GREEN)
-
-        local scroller = Instance.new("ScrollingFrame", optionsPanel); scroller.Size = UDim2.new(1, -10, 1, -50); scroller.Position = UDim2.new(0, 5, 0, 45); scroller.BackgroundTransparency = 1; scroller.ScrollBarThickness = 0; scroller.AutomaticCanvasSize = "Y"
-        local lay = Instance.new("UIListLayout", scroller); lay.Padding = UDim.new(0, 6); lay.HorizontalAlignment = "Center"
+        local scroller = Instance.new("ScrollingFrame", optionsPanel); scroller.Size = UDim2.new(1, -10, 1, -50); scroller.Position = UDim2.new(0, 5, 0, 45); scroller.BackgroundTransparency = 1; scroller.ScrollBarThickness = 0; scroller.AutomaticCanvasSize = "Y"; Instance.new("UIListLayout", scroller).Padding = UDim.new(0, 6); scroller.UIListLayout.HorizontalAlignment = "Center"
         local pad = Instance.new("UIPadding", scroller); pad.PaddingTop = UDim.new(0, 8); pad.PaddingBottom = UDim.new(0, 35)
-
         local allButtons = {}
         local function makeGlowButton(id, label)
-            local btn = Instance.new("TextButton", scroller); btn.Size = UDim2.new(0.92, 0, 0, 32); btn.BackgroundColor3 = THEME.BLACK; btn.Font = "GothamBold"; btn.TextSize = 10.5; btn.TextColor3 = THEME.WHITE; btn.Text = label; corner(btn, 6)
-            local st = stroke(btn, 1.5, THEME.GREEN_DARK); st.Transparency = 0.4
-            local glow = Instance.new("Frame", btn); glow.BackgroundColor3 = THEME.GREEN; glow.Size = UDim2.new(0, 3, 1, 0); glow.Visible = false
-
-            local function refresh()
-                local showGlow = (id == "All" and STATE.Selected["All"]) or (not STATE.Selected["All"] and STATE.Selected[tostring(id)])
-                st.Color = showGlow and THEME.GREEN or THEME.GREEN_DARK; st.Transparency = showGlow and 0 or 0.4; glow.Visible = showGlow
-            end
-            btn.MouseButton1Click:Connect(function()
-                if id == "All" then STATE.Selected = {["All"] = not STATE.Selected["All"]} 
-                else STATE.Selected["All"] = false; STATE.Selected[tostring(id)] = not STATE.Selected[tostring(id)] end
-                SaveSet("Selected", STATE.Selected); for _, b in ipairs(allButtons) do b.Upd() end
-            end)
-            refresh(); table.insert(allButtons, {Btn = btn, Upd = refresh})
+            local btn = Instance.new("TextButton", scroller); btn.Size = UDim2.new(0.92, 0, 0, 32); btn.BackgroundColor3 = THEME.BLACK; btn.Font = "GothamBold"; btn.TextSize = 10.5; btn.TextColor3 = THEME.WHITE; btn.Text = label; corner(btn, 6); local st = stroke(btn, 1.5, THEME.GREEN_DARK); st.Transparency = 0.4; local glow = Instance.new("Frame", btn); glow.BackgroundColor3 = THEME.GREEN; glow.Size = UDim2.new(0, 3, 1, 0); glow.Visible = false
+            local function refresh() local showGlow = (id == "All" and STATE.Selected["All"]) or (not STATE.Selected["All"] and STATE.Selected[tostring(id)]); st.Color = showGlow and THEME.GREEN or THEME.GREEN_DARK; st.Transparency = showGlow and 0 or 0.4; glow.Visible = showGlow end
+            btn.MouseButton1Click:Connect(function() if id == "All" then STATE.Selected = {["All"] = not STATE.Selected["All"]} else STATE.Selected["All"] = false; STATE.Selected[tostring(id)] = not STATE.Selected[tostring(id)] end SaveSet("Selected", STATE.Selected); for _, b in ipairs(allButtons) do b.Upd() end end); refresh(); table.insert(allButtons, {Btn = btn, Upd = refresh})
         end
-
         makeGlowButton("All", "Collect All Money")
         for i = 1, 30 do makeGlowButton(i, "Collect Money Slot " .. i) end
-
-        search:GetPropertyChangedSignal("Text"):Connect(function()
-            for _, b in ipairs(allButtons) do b.Btn.Visible = (search.Text == "" or b.Btn.Text:lower():find(search.Text:lower())) end
-        end)
-
-        inputConn = UserInputService.InputBegan:Connect(function(input)
-            if (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
-                local op, os = optionsPanel.AbsolutePosition, optionsPanel.AbsoluteSize
-                if not (input.Position.X >= op.X and input.Position.X <= op.X + os.X and input.Position.Y >= op.Y and input.Position.Y <= op.Y + os.Y) then closePanel() end
-            end
-        end)
+        search:GetPropertyChangedSignal("Text"):Connect(function() for _, b in ipairs(allButtons) do b.Btn.Visible = (search.Text == "" or b.Btn.Text:lower():find(search.Text:lower())) end end)
+        inputConn = UserInputService.InputBegan:Connect(function(input) if (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then local op, os = optionsPanel.AbsolutePosition, optionsPanel.AbsoluteSize if not (input.Position.X >= op.X and input.Position.X <= op.X + os.X and input.Position.Y >= op.Y and input.Position.Y <= op.Y + os.Y) then closePanel() end end end)
     end)
 
-    -- ITEM 3: Auto Collect Speed (Slider)
-    local row3 = makeRow("VA2_Row3", "Auto Collect Speed", 4)
-    local sliderFrame = Instance.new("Frame", row3); sliderFrame.AnchorPoint = Vector2.new(1, 0.5); sliderFrame.Position = UDim2.new(1, -16, 0.5, 0); sliderFrame.Size = UDim2.new(0, 150, 0, 6); sliderFrame.BackgroundColor3 = THEME.GREEN_DARK; corner(sliderFrame, 3)
-    local fill = Instance.new("Frame", sliderFrame); fill.Size = UDim2.new(0, 0, 1, 0); fill.BackgroundColor3 = THEME.GREEN; corner(fill, 3)
-    local handle = Instance.new("Frame", fill); handle.AnchorPoint = Vector2.new(0.5, 0.5); handle.Position = UDim2.new(1, 0, 0.5, 0); handle.Size = UDim2.new(0, 14, 0, 14); handle.BackgroundColor3 = THEME.WHITE; corner(handle, 7); stroke(handle, 2, THEME.GREEN)
-    local valLab = Instance.new("TextLabel", row3); valLab.Size = UDim2.new(0, 50, 1, 0); valLab.Position = UDim2.new(1, -215, 0, 0); valLab.BackgroundTransparency = 1; valLab.Font = "GothamBold"; valLab.TextSize = 12; valLab.TextColor3 = THEME.WHITE; valLab.TextXAlignment = "Right"
-
-    local function updateSlider(v)
-        v = math.clamp(v, 0, 1)
-        STATE.Speed = 0.01 + (v * 0.99)
-        fill.Size = UDim2.new(v, 0, 1, 0)
-        valLab.Text = string.format("%.2fs", STATE.Speed)
-        SaveSet("Speed", STATE.Speed)
-    end
-
+    -- ITEM 3: Adjust Sensitivity (Metal Slider Model)
+    local visRel = 0
     local dragging = false
-    handle.InputBegan:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then dragging = true end end)
-    UserInputService.InputEnded:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then dragging = false end end)
-    UserInputService.InputChanged:Connect(function(input)
-        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-            local pos = math.clamp((input.Position.X - sliderFrame.AbsolutePosition.X) / sliderFrame.AbsoluteSize.X, 0, 1)
-            updateSlider(pos)
-        end
-    end)
+    local maybeDrag = false
+    local downX
+    local DRAG_THRESHOLD = 5
+    local RSdragConn, EndDragConn
+    local sliderCenterLabel
 
-    updateSlider((STATE.Speed - 0.01) / 0.99)
+    local sRow = Instance.new("Frame", scroll); sRow.Name = "Row_Sens"; sRow.Size = UDim2.new(1, -6, 0, 70); sRow.BackgroundColor3 = THEME.BLACK; sRow.LayoutOrder = 4; corner(sRow, 12); stroke(sRow, 2.2, THEME.GREEN)
+    local sLab = Instance.new("TextLabel", sRow); sLab.BackgroundTransparency = 1; sLab.Position = UDim2.new(0, 16, 0, 4); sLab.Size = UDim2.new(1, -32, 0, 24); sLab.Font = "GothamBold"; sLab.TextSize = 13; sLab.TextColor3 = THEME.WHITE; sLab.TextXAlignment = "Left"; sLab.Text = "Adjust Collect Speed"
+    local bar = Instance.new("Frame", sRow); bar.Position = UDim2.new(0, 16, 0, 34); bar.Size = UDim2.new(1, -32, 0, 16); bar.BackgroundColor3 = THEME.BLACK; bar.Active = true; corner(bar, 8); stroke(bar, 1.8, THEME.GREEN)
+    local fill = Instance.new("Frame", bar); fill.BackgroundColor3 = THEME.GREEN; fill.Size = UDim2.fromScale(0, 1); corner(fill, 8)
+    local knobShadow = Instance.new("Frame", bar); knobShadow.Size = UDim2.fromOffset(18, 34); knobShadow.AnchorPoint = Vector2.new(0.5, 0.5); knobShadow.Position = UDim2.new(0, 0, 0.5, 2); knobShadow.BackgroundColor3 = THEME.DARK; knobShadow.BackgroundTransparency = 0.45; knobShadow.BorderSizePixel = 0; knobShadow.ZIndex = 2
+    local knobBtn = Instance.new("ImageButton", bar); knobBtn.AutoButtonColor = false; knobBtn.BackgroundColor3 = THEME.GREY; knobBtn.Size = UDim2.fromOffset(16, 32); knobBtn.AnchorPoint = Vector2.new(0.5, 0.5); knobBtn.Position = UDim2.new(0, 0, 0.5, 0); knobBtn.BorderSizePixel = 0; knobBtn.ZIndex = 3
+    Instance.new("UIStroke", knobBtn).Thickness = 1.2; knobBtn.UIStroke.Color = Color3.fromRGB(210,210,215); local kGrad = Instance.new("UIGradient", knobBtn); kGrad.Color = ColorSequence.new{ColorSequenceKeypoint.new(0.00, Color3.fromRGB(236,236,240)), ColorSequenceKeypoint.new(0.50, Color3.fromRGB(182,182,188)), ColorSequenceKeypoint.new(1.00, Color3.fromRGB(216,216,222))}; kGrad.Rotation = 90
+    local centerVal = Instance.new("TextLabel", bar); centerVal.BackgroundTransparency = 1; centerVal.Size = UDim2.fromScale(1,1); centerVal.Font = "GothamBlack"; centerVal.TextSize = 16; centerVal.TextColor3 = THEME.WHITE; centerVal.TextStrokeTransparency = 0.2; centerVal.Text = "0%"; sliderCenterLabel = centerVal
+
+    local function applyRel(rel)
+        rel = math.clamp(rel, 0, 1)
+        STATE.SpeedRel = rel
+        SaveSet("SpeedRel", rel)
+        if sliderCenterLabel then sliderCenterLabel.Text = string.format("%d%%", math.floor(rel * 100 + 0.5)) end
+    end
+    local function relFrom(x) return (x - bar.AbsolutePosition.X) / math.max(1, bar.AbsoluteSize.X) end
+    local function syncVisual(now)
+        if now then visRel = STATE.SpeedRel else visRel = visRel + (STATE.SpeedRel - visRel) * 0.3 end
+        visRel = math.clamp(visRel, 0, 1)
+        fill.Size = UDim2.fromScale(visRel, 1)
+        knobBtn.Position = UDim2.new(visRel, 0, 0.5, 0); knobShadow.Position = UDim2.new(visRel, 0, 0.5, 2)
+        centerVal.Text = string.format("%d%%", math.floor(visRel * 100 + 0.5))
+    end
+    local function stopDrag() dragging = false; maybeDrag = false; if RSdragConn then RSdragConn:Disconnect() RSdragConn = nil end if EndDragConn then EndDragConn:Disconnect() EndDragConn = nil end scroll.ScrollingEnabled = true end
+    local function beginDrag()
+        dragging = true; maybeDrag = false
+        RSdragConn = RunService.RenderStepped:Connect(function() applyRel(relFrom(UserInputService:GetMouseLocation().X)) syncVisual(false) end)
+        EndDragConn = UserInputService.InputEnded:Connect(function(io) if io.UserInputType == Enum.UserInputType.MouseButton1 or io.UserInputType == Enum.UserInputType.Touch then stopDrag() end end)
+    end
+    local function onPress(px) maybeDrag = true; downX = px; scroll.ScrollingEnabled = false; applyRel(relFrom(px)); syncVisual(true) end
+    bar.InputBegan:Connect(function(io) if io.UserInputType == Enum.UserInputType.MouseButton1 or io.UserInputType == Enum.UserInputType.Touch then onPress(io.Position.X) end end)
+    knobBtn.InputBegan:Connect(function(io) if io.UserInputType == Enum.UserInputType.MouseButton1 or io.UserInputType == Enum.UserInputType.Touch then onPress(io.Position.X) end end)
+    UserInputService.InputChanged:Connect(function(io) if maybeDrag and (io.UserInputType == Enum.UserInputType.MouseMovement or io.UserInputType == Enum.UserInputType.Touch) then if math.abs(io.Position.X - downX) >= DRAG_THRESHOLD then beginDrag() end end end)
+    
+    syncVisual(true)
 end)
 --===== UFO HUB X • SETTINGS — Smoother 🚀 (A V1 • fixed 3 rows) + Runner Save (per-map) + AA1 =====
 registerRight("Settings", function(scroll)
