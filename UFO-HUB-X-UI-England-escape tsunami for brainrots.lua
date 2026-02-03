@@ -1531,10 +1531,8 @@ registerRight("Home", function(scroll)
     end)
 
 end)
---===== UFO HUB X • Auto Collect Money (Model A V1 + Model A V2 FINAL FIX 2) =====
--- Tab: Home
--- Item 1: Auto Collect Money (Save AA1)
--- Item 2: Select Target Slots (Fixed Bottom Padding + Glow Logic + Search + Save AA1)
+--===== UFO HUB X • Auto Collect Money (Model A V1 + Model A V2 FIXED & SMOOTH) =====
+-- FIXED: ป้องกัน UI ค้าง และแก้ปัญหาปุ่มสุดท้ายโดนบัง + ระบบ Search สมบูรณ์
 
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
@@ -1546,14 +1544,18 @@ local lp = Players.LocalPlayer
 ------------------------------------------------------------------
 -- [ AA1 SAVE & STATE SYSTEM ]
 ------------------------------------------------------------------
-local SAVE = (getgenv and getgenv().UFOX_SAVE) or {
-    get = function(_, _, d) return d end,
-    set = function() end,
-}
+local function SaveGet(key, default)
+    if getgenv and getgenv().UFOX_SAVE and getgenv().UFOX_SAVE.get then
+        return getgenv().UFOX_SAVE.get("AA1/UFOX/" .. game.PlaceId .. "/" .. key, default)
+    end
+    return default
+end
 
-local BASE_PATH = "AA1/UFOX/" .. game.PlaceId
-local function SaveGet(f, d) return SaveGet and SaveGet(BASE_PATH .. "/" .. f, d) or d end
-local function SaveSet(f, v) pcall(function() if SaveSet then SaveSet(BASE_PATH .. "/" .. f, v) end end) end
+local function SaveSet(key, val)
+    if getgenv and getgenv().UFOX_SAVE and getgenv().UFOX_SAVE.set then
+        pcall(function() getgenv().UFOX_SAVE.set("AA1/UFOX/" .. game.PlaceId .. "/" .. key, val) end)
+    end
+end
 
 _G.UFOX_AA1 = _G.UFOX_AA1 or {}
 _G.UFOX_AA1["AutoCollect"] = _G.UFOX_AA1["AutoCollect"] or {
@@ -1587,36 +1589,30 @@ local function getMyPlotID()
     return finalID
 end
 
-local function callCollectRemote(plotId, slotNumber)
-    local rf = ReplicatedStorage:WaitForChild("Packages"):WaitForChild("Net"):WaitForChild("RF/Plot.PlotAction")
-    if rf then
-        local args = {"Collect Money", tostring(plotId), tostring(slotNumber)}
-        task.spawn(function() pcall(function() rf:InvokeServer(unpack(args)) end) end)
-    end
-end
-
--- Main Loop
+-- ลูปเก็บเงิน (ใช้ task.wait เพื่อไม่ให้เครื่องค้าง)
 task.spawn(function()
     while true do
         if STATE.Enabled then
             local myID = getMyPlotID()
+            local rf = ReplicatedStorage:WaitForChild("Packages"):WaitForChild("Net"):WaitForChild("RF/Plot.PlotAction")
+            
             if STATE.Selected["All"] then
                 for i = 1, 30 do
                     if not STATE.Enabled or not STATE.Selected["All"] then break end
-                    callCollectRemote(myID, i)
+                    pcall(function() rf:InvokeServer("Collect Money", myID, tostring(i)) end)
                     task.wait(0.02)
                 end
             else
                 for slot, active in pairs(STATE.Selected) do
-                    if not STATE.Enabled then break end
+                    if not STATE.Enabled or STATE.Selected["All"] then break end
                     if slot ~= "All" and active then
-                        callCollectRemote(myID, slot)
+                        pcall(function() rf:InvokeServer("Collect Money", myID, tostring(slot)) end)
                         task.wait(0.02)
                     end
                 end
             end
         end
-        task.wait(0.3)
+        task.wait(0.5)
     end
 end)
 
@@ -1640,17 +1636,17 @@ registerRight("Home", function(scroll)
     end
 
     -- Cleanup
-    for _, name in ipairs({"VA2_Header","VA2_Row1","VA2_Row2","VA2_OptionsPanel"}) do
+    for _, name in ipairs({"VA2_Row1","VA2_Row2","VA2_OptionsPanel"}) do
         local o = scroll:FindFirstChild(name) or scroll.Parent:FindFirstChild(name)
         if o then o:Destroy() end
     end
 
-    scroll.AutomaticCanvasSize = "Y"
+    scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
     local vlist = scroll:FindFirstChildOfClass("UIListLayout") or Instance.new("UIListLayout", scroll)
     vlist.Padding = UDim.new(0, 12); vlist.SortOrder = "LayoutOrder"
 
     -- ROW 1: Auto Collect Money
-    local row1 = Instance.new("Frame", scroll); row1.Name = "VA2_Row1"; row1.Size = UDim2.new(1, -6, 0, 46); row1.BackgroundColor3 = THEME.BLACK; row1.LayoutOrder = 2
+    local row1 = Instance.new("Frame", scroll); row1.Name = "VA2_Row1"; row1.Size = UDim2.new(1, -6, 0, 46); row1.BackgroundColor3 = THEME.BLACK; row1.LayoutOrder = 1
     corner(row1); stroke(row1)
     local lab1 = Instance.new("TextLabel", row1); lab1.BackgroundTransparency = 1; lab1.Size = UDim2.new(0, 200, 1, 0); lab1.Position = UDim2.new(0, 16, 0, 0)
     lab1.Font = "GothamBold"; lab1.TextSize = 13; lab1.TextColor3 = THEME.WHITE; lab1.TextXAlignment = "Left"; lab1.Text = "Auto Collect Money"
@@ -1661,7 +1657,7 @@ registerRight("Home", function(scroll)
     
     local function updateSw(on)
         swStr.Color = on and THEME.GREEN or THEME.RED
-        TweenService:Create(knob, TweenInfo.new(0.1), {Position = on and UDim2.new(1, -24, 0.5, -11) or UDim2.new(0, 2, 0.5, -11)}):Play()
+        TweenService:Create(knob, TweenInfo.new(0.15), {Position = on and UDim2.new(1, -24, 0.5, -11) or UDim2.new(0, 2, 0.5, -11)}):Play()
     end
 
     local swBtn = Instance.new("TextButton", sw); swBtn.Size = UDim2.fromScale(1,1); swBtn.BackgroundTransparency = 1; swBtn.Text = ""
@@ -1673,7 +1669,7 @@ registerRight("Home", function(scroll)
     updateSw(STATE.Enabled)
 
     -- ROW 2: Select Target Slots
-    local row2 = Instance.new("Frame", scroll); row2.Name = "VA2_Row2"; row2.Size = UDim2.new(1, -6, 0, 46); row2.BackgroundColor3 = THEME.BLACK; row2.LayoutOrder = 3
+    local row2 = Instance.new("Frame", scroll); row2.Name = "VA2_Row2"; row2.Size = UDim2.new(1, -6, 0, 46); row2.BackgroundColor3 = THEME.BLACK; row2.LayoutOrder = 2
     corner(row2); stroke(row2)
     local lab2 = Instance.new("TextLabel", row2); lab2.BackgroundTransparency = 1; lab2.Size = UDim2.new(0, 200, 1, 0); lab2.Position = UDim2.new(0, 16, 0, 0)
     lab2.Font = "GothamBold"; lab2.TextSize = 13; lab2.TextColor3 = THEME.WHITE; lab2.TextXAlignment = "Left"; lab2.Text = "Select Target Slots"
@@ -1699,18 +1695,18 @@ registerRight("Home", function(scroll)
 
         local scroller = Instance.new("ScrollingFrame", optionsPanel); scroller.Size = UDim2.new(1, -10, 1, -50); scroller.Position = UDim2.new(0, 5, 0, 45); scroller.BackgroundTransparency = 1; scroller.ScrollBarThickness = 0; scroller.AutomaticCanvasSize = "Y"
         local lay = Instance.new("UIListLayout", scroller); lay.Padding = UDim.new(0, 6); lay.HorizontalAlignment = "Center"
-        local pad = Instance.new("UIPadding", scroller); pad.PaddingTop = UDim.new(0, 8); pad.PaddingBottom = UDim.new(0, 25) -- เพิ่ม Padding ท้ายให้มากขึ้น
+        local pad = Instance.new("UIPadding", scroller); pad.PaddingTop = UDim.new(0, 8); pad.PaddingBottom = UDim.new(0, 35) -- เพิ่มระยะขอบล่างกันปุ่มสุดท้ายโดนบัง
 
         local allButtons = {}
         local function makeGlowButton(id, label)
-            local btn = Instance.new("TextButton", scroller); btn.Size = UDim2.new(0.9, 0, 0, 32); btn.BackgroundColor3 = THEME.BLACK; btn.Font = "GothamBold"; btn.TextSize = 11; btn.TextColor3 = THEME.WHITE; btn.Text = label; corner(btn, 6)
+            local btn = Instance.new("TextButton", scroller); btn.Size = UDim2.new(0.92, 0, 0, 32); btn.BackgroundColor3 = THEME.BLACK; btn.Font = "GothamBold"; btn.TextSize = 10.5; btn.TextColor3 = THEME.WHITE; btn.Text = label; corner(btn, 6)
             local st = stroke(btn, 1.5, THEME.GREEN_DARK); st.Transparency = 0.4
             local glow = Instance.new("Frame", btn); glow.BackgroundColor3 = THEME.GREEN; glow.Size = UDim2.new(0, 3, 1, 0); glow.Visible = false
 
             local function refresh()
                 local isAll = STATE.Selected["All"]
                 local isOn = STATE.Selected[tostring(id)]
-                -- แก้ไข Logic: ถ้ากด All ปุ่มอื่นต้องไม่มีออร่าเขียว
+                -- Logic: ถ้าเลือก All ปุ่มย่อยจะไม่มีออร่าเขียว
                 local showGlow = (id == "All" and isAll) or (not isAll and isOn)
                 st.Color = showGlow and THEME.GREEN or THEME.GREEN_DARK; st.Transparency = showGlow and 0 or 0.4; glow.Visible = showGlow
             end
@@ -1720,7 +1716,8 @@ registerRight("Home", function(scroll)
                 else 
                     STATE.Selected["All"] = false; STATE.Selected[tostring(id)] = not STATE.Selected[tostring(id)] 
                 end
-                SaveSet("Selected", STATE.Selected); for _, b in ipairs(allButtons) do b.Upd() end
+                SaveSet("Selected", STATE.Selected)
+                for _, b in ipairs(allButtons) do b.Upd() end
             end)
             refresh(); table.insert(allButtons, {Btn = btn, Upd = refresh})
         end
