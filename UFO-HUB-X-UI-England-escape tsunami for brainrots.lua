@@ -1531,10 +1531,10 @@ registerRight("Home", function(scroll)
     end)
 
 end)
---===== UFO HUB X • Auto Collect Money (Model A V1 + Model A V2 FULL FIX) =====
+--===== UFO HUB X • Auto Collect Money (Model A V1 + Model A V2 FINAL FIX) =====
 -- Tab: Home
--- Item 1: Auto Collect Money (ภาษาอังกฤษ ไม่มี emoji)
--- Item 2: Select Target Slots (Fixed Overlay + No TextBox)
+-- Item 1: Auto Collect Money (Save State AA1)
+-- Item 2: Select Target Slots (Save State AA1 + No ScrollBar + Fixed Padding)
 
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
@@ -1558,12 +1558,12 @@ local function SaveSet(f, v) pcall(function() SAVE.set(BASE_PATH .. "/" .. f, v)
 _G.UFOX_AA1 = _G.UFOX_AA1 or {}
 _G.UFOX_AA1["AutoCollect"] = _G.UFOX_AA1["AutoCollect"] or {
     Enabled = SaveGet("Enabled", false),
-    Selected = SaveGet("Selected", {["All"] = true}),
+    Selected = SaveGet("Selected", {["All"] = true}), -- เริ่มต้นเลือก All ไว้ก่อน
 }
 local STATE = _G.UFOX_AA1["AutoCollect"]
 
 ------------------------------------------------------------------
--- [ DYNAMIC GUID SCANNER (Workspace.Bases) ]
+-- [ DYNAMIC GUID SCANNER ]
 ------------------------------------------------------------------
 local function getMyPlotID()
     local foundID = nil
@@ -1575,9 +1575,8 @@ local function getMyPlotID()
                 local titleGui = title:FindFirstChild("TitleGui")
                 local frame = titleGui and titleGui:FindFirstChild("Frame")
                 local playerNameLabel = frame and frame:FindFirstChild("PlayerName")
-                -- เช็คชื่อผู้เล่นจาก PlayerName ใน TitleGui
                 if playerNameLabel and (playerNameLabel.Text == lp.Name or playerNameLabel.Text == lp.DisplayName) then
-                    foundID = title.Parent.Name -- ดึงเลข GUID จาก Parent ของ Title
+                    foundID = title.Parent.Name 
                     break
                 end
             end
@@ -1622,7 +1621,7 @@ task.spawn(function()
 end)
 
 ------------------------------------------------------------------
--- [ UI REGISTER (Home Tab + Fixed Model A V2) ]
+-- [ UI REGISTER (Home Tab + Fixed V A2) ]
 ------------------------------------------------------------------
 registerRight("Home", function(scroll)
     local THEME = {
@@ -1636,7 +1635,7 @@ registerRight("Home", function(scroll)
     local function corner(ui, r) Instance.new("UICorner", ui).CornerRadius = UDim.new(0, r or 12) end
     local function stroke(ui, th, col)
         local s = Instance.new("UIStroke", ui)
-        s.Thickness = th or 2.2; s.Color = col or THEME.GREEN; s.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+        s.Thickness = th or 2.2; s.Color = col or THEME.GREEN; s.ApplyStrokeMode = "Border"
         return s
     end
 
@@ -1646,14 +1645,14 @@ registerRight("Home", function(scroll)
         if o then o:Destroy() end
     end
 
-    scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    scroll.AutomaticCanvasSize = "Y"
     local vlist = scroll:FindFirstChildOfClass("UIListLayout") or Instance.new("UIListLayout", scroll)
-    vlist.Padding = UDim.new(0, 12); vlist.SortOrder = Enum.SortOrder.LayoutOrder
+    vlist.Padding = UDim.new(0, 12); vlist.SortOrder = "LayoutOrder"
 
-    -- HEADER
+    -- Header
     local header = Instance.new("TextLabel", scroll)
     header.Name = "VA2_Header"; header.BackgroundTransparency = 1; header.Size = UDim2.new(1, 0, 0, 36)
-    header.Font = Enum.Font.GothamBold; header.TextSize = 16; header.TextColor3 = THEME.WHITE
+    header.Font = "GothamBold"; header.TextSize = 16; header.TextColor3 = THEME.WHITE
     header.TextXAlignment = "Left"; header.Text = "Auto Collect System"; header.LayoutOrder = 1
 
     local function makeRow(name, labelText, order)
@@ -1664,7 +1663,7 @@ registerRight("Home", function(scroll)
         return row
     end
 
-    -- ROW 1: Auto Collect Money (Fixed Switch Logic)
+    -- ROW 1: Auto Collect Money (Save State AA1)
     local row1 = makeRow("VA2_Row1", "Auto Collect Money", 2)
     local sw = Instance.new("Frame", row1); sw.AnchorPoint = Vector2.new(1, 0.5); sw.Position = UDim2.new(1, -16, 0.5, 0); sw.Size = UDim2.new(0, 52, 0, 26); sw.BackgroundColor3 = THEME.BLACK; corner(sw, 13)
     local swStr = stroke(sw, 1.8, THEME.RED)
@@ -1683,7 +1682,7 @@ registerRight("Home", function(scroll)
     end)
     updateSw(STATE.Enabled)
 
-    -- ROW 2: Select Target Slots (Model A V2 Fixed)
+    -- ROW 2: Select Target Slots (Fixed Overlay)
     local row2 = makeRow("VA2_Row2", "Select Target Slots", 3)
     local panelParent = scroll.Parent
     local selectBtn = Instance.new("TextButton", row2)
@@ -1694,29 +1693,33 @@ registerRight("Home", function(scroll)
     local function closePanel()
         if optionsPanel then optionsPanel:Destroy(); optionsPanel = nil end
         if inputConn then inputConn:Disconnect(); inputConn = nil end
-        opened = false; updateSw(STATE.Enabled) -- Refresh visual
+        opened = false; selectStroke.Color = THEME.GREEN_DARK; selectStroke.Thickness = 1.8; selectStroke.Transparency = 0.4
     end
 
     local function openPanel()
         closePanel(); opened = true
+        selectStroke.Color = THEME.GREEN; selectStroke.Thickness = 2.4; selectStroke.Transparency = 0
         local pw, ph = panelParent.AbsoluteSize.X, panelParent.AbsoluteSize.Y
         optionsPanel = Instance.new("Frame", panelParent); optionsPanel.Name = "VA2_OptionsPanel"; optionsPanel.BackgroundColor3 = THEME.BLACK; optionsPanel.Position = UDim2.new(0, math.floor(pw * 0.65), 0, 10); optionsPanel.Size = UDim2.new(0, math.floor(pw * 0.33), 0, ph - 20); optionsPanel.ZIndex = 100; corner(optionsPanel); stroke(optionsPanel, 2, THEME.GREEN)
 
-        -- Search Slot (No more "TextBox")
         local search = Instance.new("TextBox", optionsPanel); search.Size = UDim2.new(1, -16, 0, 30); search.Position = UDim2.new(0, 8, 0, 8); search.BackgroundColor3 = Color3.fromRGB(20,20,20); search.PlaceholderText = "🔍 Search Slot"; search.Text = ""; search.Font = "GothamBold"; search.TextSize = 12; search.TextColor3 = THEME.WHITE; corner(search, 6); stroke(search, 1.2, THEME.GREEN)
 
-        local scroller = Instance.new("ScrollingFrame", optionsPanel); scroller.Size = UDim2.new(1, -10, 1, -50); scroller.Position = UDim2.new(0, 5, 0, 45); scroller.BackgroundTransparency = 1; scroller.ScrollBarThickness = 2; scroller.AutomaticCanvasSize = "Y"
+        local scroller = Instance.new("ScrollingFrame", optionsPanel); scroller.Size = UDim2.new(1, -10, 1, -50); scroller.Position = UDim2.new(0, 5, 0, 45); scroller.BackgroundTransparency = 1; scroller.ScrollBarThickness = 0; scroller.AutomaticCanvasSize = "Y" -- No ScrollBar
         local lay = Instance.new("UIListLayout", scroller); lay.Padding = UDim.new(0, 6); lay.HorizontalAlignment = "Center"
+        Instance.new("UIPadding", scroller).PaddingTop = UDim.new(0, 8); Instance.new("UIPadding", scroller).PaddingBottom = UDim.new(0, 8) -- Fixed Padding
 
         local allButtons = {}
         local function makeGlowButton(id, label)
-            local btn = Instance.new("TextButton", scroller); btn.Size = UDim2.new(0.92, 0, 0, 30); btn.BackgroundColor3 = THEME.BLACK; btn.Font = "GothamBold"; btn.TextSize = 12; btn.TextColor3 = THEME.WHITE; btn.Text = label; corner(btn, 6)
+            local btn = Instance.new("TextButton", scroller); btn.Size = UDim2.new(0.9, 0, 0, 30); btn.BackgroundColor3 = THEME.BLACK; btn.Font = "GothamBold"; btn.TextSize = 11; btn.TextColor3 = THEME.WHITE; btn.Text = label; corner(btn, 6)
             local st = stroke(btn, 1.5, THEME.GREEN_DARK); st.Transparency = 0.4
             local glow = Instance.new("Frame", btn); glow.BackgroundColor3 = THEME.GREEN; glow.Size = UDim2.new(0, 3, 1, 0); glow.Visible = false
 
             local function refresh()
-                local on = STATE.Selected[tostring(id)]
-                st.Color = on and THEME.GREEN or THEME.GREEN_DARK; st.Transparency = on and 0 or 0.4; glow.Visible = on
+                local isAll = STATE.Selected["All"]
+                local isOn = STATE.Selected[tostring(id)]
+                -- Smart Glow Logic: ถ้าเลือก All อันอื่นต้องดับ
+                local showGlow = (id == "All" and isAll) or (not isAll and isOn)
+                st.Color = showGlow and THEME.GREEN or THEME.GREEN_DARK; st.Transparency = showGlow and 0 or 0.4; glow.Visible = showGlow
             end
             btn.MouseButton1Click:Connect(function()
                 if id == "All" then 
@@ -1731,7 +1734,6 @@ registerRight("Home", function(scroll)
             refresh(); table.insert(allButtons, {Btn = btn, Upd = refresh})
         end
 
-        -- New Labels: Collect All Money & Collect Money Slot X
         makeGlowButton("All", "Collect All Money")
         for i = 1, 30 do makeGlowButton(i, "Collect Money Slot " .. i) end
 
