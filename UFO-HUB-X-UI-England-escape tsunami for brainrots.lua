@@ -2109,7 +2109,7 @@ if not success then
 end
 --===== ⚡ UFO HUB X • Auto Buy Speed Upgrade (MODEL AAA2 SHOP SYSTEM) =====
 -- SYSTEM: Speed Upgrade (Located in Shop)
--- FIXED: Slider boundary issue (Slider won't follow outside clicks)
+-- FIXED: Slider boundary issue & Top item being obscured (Added Padding)
 -- [RULE] : NEVER SHORTEN THE SCRIPT (FULL LENGTH)
 
 local Players = game:GetService("Players")
@@ -2194,21 +2194,30 @@ local function InitShopUI(scroll)
     end
 
     -- Cleanup
-    for _, name in ipairs({"SPD_Header","SPD_Row1","SPD_Row2","SPD_Row_Sens","SPD_OptionsPanel"}) do
+    for _, name in ipairs({"SPD_Header","SPD_Row1","SPD_Row2","SPD_Row_Sens","SPD_OptionsPanel","SPD_Padding"}) do
         local o = scroll:FindFirstChild(name) or scroll.Parent:FindFirstChild(name)
         if o then o:Destroy() end
     end
 
     scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    
+    -- แก้ปัญหาปุ่มแรกโดนบัง: เพิ่ม Padding ให้ ScrollingFrame
+    local pad = Instance.new("UIPadding", scroll)
+    pad.Name = "SPD_Padding"
+    pad.PaddingTop = UDim.new(0, 10)
+    pad.PaddingLeft = UDim.new(0, 3)
+    pad.PaddingRight = UDim.new(0, 3)
+    pad.PaddingBottom = UDim.new(0, 10)
+
     local vlist = scroll:FindFirstChildOfClass("UIListLayout") or Instance.new("UIListLayout", scroll)
     vlist.Padding = UDim.new(0, 12); vlist.SortOrder = "LayoutOrder"
 
     -- Header: ⚡ Buy Speed Upgrade
     local header = Instance.new("TextLabel", scroll)
-    header.Name = "SPD_Header"; header.BackgroundTransparency = 1; header.Size = UDim2.new(1, 0, 0, 30); header.Font = "GothamBold"; header.TextSize = 16; header.TextColor3 = THEME.WHITE; header.TextXAlignment = "Left"; header.Text = "⚡ Buy Speed Upgrade"; header.LayoutOrder = 20
+    header.Name = "SPD_Header"; header.BackgroundTransparency = 1; header.Size = UDim2.new(1, 0, 0, 30); header.Font = "GothamBold"; header.TextSize = 16; header.TextColor3 = THEME.WHITE; header.TextXAlignment = "Left"; header.Text = "⚡ Buy Speed Upgrade"; header.LayoutOrder = 1
 
     -- 1. Auto Buy Speed Upgrade
-    local row1 = Instance.new("Frame", scroll); row1.Name = "SPD_Row1"; row1.Size = UDim2.new(1, -6, 0, 46); row1.BackgroundColor3 = THEME.BLACK; row1.LayoutOrder = 21
+    local row1 = Instance.new("Frame", scroll); row1.Name = "SPD_Row1"; row1.Size = UDim2.new(1, 0, 0, 46); row1.BackgroundColor3 = THEME.BLACK; row1.LayoutOrder = 2
     corner(row1); stroke(row1)
     local lab1 = Instance.new("TextLabel", row1); lab1.BackgroundTransparency = 1; lab1.Size = UDim2.new(0, 250, 1, 0); lab1.Position = UDim2.new(0, 16, 0, 0)
     lab1.Font = "GothamBold"; lab1.TextSize = 13; lab1.TextColor3 = THEME.WHITE; lab1.TextXAlignment = "Left"; lab1.Text = "Auto Buy Speed Upgrade"
@@ -2226,7 +2235,7 @@ local function InitShopUI(scroll)
     updateSw(SPD_STATE.Enabled)
 
     -- 2. Select Buy Speed Upgrade (With Search)
-    local row2 = Instance.new("Frame", scroll); row2.Name = "SPD_Row2"; row2.Size = UDim2.new(1, -6, 0, 46); row2.BackgroundColor3 = THEME.BLACK; row2.LayoutOrder = 22
+    local row2 = Instance.new("Frame", scroll); row2.Name = "SPD_Row2"; row2.Size = UDim2.new(1, 0, 0, 46); row2.BackgroundColor3 = THEME.BLACK; row2.LayoutOrder = 3
     corner(row2); stroke(row2)
     local lab2 = Instance.new("TextLabel", row2); lab2.BackgroundTransparency = 1; lab2.Size = UDim2.new(0, 250, 1, 0); lab2.Position = UDim2.new(0, 16, 0, 0)
     lab2.Font = "GothamBold"; lab2.TextSize = 13; lab2.TextColor3 = THEME.WHITE; lab2.TextXAlignment = "Left"; lab2.Text = "Select Buy Speed Upgrade"
@@ -2290,7 +2299,7 @@ local function InitShopUI(scroll)
     local currentRel = SPD_STATE.SpeedRel; local visRel = SPD_STATE.SpeedRel
     local dragging = false
 
-    local sRow = Instance.new("Frame", scroll); sRow.Name = "SPD_Row_Sens"; sRow.Size = UDim2.new(1, -6, 0, 70); sRow.BackgroundColor3 = THEME.BLACK; sRow.LayoutOrder = 23; corner(sRow, 12); stroke(sRow, 2.2, THEME.GREEN)
+    local sRow = Instance.new("Frame", scroll); sRow.Name = "SPD_Row_Sens"; sRow.Size = UDim2.new(1, 0, 0, 70); sRow.BackgroundColor3 = THEME.BLACK; sRow.LayoutOrder = 4; corner(sRow, 12); stroke(sRow, 2.2, THEME.GREEN)
     local sLab = Instance.new("TextLabel", sRow); sLab.BackgroundTransparency = 1; sLab.Position = UDim2.new(0, 16, 0, 4); sLab.Size = UDim2.new(1, -32, 0, 24); sLab.Font = "GothamBold"; sLab.TextSize = 13; sLab.TextColor3 = THEME.WHITE; sLab.TextXAlignment = "Left"; sLab.Text = "Adjust Speed Upgrade Sensitivity"
     
     local bar = Instance.new("Frame", sRow); bar.Position = UDim2.new(0, 16, 0, 34); bar.Size = UDim2.new(1, -32, 0, 16); bar.BackgroundColor3 = THEME.BLACK; corner(bar, 8); stroke(bar, 1.8, THEME.GREEN); bar.Active = true
@@ -2313,7 +2322,6 @@ local function InitShopUI(scroll)
         SaveSet("SpeedRel", rel)
     end
 
-    -- ปรับปรุง Input Logic: เช็คให้ตรงจุดและหยุดเมื่อปล่อยจริง
     bar.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             dragging = true; scroll.ScrollingEnabled = false; updateSlider(input)
