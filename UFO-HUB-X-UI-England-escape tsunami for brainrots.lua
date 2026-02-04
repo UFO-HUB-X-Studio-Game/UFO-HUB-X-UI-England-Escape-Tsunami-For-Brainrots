@@ -1532,6 +1532,7 @@ registerRight("Home", function(scroll)
 
 end)
 --===== 🛸 UFO HUB X • Auto Collect Money (MODEL AAA2 TRUE GLOBAL & INSTANT ALL) =====
+-- FIXED: Added Black Stroke to Speed Percentage Text
 -- FIXED: UI Padding (ป้องกันขอบกินปุ่มแรกและปุ่มสุดท้าย)
 -- FIXED: Added Emoji to Main Title
 -- FIXED: Slider Global Drag & Instant Collect All Mode
@@ -1665,7 +1666,7 @@ local function InitUI(scroll)
 
     -- [HEADER]
     local header = Instance.new("TextLabel", scroll)
-    header.Name = "VA2_Header"; header.BackgroundTransparency = 1; header.Size = UDim2.new(1, 0, 0, 30); header.Font = "GothamBold"; header.TextSize = 16; header.TextColor3 = THEME.WHITE; header.TextXAlignment = "Left"; header.Text = "》》》Auto Collect System 💲《《《"; header.LayoutOrder = 0
+    header.Name = "VA2_Header"; header.BackgroundTransparency = 1; header.Size = UDim2.new(1, 0, 0, 30); header.Font = "GothamBold"; header.TextSize = 16; header.TextColor3 = THEME.WHITE; header.TextXAlignment = "Left"; header.Text = "》》》Auto Collect System 💸《《《"; header.LayoutOrder = 0
 
     -- 1. Auto Collect Money
     local row1 = Instance.new("Frame", scroll); row1.Name = "VA2_Row1"; row1.Size = UDim2.new(1, -6, 0, 46); row1.BackgroundColor3 = THEME.BLACK; row1.LayoutOrder = 1
@@ -1718,7 +1719,6 @@ local function InitUI(scroll)
         local scroller = Instance.new("ScrollingFrame", optionsPanel); scroller.Size = UDim2.new(1, -10, 1, -50); scroller.Position = UDim2.new(0, 5, 0, 45); scroller.BackgroundTransparency = 1; scroller.ScrollBarThickness = 0; scroller.AutomaticCanvasSize = "Y"
         local lay = Instance.new("UIListLayout", scroller); lay.Padding = UDim.new(0, 6); lay.HorizontalAlignment = "Center"
         
-        -- [FIXED] เพิ่ม Padding เพื่อป้องกันขอบกินปุ่มแรกและสุดท้าย
         local listPadding = Instance.new("UIPadding", scroller)
         listPadding.PaddingTop = UDim.new(0, 10)
         listPadding.PaddingBottom = UDim.new(0, 15)
@@ -1770,7 +1770,10 @@ local function InitUI(scroll)
 
     local knobBtn = Instance.new("ImageButton", bar); knobBtn.AutoButtonColor = false; knobBtn.BackgroundColor3 = THEME.GREY; knobBtn.Size = UDim2.fromOffset(16, 32); knobBtn.AnchorPoint = Vector2.new(0.5, 0.5); knobBtn.Position = UDim2.new(visRel, 0, 0.5, 0); knobBtn.BorderSizePixel = 0; knobBtn.ZIndex = 3
     local kGrad = Instance.new("UIGradient", knobBtn); kGrad.Color = ColorSequence.new{ColorSequenceKeypoint.new(0, Color3.fromRGB(240,240,240)), ColorSequenceKeypoint.new(1, Color3.fromRGB(180,180,180))}; kGrad.Rotation = 90
+    
+    -- [FIXED] เพิ่มเส้นขอบสีดำให้กับตัวเลขเปอร์เซ็นต์
     local centerVal = Instance.new("TextLabel", bar); centerVal.BackgroundTransparency = 1; centerVal.Size = UDim2.fromScale(1,1); centerVal.Font = "GothamBlack"; centerVal.TextSize = 16; centerVal.TextColor3 = THEME.WHITE; centerVal.Text = math.floor(visRel * 100 + 0.5) .. "%"
+    centerVal.TextStrokeTransparency = 0; centerVal.TextStrokeColor3 = Color3.new(0,0,0)
 
     local function updateFromPos(px)
         local barPos = bar.AbsolutePosition.X; local barSize = bar.AbsoluteSize.X
