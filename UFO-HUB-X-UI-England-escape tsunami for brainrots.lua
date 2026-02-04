@@ -1531,10 +1531,10 @@ registerRight("Home", function(scroll)
     end)
 
 end)
---===== UFO HUB X • Auto Collect Money (Model A V1 + V2 FIXED & METAL AAA2 TRUE GLOBAL) =====
--- FIXED: ป้องกัน UI ค้าง และแก้ปัญหาปุ่มสุดท้ายโดนบัง + ระบบ Search สมบูรณ์
--- FIXED: ปรับปรุงระบบ Slider ให้ลากตามเมาส์ได้ทุกที่บนหน้าจอ (Global Drag Fixed)
--- UPDATED: โหมด All จะเก็บเงินทุกสล็อตพร้อมกันทันทีในทีเดียว (Instant Collect)
+--===== UFO HUB X • Auto Collect Money (MODEL AAA2 TRUE GLOBAL & INSTANT ALL) =====
+-- FIXED: UI Startup Logic (Ensures UI Renders properly)
+-- FIXED: Slider Global Drag (Works even when mouse leaves the UI)
+-- FIXED: Instant Collect All (Fires all slots simultaneously)
 -- [RULE] : NEVER SHORTEN THE SCRIPT (FULL LENGTH)
 
 local Players = game:GetService("Players")
@@ -1596,40 +1596,34 @@ local function getMyPlotID()
     return finalID
 end
 
--- ลูปเก็บเงิน (อัปเกรดระบบเก็บพร้อมกันทีเดียว)
+-- ลูปเก็บเงิน (INSTANT MODE)
 task.spawn(function()
     while true do
         if STATE.Enabled then
             local myID = getMyPlotID()
             local rf = ReplicatedStorage:WaitForChild("Packages"):WaitForChild("Net"):WaitForChild("RF/Plot.PlotAction")
             
-            -- คำนวณความเร็วหลักจาก Slider
             local currentWait = 1.0 - (STATE.SpeedRel * 0.98)
             currentWait = math.clamp(currentWait, 0.02, 1.0)
 
             if STATE.Selected["All"] then
-                -- โหมด "เก็บทั้งหมดพร้อมกันในทีเดียว"
                 for i = 1, 30 do
                     if not STATE.Enabled or not STATE.Selected["All"] then break end
                     task.spawn(function()
                         pcall(function() rf:InvokeServer("Collect Money", myID, tostring(i)) end)
                     end)
                 end
-                -- รอตามความเร็วที่ตั้งค่าไว้ก่อนวนรอบถัดไป
-                task.wait(currentWait)
             else
-                -- โหมดเลือกสล็อต (เก็บทีละอันตามที่เลือก)
                 for slot, active in pairs(STATE.Selected) do
                     if not STATE.Enabled or STATE.Selected["All"] then break end
                     if slot ~= "All" and active then
                         task.spawn(function()
                             pcall(function() rf:InvokeServer("Collect Money", myID, tostring(slot)) end)
                         end)
-                        task.wait(currentWait / 5)
                     end
                 end
-                task.wait(currentWait)
             end
+            task.wait(currentWait)
         else
             task.wait(0.5)
         end
@@ -1637,9 +1631,11 @@ task.spawn(function()
 end)
 
 ------------------------------------------------------------------
--- [ UI REGISTER ]
+-- [ UI CORE BUILDER ]
 ------------------------------------------------------------------
-registerRight("Home", function(scroll)
+local function InitUI(scroll)
+    if not scroll then return end
+    
     local THEME = {
         GREEN = Color3.fromRGB(25,255,125),
         GREEN_DARK = Color3.fromRGB(0,120,60),
@@ -1657,7 +1653,7 @@ registerRight("Home", function(scroll)
         return s
     end
 
-    -- Cleanup
+    -- Cleanup old items
     for _, name in ipairs({"VA2_Header","VA2_Row1","VA2_Row2","Row_Sens","VA2_OptionsPanel"}) do
         local o = scroll:FindFirstChild(name) or scroll.Parent:FindFirstChild(name)
         if o then o:Destroy() end
@@ -1671,11 +1667,12 @@ registerRight("Home", function(scroll)
     local header = Instance.new("TextLabel", scroll)
     header.Name = "VA2_Header"; header.BackgroundTransparency = 1; header.Size = UDim2.new(1, 0, 0, 30); header.Font = "GothamBold"; header.TextSize = 16; header.TextColor3 = THEME.WHITE; header.TextXAlignment = "Left"; header.Text = "Auto Collect System"; header.LayoutOrder = 0
 
-    -- รายการที่ 1: Auto Collect Money
+    -- 1. Auto Collect Money
     local row1 = Instance.new("Frame", scroll); row1.Name = "VA2_Row1"; row1.Size = UDim2.new(1, -6, 0, 46); row1.BackgroundColor3 = THEME.BLACK; row1.LayoutOrder = 1
     corner(row1); stroke(row1)
     local lab1 = Instance.new("TextLabel", row1); lab1.BackgroundTransparency = 1; lab1.Size = UDim2.new(0, 200, 1, 0); lab1.Position = UDim2.new(0, 16, 0, 0)
-    lab1.Font = "GothamBold"; lab1.TextSize = 13; lab1.TextColor3 = THEME.WHITE; lab1.TextXAlignment = "Left"; lab1.Text = "》》》Auto Collect Colle 💲《《《ct    
+    lab1.Font = "GothamBold"; lab1.TextSize = 13; lab1.TextColor3 = THEME.WHITE; lab1.TextXAlignment = "Left"; lab1.Text = "Auto Collect Money"
+    
     local sw = Instance.new("Frame", row1); sw.AnchorPoint = Vector2.new(1, 0.5); sw.Position = UDim2.new(1, -16, 0.5, 0); sw.Size = UDim2.new(0, 52, 0, 26); sw.BackgroundColor3 = THEME.BLACK; corner(sw, 13)
     local swStr = stroke(sw, 1.8, THEME.RED)
     local knobToggle = Instance.new("Frame", sw); knobToggle.Size = UDim2.new(0, 22, 0, 22); knobToggle.Position = UDim2.new(0, 2, 0.5, -11); knobToggle.BackgroundColor3 = THEME.WHITE; corner(knobToggle, 11)
@@ -1693,7 +1690,7 @@ registerRight("Home", function(scroll)
     end)
     updateSw(STATE.Enabled)
 
-    -- รายการที่ 2: Select Target Slots (Fixed All Default)
+    -- 2. Select Target Slots
     local row2 = Instance.new("Frame", scroll); row2.Name = "VA2_Row2"; row2.Size = UDim2.new(1, -6, 0, 46); row2.BackgroundColor3 = THEME.BLACK; row2.LayoutOrder = 2
     corner(row2); stroke(row2)
     local lab2 = Instance.new("TextLabel", row2); lab2.BackgroundTransparency = 1; lab2.Size = UDim2.new(0, 200, 1, 0); lab2.Position = UDim2.new(0, 16, 0, 0)
@@ -1720,19 +1717,15 @@ registerRight("Home", function(scroll)
 
         local scroller = Instance.new("ScrollingFrame", optionsPanel); scroller.Size = UDim2.new(1, -10, 1, -50); scroller.Position = UDim2.new(0, 5, 0, 45); scroller.BackgroundTransparency = 1; scroller.ScrollBarThickness = 0; scroller.AutomaticCanvasSize = "Y"
         local lay = Instance.new("UIListLayout", scroller); lay.Padding = UDim.new(0, 6); lay.HorizontalAlignment = "Center"
-        local pad = Instance.new("UIPadding", scroller); pad.PaddingTop = UDim.new(0, 8); pad.PaddingBottom = UDim.new(0, 35)
-
+        
         local allButtons = {}
         local function makeGlowButton(id, label)
             local btn = Instance.new("TextButton", scroller); btn.Size = UDim2.new(0.92, 0, 0, 32); btn.BackgroundColor3 = THEME.BLACK; btn.Font = "GothamBold"; btn.TextSize = 10.5; btn.TextColor3 = THEME.WHITE; btn.Text = label; corner(btn, 6)
             local st = stroke(btn, 1.5, THEME.GREEN_DARK); st.Transparency = 0.4
-            local glow = Instance.new("Frame", btn); glow.BackgroundColor3 = THEME.GREEN; glow.Size = UDim2.new(0, 3, 1, 0); glow.Visible = false
-
             local function refresh()
-                local isAll = STATE.Selected["All"]
-                local isOn = STATE.Selected[tostring(id)]
-                local showGlow = (id == "All" and isAll) or (not isAll and isOn)
-                st.Color = showGlow and THEME.GREEN or THEME.GREEN_DARK; st.Transparency = showGlow and 0 or 0.4; glow.Visible = showGlow
+                local isAll = STATE.Selected["All"]; local isOn = STATE.Selected[tostring(id)]
+                local show = (id == "All" and isAll) or (not isAll and isOn)
+                st.Color = show and THEME.GREEN or THEME.GREEN_DARK; st.Transparency = show and 0 or 0.4
             end
             btn.MouseButton1Click:Connect(function()
                 if id == "All" then STATE.Selected = {["All"] = not STATE.Selected["All"]} 
@@ -1760,12 +1753,9 @@ registerRight("Home", function(scroll)
     end
     selectBtn.MouseButton1Click:Connect(function() if opened then closePanel() else openPanel() end end)
 
-    -- รายการที่ 3: Metal Global Speed Slider (TRUE GLOBAL FIXED)
-    local currentRel = STATE.SpeedRel
-    local visRel = STATE.SpeedRel
-    local dragging = false
-    local RSdragConn, EndDragConn, ChangeConn
-    local sliderCenterLabel
+    -- 3. METAL AAA2 TRUE GLOBAL SLIDER
+    local currentRel = STATE.SpeedRel; local visRel = STATE.SpeedRel
+    local dragging = false; local RSdragConn, EndDragConn, ChangeConn
 
     local sRow = Instance.new("Frame", scroll); sRow.Name = "Row_Sens"; sRow.Size = UDim2.new(1, -6, 0, 70); sRow.BackgroundColor3 = THEME.BLACK; sRow.LayoutOrder = 3; corner(sRow, 12); stroke(sRow, 2.2, THEME.GREEN)
     local sLab = Instance.new("TextLabel", sRow); sLab.BackgroundTransparency = 1; sLab.Position = UDim2.new(0, 16, 0, 4); sLab.Size = UDim2.new(1, -32, 0, 24); sLab.Font = "GothamBold"; sLab.TextSize = 13; sLab.TextColor3 = THEME.WHITE; sLab.TextXAlignment = "Left"; sLab.Text = "Adjust Collect Speed"
@@ -1773,77 +1763,62 @@ registerRight("Home", function(scroll)
     local bar = Instance.new("Frame", sRow); bar.Position = UDim2.new(0, 16, 0, 34); bar.Size = UDim2.new(1, -32, 0, 16); bar.BackgroundColor3 = THEME.BLACK; corner(bar, 8); stroke(bar, 1.8, THEME.GREEN); bar.Active = true
     local fill = Instance.new("Frame", bar); fill.BackgroundColor3 = THEME.GREEN; corner(fill, 8); fill.Size = UDim2.fromScale(visRel, 1)
 
-    local knobShadow = Instance.new("Frame", bar); knobShadow.Size = UDim2.fromOffset(18, 34); knobShadow.AnchorPoint = Vector2.new(0.5, 0.5); knobShadow.Position = UDim2.new(visRel, 0, 0.5, 2); knobShadow.BackgroundColor3 = THEME.DARK; knobShadow.BackgroundTransparency = 0.45; knobShadow.BorderSizePixel = 0; knobShadow.ZIndex = 2
     local knobBtn = Instance.new("ImageButton", bar); knobBtn.AutoButtonColor = false; knobBtn.BackgroundColor3 = THEME.GREY; knobBtn.Size = UDim2.fromOffset(16, 32); knobBtn.AnchorPoint = Vector2.new(0.5, 0.5); knobBtn.Position = UDim2.new(visRel, 0, 0.5, 0); knobBtn.BorderSizePixel = 0; knobBtn.ZIndex = 3
-    local kStroke = Instance.new("UIStroke", knobBtn); kStroke.Thickness = 1.2; kStroke.Color = Color3.fromRGB(210,210,215)
-    local kGrad = Instance.new("UIGradient", knobBtn); kGrad.Color = ColorSequence.new{ColorSequenceKeypoint.new(0.00, Color3.fromRGB(236,236,240)), ColorSequenceKeypoint.new(0.50, Color3.fromRGB(182,182,188)), ColorSequenceKeypoint.new(1.00, Color3.fromRGB(216,216,222))}; kGrad.Rotation = 90
-
-    local centerVal = Instance.new("TextLabel", bar); centerVal.BackgroundTransparency = 1; centerVal.Size = UDim2.fromScale(1,1); centerVal.Font = "GothamBlack"; centerVal.TextSize = 16; centerVal.TextColor3 = THEME.WHITE; centerVal.TextStrokeTransparency = 0.2; centerVal.Text = math.floor(visRel * 100 + 0.5) .. "%"; sliderCenterLabel = centerVal
-
-    local function applyRel(rel)
-        rel = math.clamp(rel, 0, 1)
-        currentRel = rel
-        STATE.SpeedRel = rel
-        SaveSet("SpeedRel", rel)
-        if sliderCenterLabel then sliderCenterLabel.Text = string.format("%d%%", math.floor(rel * 100 + 0.5)) end
-    end
-
-    local function syncVisual(now)
-        if now then visRel = currentRel else visRel = visRel + (currentRel - visRel) * 0.35 end
-        visRel = math.clamp(visRel, 0, 1)
-        fill.Size = UDim2.fromScale(visRel, 1); knobBtn.Position = UDim2.new(visRel, 0, 0.5, 0); knobShadow.Position = UDim2.new(visRel, 0, 0.5, 2); centerVal.Text = string.format("%d%%", math.floor(visRel * 100 + 0.5))
-    end
+    local kGrad = Instance.new("UIGradient", knobBtn); kGrad.Color = ColorSequence.new{ColorSequenceKeypoint.new(0, Color3.fromRGB(240,240,240)), ColorSequenceKeypoint.new(1, Color3.fromRGB(180,180,180))}; kGrad.Rotation = 90
+    local centerVal = Instance.new("TextLabel", bar); centerVal.BackgroundTransparency = 1; centerVal.Size = UDim2.fromScale(1,1); centerVal.Font = "GothamBlack"; centerVal.TextSize = 16; centerVal.TextColor3 = THEME.WHITE; centerVal.Text = math.floor(visRel * 100 + 0.5) .. "%"
 
     local function updateFromPos(px)
-        local barPos = bar.AbsolutePosition.X
-        local barSize = bar.AbsoluteSize.X
-        applyRel((px - barPos) / barSize)
-    end
-
-    -- ระบบ True Global Hook
-    local function stopDragging()
-        dragging = false
-        scroll.ScrollingEnabled = true
-        if ChangeConn then ChangeConn:Disconnect() ChangeConn = nil end
-        if EndDragConn then EndDragConn:Disconnect() EndDragConn = nil end
+        local barPos = bar.AbsolutePosition.X; local barSize = bar.AbsoluteSize.X
+        local rel = math.clamp((px - barPos) / barSize, 0, 1)
+        currentRel = rel; STATE.SpeedRel = rel; SaveSet("SpeedRel", rel)
     end
 
     local function startDragging(startPx)
-        dragging = true
-        scroll.ScrollingEnabled = false
-        updateFromPos(startPx)
-        
-        -- Hook เข้ากับหน้าจอทั้งหมดทันที
+        dragging = true; scroll.ScrollingEnabled = false; updateFromPos(startPx)
         ChangeConn = UserInputService.InputChanged:Connect(function(input)
             if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
                 updateFromPos(input.Position.X)
             end
         end)
-        
         EndDragConn = UserInputService.InputEnded:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                stopDragging()
+                dragging = false; scroll.ScrollingEnabled = true
+                if ChangeConn then ChangeConn:Disconnect() end
+                if EndDragConn then EndDragConn:Disconnect() end
             end
         end)
     end
 
-    bar.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            startDragging(input.Position.X)
-        end
-    end)
+    bar.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then startDragging(i.Position.X) end end)
+    knobBtn.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then startDragging(i.Position.X) end end)
 
-    knobBtn.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            startDragging(input.Position.X)
-        end
-    end)
-
-    -- การ Sync หน้าตา UI ให้ลื่นไหล
     RunService.RenderStepped:Connect(function()
-        syncVisual(false)
+        visRel = visRel + (currentRel - visRel) * 0.35
+        fill.Size = UDim2.fromScale(visRel, 1); knobBtn.Position = UDim2.new(visRel, 0, 0.5, 0)
+        centerVal.Text = string.format("%d%%", math.floor(visRel * 100 + 0.5))
+    end)
+end
+
+------------------------------------------------------------------
+-- [ UI REGISTRATION HOOK ]
+------------------------------------------------------------------
+-- พยายามเรียกใช้ registerRight ถ้ามีอยู่ ถ้าไม่มีจะทำการหา ScrollingFrame เอง
+local success, err = pcall(function()
+    registerRight("Home", function(scroll)
+        InitUI(scroll)
     end)
 end)
+
+if not success then
+    -- กรณีหา registerRight ไม่เจอ จะพยายามหา ScrollingFrame ที่น่าจะเป็นหน้า Home
+    task.spawn(function()
+        local mainGui = lp:WaitForChild("PlayerGui"):FindFirstChild("UFO_HUB") or lp.PlayerGui:FindFirstChildOfClass("ScreenGui")
+        if mainGui then
+            local scroll = mainGui:FindFirstChildOfClass("ScrollingFrame", true)
+            if scroll then InitUI(scroll) end
+        end
+    end)
+end
 --===== UFO HUB X • SETTINGS — Smoother 🚀 (A V1 • fixed 3 rows) + Runner Save (per-map) + AA1 =====
 registerRight("Settings", function(scroll)
     local TweenService = game:GetService("TweenService")
