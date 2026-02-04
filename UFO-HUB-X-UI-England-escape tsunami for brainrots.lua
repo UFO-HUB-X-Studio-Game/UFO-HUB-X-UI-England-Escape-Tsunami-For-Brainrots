@@ -1464,7 +1464,7 @@ registerRight("Home", function(scroll)
     header.Font = Enum.Font.GothamBold; header.TextSize = 16; header.TextColor3 = THEME.WHITE
     header.TextXAlignment = Enum.TextXAlignment.Left; header.Text = "》》》  Upgrade Auto ⚡《《《"
 
-    -- รายการที่ 1: rebirth auto
+    -- รายAutobirth auto
     local row1 = Instance.new("Frame", scroll)
     row1.LayoutOrder = 0; row1.Size = UDim2.new(1, -6, 0, 46); row1.BackgroundColor3 = THEME.BLACK
     corner(row1, 12); stroke(row1, 2.2, THEME.GREEN)
@@ -1675,8 +1675,7 @@ registerRight("Home", function(scroll)
     local row1 = Instance.new("Frame", scroll); row1.Name = "VA2_Row1"; row1.Size = UDim2.new(1, -6, 0, 46); row1.BackgroundColor3 = THEME.BLACK; row1.LayoutOrder = 1
     corner(row1); stroke(row1)
     local lab1 = Instance.new("TextLabel", row1); lab1.BackgroundTransparency = 1; lab1.Size = UDim2.new(0, 200, 1, 0); lab1.Position = UDim2.new(0, 16, 0, 0)
-    lab1.Font = "GothamBold"; lab1.TextSize = 13; lab1.TextColor3 = THEME.WHITE; lab1.TextXAlignment = "Left"; lab1.Text = "Auto Collect Money"
-    
+    lab1.Font = "GothamBold"; lab1.TextSize = 13; lab1.TextColor3 = THEME.WHITE; lab1.TextXAlignment = "Left"; lab1.Text = "》》》Auto Collect Colle 💲《《《ct    
     local sw = Instance.new("Frame", row1); sw.AnchorPoint = Vector2.new(1, 0.5); sw.Position = UDim2.new(1, -16, 0.5, 0); sw.Size = UDim2.new(0, 52, 0, 26); sw.BackgroundColor3 = THEME.BLACK; corner(sw, 13)
     local swStr = stroke(sw, 1.8, THEME.RED)
     local knobToggle = Instance.new("Frame", sw); knobToggle.Size = UDim2.new(0, 22, 0, 22); knobToggle.Position = UDim2.new(0, 2, 0.5, -11); knobToggle.BackgroundColor3 = THEME.WHITE; corner(knobToggle, 11)
