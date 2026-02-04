@@ -451,7 +451,7 @@ btnEvent.MouseButton1Click:Connect(function()
 
 
 btnShop.MouseButton1Click:Connect(function()
-        onTabClick("Shop", ICON_SHOP, function()
+   ShopabClick("Shop", ICON_SHOP, function()
             setHomeActive(false); setEventActive(false)
             setShopActive(true); setSettingsActive(false)
         end, btnShop)
@@ -665,7 +665,7 @@ end
 local TAB_TITLE_TH = {
     Home = "Home",
     Event = "Event",
-    Shop= "Shop",
+    Shop = "Shop",
     Settings = "Settings",
 }
 
