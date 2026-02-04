@@ -1531,10 +1531,10 @@ registerRight("Home", function(scroll)
     end)
 
 end)
---===== UFO HUB X • Auto Collect Money (MODEL AAA2 TRUE GLOBAL & INSTANT ALL) =====
--- FIXED: UI Startup Logic (Ensures UI Renders properly)
--- FIXED: Slider Global Drag (Works even when mouse leaves the UI)
--- FIXED: Instant Collect All (Fires all slots simultaneously)
+--===== 🛸 UFO HUB X • Auto Collect Money (MODEL AAA2 TRUE GLOBAL & INSTANT ALL) =====
+-- FIXED: UI Padding (ป้องกันขอบกินปุ่มแรกและปุ่มสุดท้าย)
+-- FIXED: Added Emoji to Main Title
+-- FIXED: Slider Global Drag & Instant Collect All Mode
 -- [RULE] : NEVER SHORTEN THE SCRIPT (FULL LENGTH)
 
 local Players = game:GetService("Players")
@@ -1665,7 +1665,7 @@ local function InitUI(scroll)
 
     -- [HEADER]
     local header = Instance.new("TextLabel", scroll)
-    header.Name = "VA2_Header"; header.BackgroundTransparency = 1; header.Size = UDim2.new(1, 0, 0, 30); header.Font = "GothamBold"; header.TextSize = 16; header.TextColor3 = THEME.WHITE; header.TextXAlignment = "Left"; header.Text = "Auto Collect System"; header.LayoutOrder = 0
+    header.Name = "VA2_Header"; header.BackgroundTransparency = 1; header.Size = UDim2.new(1, 0, 0, 30); header.Font = "GothamBold"; header.TextSize = 16; header.TextColor3 = THEME.WHITE; header.TextXAlignment = "Left"; header.Text = "》》》Auto Collect System 💲《《《"; header.LayoutOrder = 0
 
     -- 1. Auto Collect Money
     local row1 = Instance.new("Frame", scroll); row1.Name = "VA2_Row1"; row1.Size = UDim2.new(1, -6, 0, 46); row1.BackgroundColor3 = THEME.BLACK; row1.LayoutOrder = 1
@@ -1717,6 +1717,11 @@ local function InitUI(scroll)
 
         local scroller = Instance.new("ScrollingFrame", optionsPanel); scroller.Size = UDim2.new(1, -10, 1, -50); scroller.Position = UDim2.new(0, 5, 0, 45); scroller.BackgroundTransparency = 1; scroller.ScrollBarThickness = 0; scroller.AutomaticCanvasSize = "Y"
         local lay = Instance.new("UIListLayout", scroller); lay.Padding = UDim.new(0, 6); lay.HorizontalAlignment = "Center"
+        
+        -- [FIXED] เพิ่ม Padding เพื่อป้องกันขอบกินปุ่มแรกและสุดท้าย
+        local listPadding = Instance.new("UIPadding", scroller)
+        listPadding.PaddingTop = UDim.new(0, 10)
+        listPadding.PaddingBottom = UDim.new(0, 15)
         
         local allButtons = {}
         local function makeGlowButton(id, label)
@@ -1802,7 +1807,6 @@ end
 ------------------------------------------------------------------
 -- [ UI REGISTRATION HOOK ]
 ------------------------------------------------------------------
--- พยายามเรียกใช้ registerRight ถ้ามีอยู่ ถ้าไม่มีจะทำการหา ScrollingFrame เอง
 local success, err = pcall(function()
     registerRight("Home", function(scroll)
         InitUI(scroll)
@@ -1810,7 +1814,6 @@ local success, err = pcall(function()
 end)
 
 if not success then
-    -- กรณีหา registerRight ไม่เจอ จะพยายามหา ScrollingFrame ที่น่าจะเป็นหน้า Home
     task.spawn(function()
         local mainGui = lp:WaitForChild("PlayerGui"):FindFirstChild("UFO_HUB") or lp.PlayerGui:FindFirstChildOfClass("ScreenGui")
         if mainGui then
