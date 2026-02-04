@@ -3066,6 +3066,7 @@ end)
 ---- ========== ผูกปุ่มแท็บ + เปิดแท็บแรก ==========
 local tabs = {
     {btn = btnHome, set = setHomeActive, name = "Home", icon = ICON_HOME},
+    {btn = btnEvent, set = setEventActive, name = "Event", icon = ICON_EVENT},
     {btn = btnShop, set = setShopActive, name = "Shop", icon = ICON_SHOP},
     {btn = btnSettings, set = setSettingsActive, name = "Settings", icon = ICON_SETTINGS},
 }
