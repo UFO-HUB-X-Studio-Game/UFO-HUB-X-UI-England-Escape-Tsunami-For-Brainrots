@@ -1534,7 +1534,7 @@ end)
 --===== UFO HUB X • Auto Collect Money (Model A V1 + V2 FIXED & METAL AAA2 TRUE GLOBAL) =====
 -- FIXED: ป้องกัน UI ค้าง และแก้ปัญหาปุ่มสุดท้ายโดนบัง + ระบบ Search สมบูรณ์
 -- FIXED: ปรับปรุงระบบ Slider ให้ลากตามเมาส์ได้ทุกที่บนหน้าจอ (Global Drag Fixed)
--- ADDED: Item 3 Metal Slider (Starting at 5% / 0.05)
+-- UPDATED: โหมด All จะเก็บเงินทุกสล็อตพร้อมกันทันทีในทีเดียว (Instant Collect)
 -- [RULE] : NEVER SHORTEN THE SCRIPT (FULL LENGTH)
 
 local Players = game:GetService("Players")
@@ -1596,25 +1596,29 @@ local function getMyPlotID()
     return finalID
 end
 
--- ลูปเก็บเงิน
+-- ลูปเก็บเงิน (อัปเกรดระบบเก็บพร้อมกันทีเดียว)
 task.spawn(function()
     while true do
         if STATE.Enabled then
             local myID = getMyPlotID()
             local rf = ReplicatedStorage:WaitForChild("Packages"):WaitForChild("Net"):WaitForChild("RF/Plot.PlotAction")
             
+            -- คำนวณความเร็วหลักจาก Slider
             local currentWait = 1.0 - (STATE.SpeedRel * 0.98)
             currentWait = math.clamp(currentWait, 0.02, 1.0)
 
             if STATE.Selected["All"] then
+                -- โหมด "เก็บทั้งหมดพร้อมกันในทีเดียว"
                 for i = 1, 30 do
                     if not STATE.Enabled or not STATE.Selected["All"] then break end
                     task.spawn(function()
                         pcall(function() rf:InvokeServer("Collect Money", myID, tostring(i)) end)
                     end)
-                    task.wait(currentWait / 10)
                 end
+                -- รอตามความเร็วที่ตั้งค่าไว้ก่อนวนรอบถัดไป
+                task.wait(currentWait)
             else
+                -- โหมดเลือกสล็อต (เก็บทีละอันตามที่เลือก)
                 for slot, active in pairs(STATE.Selected) do
                     if not STATE.Enabled or STATE.Selected["All"] then break end
                     if slot ~= "All" and active then
@@ -1624,8 +1628,8 @@ task.spawn(function()
                         task.wait(currentWait / 5)
                     end
                 end
+                task.wait(currentWait)
             end
-            task.wait(currentWait)
         else
             task.wait(0.5)
         end
