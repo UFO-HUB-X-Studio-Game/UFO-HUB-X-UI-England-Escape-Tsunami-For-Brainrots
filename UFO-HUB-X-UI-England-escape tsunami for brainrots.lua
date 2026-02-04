@@ -530,6 +530,7 @@ end
 
 local btnHome,setHomeActive = makeTabButton(LeftScroll, "Home",ICON_HOME)
 local btnShop,setShopActive = makeTabButton(LeftScroll, "Shop",ICON_SHOP)
+local btnEvent,setEventActive = makeTabButton(LeftScroll, "Event",ICON_EVENT)
 local btnSettings,setSettingsActive = makeTabButton(LeftScroll, "Settings",ICON_SETTINGS)
 
 -- ========== RIGHT ==========
