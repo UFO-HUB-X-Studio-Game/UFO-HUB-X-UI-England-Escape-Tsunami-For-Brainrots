@@ -2109,7 +2109,7 @@ if not success then
 end
 --===== ⚡ UFO HUB X • Auto Buy Speed Upgrade (MODEL AAA2 SHOP SYSTEM) =====
 -- SYSTEM: Speed Upgrade (Located in Shop)
--- FEATURES: Search Bar, Metal Square Knob Slider, Independent Logic
+-- FIXED: Slider boundary issue (Slider won't follow outside clicks)
 -- [RULE] : NEVER SHORTEN THE SCRIPT (FULL LENGTH)
 
 local Players = game:GetService("Players")
@@ -2152,7 +2152,6 @@ task.spawn(function()
         if SPD_STATE.Enabled then
             local rf = ReplicatedStorage:WaitForChild("RemoteFunctions"):WaitForChild("UpgradeSpeed")
             
-            -- ปรับความไวตาม Slider (0.02s - 1.0s)
             local currentWait = 1.0 - (SPD_STATE.SpeedRel * 0.98)
             currentWait = math.clamp(currentWait, 0.02, 1.0)
 
@@ -2249,7 +2248,6 @@ local function InitShopUI(scroll)
         local pw, ph = scroll.Parent.AbsoluteSize.X, scroll.Parent.AbsoluteSize.Y
         optionsPanel = Instance.new("Frame", scroll.Parent); optionsPanel.Name = "SPD_OptionsPanel"; optionsPanel.BackgroundColor3 = THEME.BLACK; optionsPanel.Position = UDim2.new(0, math.floor(pw * 0.65), 0, 10); optionsPanel.Size = UDim2.new(0, math.floor(pw * 0.33), 0, ph - 20); optionsPanel.ZIndex = 100; corner(optionsPanel); stroke(optionsPanel, 2, THEME.GREEN)
 
-        -- Search Bar (กลับมาตามคำขอ)
         local search = Instance.new("TextBox", optionsPanel); search.Size = UDim2.new(1, -16, 0, 30); search.Position = UDim2.new(0, 8, 0, 8); search.BackgroundColor3 = Color3.fromRGB(20,20,20); search.PlaceholderText = "🔍 Search Upgrade"; search.Text = ""; search.Font = "GothamBold"; search.TextSize = 12; search.TextColor3 = THEME.WHITE; corner(search, 6); stroke(search, 1.2, THEME.GREEN)
 
         local scroller = Instance.new("ScrollingFrame", optionsPanel); scroller.Size = UDim2.new(1, -10, 1, -50); scroller.Position = UDim2.new(0, 5, 0, 45); scroller.BackgroundTransparency = 1; scroller.ScrollBarThickness = 0; scroller.AutomaticCanvasSize = "Y"
@@ -2288,10 +2286,9 @@ local function InitShopUI(scroll)
     end
     selectBtn.MouseButton1Click:Connect(function() if opened then closePanel() else openPanel() end end)
 
-    -- 3. Adjust Speed Upgrade Sensitivity (Model A Slider)
+    -- 3. Adjust Speed Upgrade Sensitivity (FIXED BOUNDARY)
     local currentRel = SPD_STATE.SpeedRel; local visRel = SPD_STATE.SpeedRel
-    local dragging = false; local maybeDrag = false; local downX
-    local DRAG_THRESHOLD = 5; local RSdragConn, EndDragConn
+    local dragging = false
 
     local sRow = Instance.new("Frame", scroll); sRow.Name = "SPD_Row_Sens"; sRow.Size = UDim2.new(1, -6, 0, 70); sRow.BackgroundColor3 = THEME.BLACK; sRow.LayoutOrder = 23; corner(sRow, 12); stroke(sRow, 2.2, THEME.GREEN)
     local sLab = Instance.new("TextLabel", sRow); sLab.BackgroundTransparency = 1; sLab.Position = UDim2.new(0, 16, 0, 4); sLab.Size = UDim2.new(1, -32, 0, 24); sLab.Font = "GothamBold"; sLab.TextSize = 13; sLab.TextColor3 = THEME.WHITE; sLab.TextXAlignment = "Left"; sLab.Text = "Adjust Speed Upgrade Sensitivity"
@@ -2306,50 +2303,37 @@ local function InitShopUI(scroll)
     
     local centerVal = Instance.new("TextLabel", bar); centerVal.BackgroundTransparency = 1; centerVal.Size = UDim2.fromScale(1,1); centerVal.Font = "GothamBlack"; centerVal.TextSize = 16; centerVal.TextColor3 = THEME.WHITE; centerVal.TextStrokeTransparency = 0.2; centerVal.Text = math.floor(visRel * 100 + 0.5) .. "%"
 
-    local function applyRel(rel)
-        rel = math.clamp(rel, 0, 1)
-        currentRel = rel; SPD_STATE.SpeedRel = rel; SaveSet("SpeedRel", rel)
+    local function updateSlider(input)
+        local pos = input.Position.X
+        local start = bar.AbsolutePosition.X
+        local width = bar.AbsoluteSize.X
+        local rel = math.clamp((pos - start) / width, 0, 1)
+        currentRel = rel
+        SPD_STATE.SpeedRel = rel
+        SaveSet("SpeedRel", rel)
     end
 
-    local function relFrom(x) return (x - bar.AbsolutePosition.X) / math.max(1, bar.AbsoluteSize.X) end
-
-    local function stopDrag()
-        dragging = false; maybeDrag = false; downX = nil
-        if RSdragConn then RSdragConn:Disconnect() RSdragConn = nil end
-        if EndDragConn then EndDragConn:Disconnect() EndDragConn = nil end
-        scroll.ScrollingEnabled = true
-    end
-
-    local function beginDrag()
-        dragging = true; maybeDrag = false
-        RSdragConn = RunService.RenderStepped:Connect(function()
-            applyRel(relFrom(UserInputService:GetMouseLocation().X))
-        end)
-        EndDragConn = UserInputService.InputEnded:Connect(function(io)
-            if io.UserInputType == Enum.UserInputType.MouseButton1 or io.UserInputType == Enum.UserInputType.Touch then stopDrag() end
-        end)
-    end
-
-    bar.InputBegan:Connect(function(io)
-        if io.UserInputType == Enum.UserInputType.MouseButton1 or io.UserInputType == Enum.UserInputType.Touch then
-            maybeDrag = true; downX = io.Position.X; scroll.ScrollingEnabled = false; applyRel(relFrom(io.Position.X))
+    -- ปรับปรุง Input Logic: เช็คให้ตรงจุดและหยุดเมื่อปล่อยจริง
+    bar.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true; scroll.ScrollingEnabled = false; updateSlider(input)
         end
     end)
 
-    knobBtn.InputBegan:Connect(function(io)
-        if io.UserInputType == Enum.UserInputType.MouseButton1 or io.UserInputType == Enum.UserInputType.Touch then
-            maybeDrag = true; downX = io.Position.X; scroll.ScrollingEnabled = false; applyRel(relFrom(io.Position.X))
+    UserInputService.InputChanged:Connect(function(input)
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            updateSlider(input)
         end
     end)
 
-    UserInputService.InputChanged:Connect(function(io)
-        if maybeDrag and (io.UserInputType == Enum.UserInputType.MouseMovement or io.UserInputType == Enum.UserInputType.Touch) then
-            if math.abs(io.Position.X - downX) >= DRAG_THRESHOLD then beginDrag() end
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = false; scroll.ScrollingEnabled = true
         end
     end)
 
     RunService.RenderStepped:Connect(function()
-        visRel = visRel + (currentRel - visRel) * 0.3
+        visRel = visRel + (currentRel - visRel) * 0.25
         fill.Size = UDim2.fromScale(visRel, 1)
         knobBtn.Position = UDim2.new(visRel, 0, 0.5, 0)
         knobShadow.Position = UDim2.new(visRel, 0, 0.5, 2)
