@@ -1825,11 +1825,10 @@ if not success then
         end
     end)
 end
---===== 🛸 UFO HUB X • Auto Upgrade Brainrots (MODEL AAA2 TRUE GLOBAL) =====
--- FIXED: Added Black Stroke to Speed Percentage Text
--- FIXED: UI Padding & Emoji Headers
--- FIXED: Logic changed to "Collect Money" (Upgrade Mode) as requested
--- [RULE] : NEVER SHORTEN THE SCRIPT (FULL LENGTH)
+--===== 🛸 UFO HUB X • Auto Upgrade Brainrots (INDEPENDENT SYSTEM) =====
+-- SYSTEM: Upgrade Brainrots (Separated from Money Collect)
+-- MODEL: AAA2 (Full Length, No Shortening)
+-- [RULE] : NEVER SHORTEN THE SCRIPT
 
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
@@ -1840,11 +1839,11 @@ local Workspace = game:GetService("Workspace")
 local lp = Players.LocalPlayer
 
 ------------------------------------------------------------------
--- [ AAA1 SAVE & STATE SYSTEM ]
+-- [ SAVE & STATE SYSTEM - SEPARATED ]
 ------------------------------------------------------------------
 local function SaveGet(key, default)
     if getgenv and getgenv().UFOX_SAVE and getgenv().UFOX_SAVE.get then
-        return getgenv().UFOX_SAVE.get("AAA1/UFOX_Upgrade/" .. game.PlaceId .. "/" .. key, default)
+        return getgenv().UFOX_SAVE.get("AAA1/UFOX_UPG/" .. game.PlaceId .. "/" .. key, default)
     end
     return default
 end
@@ -1852,21 +1851,21 @@ end
 local function SaveSet(key, val)
     if getgenv and getgenv().UFOX_SAVE and getgenv().UFOX_SAVE.set then
         pcall(function() 
-            getgenv().UFOX_SAVE.set("AAA1/UFOX_Upgrade/" .. game.PlaceId .. "/" .. key, val) 
+            getgenv().UFOX_SAVE.set("AAA1/UFOX_UPG/" .. game.PlaceId .. "/" .. key, val) 
         end)
     end
 end
 
-_G.UFOX_AAA1 = _G.UFOX_AAA1 or {}
-_G.UFOX_AAA1["AutoUpgrade"] = _G.UFOX_AAA1["AutoUpgrade"] or {
+-- แยก State ออกมาเป็นของ Upgrade โดยเฉพาะ
+_G.UFOX_UPGRADE_ONLY = _G.UFOX_UPGRADE_ONLY or {
     Enabled = SaveGet("Enabled", false),
     Selected = SaveGet("Selected", {["All"] = true}), 
     SpeedRel = SaveGet("SpeedRel", 0.05),
 }
-local STATE = _G.UFOX_AAA1["AutoUpgrade"]
+local UPG_STATE = _G.UFOX_UPGRADE_ONLY
 
 ------------------------------------------------------------------
--- [ DYNAMIC GUID SCANNER ]
+-- [ DYNAMIC PLOT SCANNER ]
 ------------------------------------------------------------------
 local function getMyPlotID()
     local foundID = nil
@@ -1885,32 +1884,32 @@ local function getMyPlotID()
             end
         end
     end
-    -- ใช้ GUID ที่คุณให้มาเป็น Default
-    local finalID = foundID or "b6b59376-0b3a-4062-b13b-bbdaa46693b1"
-    if not finalID:find("{") then finalID = "{" .. finalID .. "}" end
-    return finalID
+    -- Default GUID ที่คุณให้มา
+    return foundID or "b6b59376-0b3a-4062-b13b-bbdaa46693b1"
 end
 
--- [ รายการที่ 1 & 3 ] ระบบอัปเกรดออโต้ (INSTANT UPGRADE)
+-- [ UPGRADE LOGIC LOOP ]
 task.spawn(function()
     while true do
-        if STATE.Enabled then
+        if UPG_STATE.Enabled then
             local myID = getMyPlotID()
             local rf = ReplicatedStorage:WaitForChild("Packages"):WaitForChild("Net"):WaitForChild("RF/Plot.PlotAction")
             
-            local currentWait = 1.0 - (STATE.SpeedRel * 0.98)
+            -- ปรับความไวตาม Slider
+            local currentWait = 1.0 - (UPG_STATE.SpeedRel * 0.98)
             currentWait = math.clamp(currentWait, 0.02, 1.0)
 
-            if STATE.Selected["All"] then
+            if UPG_STATE.Selected["All"] then
                 for i = 1, 30 do
-                    if not STATE.Enabled or not STATE.Selected["All"] then break end
+                    if not UPG_STATE.Enabled or not UPG_STATE.Selected["All"] then break end
                     task.spawn(function()
+                        -- สั่งอัปเกรดตามโครงสร้างที่คุณให้มา
                         pcall(function() rf:InvokeServer("Collect Money", myID, tostring(i)) end)
                     end)
                 end
             else
-                for slot, active in pairs(STATE.Selected) do
-                    if not STATE.Enabled or STATE.Selected["All"] then break end
+                for slot, active in pairs(UPG_STATE.Selected) do
+                    if not UPG_STATE.Enabled or UPG_STATE.Selected["All"] then break end
                     if slot ~= "All" and active then
                         task.spawn(function()
                             pcall(function() rf:InvokeServer("Collect Money", myID, tostring(slot)) end)
@@ -1926,9 +1925,9 @@ task.spawn(function()
 end)
 
 ------------------------------------------------------------------
--- [ UI CORE BUILDER - MODEL AAA2 ]
+-- [ UI BUILDER ]
 ------------------------------------------------------------------
-local function InitUI(scroll)
+local function InitUpgradeUI(scroll)
     if not scroll then return end
     
     local THEME = {
@@ -1947,8 +1946,8 @@ local function InitUI(scroll)
         return s
     end
 
-    -- Cleanup
-    for _, name in ipairs({"VA2_Header","VA2_Row1","VA2_Row2","Row_Sens","VA2_OptionsPanel"}) do
+    -- Cleanup เก่าเพื่อไม่ให้ UI ซ้อนกันตอนรันใหม่
+    for _, name in ipairs({"UPG_Header","UPG_Row1","UPG_Row2","UPG_Row_Sens","UPG_OptionsPanel"}) do
         local o = scroll:FindFirstChild(name) or scroll.Parent:FindFirstChild(name)
         if o then o:Destroy() end
     end
@@ -1957,12 +1956,12 @@ local function InitUI(scroll)
     local vlist = scroll:FindFirstChildOfClass("UIListLayout") or Instance.new("UIListLayout", scroll)
     vlist.Padding = UDim.new(0, 12); vlist.SortOrder = "LayoutOrder"
 
-    -- [HEADER - มีอีโมจิ]
+    -- Header: 🧠 Auto Upgrade Brainrots
     local header = Instance.new("TextLabel", scroll)
-    header.Name = "VA2_Header"; header.BackgroundTransparency = 1; header.Size = UDim2.new(1, 0, 0, 30); header.Font = "GothamBold"; header.TextSize = 16; header.TextColor3 = THEME.WHITE; header.TextXAlignment = "Left"; header.Text = "🧠 Auto Upgrade Brainrots"; header.LayoutOrder = 0
+    header.Name = "UPG_Header"; header.BackgroundTransparency = 1; header.Size = UDim2.new(1, 0, 0, 30); header.Font = "GothamBold"; header.TextSize = 16; header.TextColor3 = THEME.WHITE; header.TextXAlignment = "Left"; header.Text = "🧠 Auto Upgrade Brainrots"; header.LayoutOrder = 10 -- ต่อจากระบบเดิม
 
-    -- 1. Auto Upgrade Brainrots (ไม่มีอีโมจิ)
-    local row1 = Instance.new("Frame", scroll); row1.Name = "VA2_Row1"; row1.Size = UDim2.new(1, -6, 0, 46); row1.BackgroundColor3 = THEME.BLACK; row1.LayoutOrder = 1
+    -- Row 1: Auto Upgrade Brainrots
+    local row1 = Instance.new("Frame", scroll); row1.Name = "UPG_Row1"; row1.Size = UDim2.new(1, -6, 0, 46); row1.BackgroundColor3 = THEME.BLACK; row1.LayoutOrder = 11
     corner(row1); stroke(row1)
     local lab1 = Instance.new("TextLabel", row1); lab1.BackgroundTransparency = 1; lab1.Size = UDim2.new(0, 250, 1, 0); lab1.Position = UDim2.new(0, 16, 0, 0)
     lab1.Font = "GothamBold"; lab1.TextSize = 13; lab1.TextColor3 = THEME.WHITE; lab1.TextXAlignment = "Left"; lab1.Text = "Auto Upgrade Brainrots"
@@ -1978,14 +1977,14 @@ local function InitUI(scroll)
 
     local swBtn = Instance.new("TextButton", sw); swBtn.Size = UDim2.fromScale(1,1); swBtn.BackgroundTransparency = 1; swBtn.Text = ""
     swBtn.MouseButton1Click:Connect(function()
-        STATE.Enabled = not STATE.Enabled
-        SaveSet("Enabled", STATE.Enabled)
-        updateSw(STATE.Enabled)
+        UPG_STATE.Enabled = not UPG_STATE.Enabled
+        SaveSet("Enabled", UPG_STATE.Enabled)
+        updateSw(UPG_STATE.Enabled)
     end)
-    updateSw(STATE.Enabled)
+    updateSw(UPG_STATE.Enabled)
 
-    -- 2. Select Upgrade Brainrots Options (31 ปุ่ม)
-    local row2 = Instance.new("Frame", scroll); row2.Name = "VA2_Row2"; row2.Size = UDim2.new(1, -6, 0, 46); row2.BackgroundColor3 = THEME.BLACK; row2.LayoutOrder = 2
+    -- Row 2: Select Upgrade Brainrots Options
+    local row2 = Instance.new("Frame", scroll); row2.Name = "UPG_Row2"; row2.Size = UDim2.new(1, -6, 0, 46); row2.BackgroundColor3 = THEME.BLACK; row2.LayoutOrder = 12
     corner(row2); stroke(row2)
     local lab2 = Instance.new("TextLabel", row2); lab2.BackgroundTransparency = 1; lab2.Size = UDim2.new(0, 250, 1, 0); lab2.Position = UDim2.new(0, 16, 0, 0)
     lab2.Font = "GothamBold"; lab2.TextSize = 13; lab2.TextColor3 = THEME.WHITE; lab2.TextXAlignment = "Left"; lab2.Text = "Select Upgrade Brainrots Options"
@@ -2005,7 +2004,7 @@ local function InitUI(scroll)
         closePanel(); opened = true
         selectStroke.Color = THEME.GREEN; selectStroke.Transparency = 0
         local pw, ph = scroll.Parent.AbsoluteSize.X, scroll.Parent.AbsoluteSize.Y
-        optionsPanel = Instance.new("Frame", scroll.Parent); optionsPanel.Name = "VA2_OptionsPanel"; optionsPanel.BackgroundColor3 = THEME.BLACK; optionsPanel.Position = UDim2.new(0, math.floor(pw * 0.6), 0, 10); optionsPanel.Size = UDim2.new(0, math.floor(pw * 0.38), 0, ph - 20); optionsPanel.ZIndex = 100; corner(optionsPanel); stroke(optionsPanel, 2, THEME.GREEN)
+        optionsPanel = Instance.new("Frame", scroll.Parent); optionsPanel.Name = "UPG_OptionsPanel"; optionsPanel.BackgroundColor3 = THEME.BLACK; optionsPanel.Position = UDim2.new(0, math.floor(pw * 0.6), 0, 10); optionsPanel.Size = UDim2.new(0, math.floor(pw * 0.38), 0, ph - 20); optionsPanel.ZIndex = 100; corner(optionsPanel); stroke(optionsPanel, 2, THEME.GREEN)
 
         local scroller = Instance.new("ScrollingFrame", optionsPanel); scroller.Size = UDim2.new(1, -10, 1, -20); scroller.Position = UDim2.new(0, 5, 0, 10); scroller.BackgroundTransparency = 1; scroller.ScrollBarThickness = 0; scroller.AutomaticCanvasSize = "Y"
         local lay = Instance.new("UIListLayout", scroller); lay.Padding = UDim.new(0, 6); lay.HorizontalAlignment = "Center"
@@ -2016,14 +2015,14 @@ local function InitUI(scroll)
             local btn = Instance.new("TextButton", scroller); btn.Size = UDim2.new(0.92, 0, 0, 32); btn.BackgroundColor3 = THEME.BLACK; btn.Font = "GothamBold"; btn.TextSize = 10; btn.TextColor3 = THEME.WHITE; btn.Text = label; corner(btn, 6)
             local st = stroke(btn, 1.5, THEME.GREEN_DARK); st.Transparency = 0.4
             local function refresh()
-                local isAll = STATE.Selected["All"]; local isOn = STATE.Selected[tostring(id)]
+                local isAll = UPG_STATE.Selected["All"]; local isOn = UPG_STATE.Selected[tostring(id)]
                 local show = (id == "All" and isAll) or (not isAll and isOn)
                 st.Color = show and THEME.GREEN or THEME.GREEN_DARK; st.Transparency = show and 0 or 0.4
             end
             btn.MouseButton1Click:Connect(function()
-                if id == "All" then STATE.Selected = {["All"] = not STATE.Selected["All"]} 
-                else STATE.Selected["All"] = false; STATE.Selected[tostring(id)] = not STATE.Selected[tostring(id)] end
-                SaveSet("Selected", STATE.Selected)
+                if id == "All" then UPG_STATE.Selected = {["All"] = not UPG_STATE.Selected["All"]} 
+                else UPG_STATE.Selected["All"] = false; UPG_STATE.Selected[tostring(id)] = not UPG_STATE.Selected[tostring(id)] end
+                SaveSet("Selected", UPG_STATE.Selected)
                 for _, b in ipairs(allButtons) do b.Upd() end
             end)
             refresh(); table.insert(allButtons, {Btn = btn, Upd = refresh})
@@ -2041,11 +2040,11 @@ local function InitUI(scroll)
     end
     selectBtn.MouseButton1Click:Connect(function() if opened then closePanel() else openPanel() end end)
 
-    -- 3. Adjust Upgrade Brainrots Speed (เส้นขอบสีดำ)
-    local currentRel = STATE.SpeedRel; local visRel = STATE.SpeedRel
-    local dragging = false; local RSdragConn, EndDragConn, ChangeConn
+    -- Row 3: Adjust Upgrade Brainrots Speed (เส้นขอบสีดำ)
+    local currentRel = UPG_STATE.SpeedRel; local visRel = UPG_STATE.SpeedRel
+    local dragging = false; local ChangeConn, EndDragConn
 
-    local sRow = Instance.new("Frame", scroll); sRow.Name = "Row_Sens"; sRow.Size = UDim2.new(1, -6, 0, 70); sRow.BackgroundColor3 = THEME.BLACK; sRow.LayoutOrder = 3; corner(sRow, 12); stroke(sRow, 2.2, THEME.GREEN)
+    local sRow = Instance.new("Frame", scroll); sRow.Name = "UPG_Row_Sens"; sRow.Size = UDim2.new(1, -6, 0, 70); sRow.BackgroundColor3 = THEME.BLACK; sRow.LayoutOrder = 13; corner(sRow, 12); stroke(sRow, 2.2, THEME.GREEN)
     local sLab = Instance.new("TextLabel", sRow); sLab.BackgroundTransparency = 1; sLab.Position = UDim2.new(0, 16, 0, 4); sLab.Size = UDim2.new(1, -32, 0, 24); sLab.Font = "GothamBold"; sLab.TextSize = 13; sLab.TextColor3 = THEME.WHITE; sLab.TextXAlignment = "Left"; sLab.Text = "Adjust Upgrade Brainrots Speed"
     
     local bar = Instance.new("Frame", sRow); bar.Position = UDim2.new(0, 16, 0, 34); bar.Size = UDim2.new(1, -32, 0, 16); bar.BackgroundColor3 = THEME.BLACK; corner(bar, 8); stroke(bar, 1.8, THEME.GREEN); bar.Active = true
@@ -2060,7 +2059,7 @@ local function InitUI(scroll)
     local function updateFromPos(px)
         local barPos = bar.AbsolutePosition.X; local barSize = bar.AbsoluteSize.X
         local rel = math.clamp((px - barPos) / barSize, 0, 1)
-        currentRel = rel; STATE.SpeedRel = rel; SaveSet("SpeedRel", rel)
+        currentRel = rel; UPG_STATE.SpeedRel = rel; SaveSet("SpeedRel", rel)
     end
 
     local function startDragging(startPx)
@@ -2090,11 +2089,11 @@ local function InitUI(scroll)
 end
 
 ------------------------------------------------------------------
--- [ UI REGISTRATION HOOK ]
+-- [ UI REGISTRATION ]
 ------------------------------------------------------------------
 local success, err = pcall(function()
     registerRight("Home", function(scroll)
-        InitUI(scroll)
+        InitUpgradeUI(scroll)
     end)
 end)
 
@@ -2103,7 +2102,7 @@ if not success then
         local mainGui = lp:WaitForChild("PlayerGui"):FindFirstChild("UFO_HUB") or lp.PlayerGui:FindFirstChildOfClass("ScreenGui")
         if mainGui then
             local scroll = mainGui:FindFirstChildOfClass("ScrollingFrame", true)
-            if scroll then InitUI(scroll) end
+            if scroll then InitUpgradeUI(scroll) end
         end
     end)
 end
