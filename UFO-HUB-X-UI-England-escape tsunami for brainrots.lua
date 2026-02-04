@@ -1666,7 +1666,7 @@ local function InitUI(scroll)
 
     -- [HEADER]
     local header = Instance.new("TextLabel", scroll)
-    header.Name = "VA2_Header"; header.BackgroundTransparency = 1; header.Size = UDim2.new(1, 0, 0, 30); header.Font = "GothamBold"; header.TextSize = 16; header.TextColor3 = THEME.WHITE; header.TextXAlignment = "Left"; header.Text = "》》》Auto Collect System 💸《《《"; header.LayoutOrder = 0
+    header.Name = "VA2_Header"; header.BackgroundTransparency = 1; header.Size = UDim2.new(1, 0, 0, 30); header.Font = "GothamBold"; header.TextSize = 16; header.TextColor3 = THEME.WHITE; header.TextXAlignment = "Left"; header.Text = "》》》Auto Collect Money 💸《《《"; header.LayoutOrder = 0
 
     -- 1. Auto Collect Money
     local row1 = Instance.new("Frame", scroll); row1.Name = "VA2_Row1"; row1.Size = UDim2.new(1, -6, 0, 46); row1.BackgroundColor3 = THEME.BLACK; row1.LayoutOrder = 1
@@ -1695,7 +1695,7 @@ local function InitUI(scroll)
     local row2 = Instance.new("Frame", scroll); row2.Name = "VA2_Row2"; row2.Size = UDim2.new(1, -6, 0, 46); row2.BackgroundColor3 = THEME.BLACK; row2.LayoutOrder = 2
     corner(row2); stroke(row2)
     local lab2 = Instance.new("TextLabel", row2); lab2.BackgroundTransparency = 1; lab2.Size = UDim2.new(0, 200, 1, 0); lab2.Position = UDim2.new(0, 16, 0, 0)
-    lab2.Font = "GothamBold"; lab2.TextSize = 13; lab2.TextColor3 = THEME.WHITE; lab2.TextXAlignment = "Left"; lab2.Text = "Select Target Slots"
+    lab2.Font = "GothamBold"; lab2.TextSize = 13; lab2.TextColor3 = THEME.WHITE; lab2.TextXAlignment = "Left"; lab2.Text = "Auto Money Collection Settings"
 
     local selectBtn = Instance.new("TextButton", row2)
     selectBtn.AnchorPoint = Vector2.new(1, 0.5); selectBtn.Position = UDim2.new(1, -16, 0.5, 0); selectBtn.Size = UDim2.new(0, 180, 0, 28); selectBtn.BackgroundColor3 = THEME.BLACK; selectBtn.Text = "🔍 Select Options"; selectBtn.Font = "GothamBold"; selectBtn.TextSize = 13; selectBtn.TextColor3 = THEME.WHITE; corner(selectBtn, 8)
