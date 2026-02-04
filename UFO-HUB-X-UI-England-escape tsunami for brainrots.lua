@@ -2109,7 +2109,7 @@ if not success then
 end
 --===== ⚡ UFO HUB X • Auto Buy Speed Upgrade (MODEL AAA2 SHOP SYSTEM) =====
 -- SYSTEM: Speed Upgrade (Located in Shop)
--- FIXED: Top item being obscured by adding more padding and adjusting layout order
+-- FIXED: Options Panel button "+1" being obscured by adding dedicated Scroller Padding
 -- [RULE] : NEVER SHORTEN THE SCRIPT (FULL LENGTH)
 
 local Players = game:GetService("Players")
@@ -2193,86 +2193,66 @@ local function InitShopUI(scroll)
         return s
     end
 
-    -- Cleanup existing elements
+    -- Cleanup
     for _, name in ipairs({"SPD_Header","SPD_Row1","SPD_Row2","SPD_Row_Sens","SPD_OptionsPanel","SPD_Padding"}) do
         local o = scroll:FindFirstChild(name) or scroll.Parent:FindFirstChild(name)
         if o then o:Destroy() end
     end
 
-    -- เพิ่ม Padding ให้มากขึ้นเพื่อกันขอบบัง
     scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
     local pad = Instance.new("UIPadding", scroll)
     pad.Name = "SPD_Padding"
-    pad.PaddingTop = UDim.new(0, 20) -- เพิ่มจากเดิมเป็น 20
+    pad.PaddingTop = UDim.new(0, 15)
     pad.PaddingLeft = UDim.new(0, 8)
     pad.PaddingRight = UDim.new(0, 12)
-    pad.PaddingBottom = UDim.new(0, 20)
+    pad.PaddingBottom = UDim.new(0, 15)
 
     local vlist = scroll:FindFirstChildOfClass("UIListLayout") or Instance.new("UIListLayout", scroll)
-    vlist.Padding = UDim.new(0, 15); vlist.SortOrder = "LayoutOrder"
+    vlist.Padding = UDim.new(0, 14); vlist.SortOrder = "LayoutOrder"
 
-    -- Header: ⚡ Buy Speed Upgrade
+    -- Header
     local header = Instance.new("TextLabel", scroll)
-    header.Name = "SPD_Header"; header.BackgroundTransparency = 1; header.Size = UDim2.new(1, 0, 0, 35); header.Font = "GothamBold"; header.TextSize = 16; header.TextColor3 = THEME.WHITE; header.TextXAlignment = "Left"; header.Text = "⚡ Buy Speed Upgrade"; header.LayoutOrder = 100
+    header.Name = "SPD_Header"; header.BackgroundTransparency = 1; header.Size = UDim2.new(1, 0, 0, 30); header.Font = "GothamBold"; header.TextSize = 16; header.TextColor3 = THEME.WHITE; header.TextXAlignment = "Left"; header.Text = "⚡ Buy Speed Upgrade"; header.LayoutOrder = 100
 
-    -- 1. Auto Buy Speed Upgrade
-    local row1 = Instance.new("Frame", scroll); row1.Name = "SPD_Row1"; row1.Size = UDim2.new(1, 0, 0, 48); row1.BackgroundColor3 = THEME.BLACK; row1.LayoutOrder = 101
-    corner(row1); stroke(row1)
-    local lab1 = Instance.new("TextLabel", row1); lab1.BackgroundTransparency = 1; lab1.Size = UDim2.new(0, 250, 1, 0); lab1.Position = UDim2.new(0, 16, 0, 0)
-    lab1.Font = "GothamBold"; lab1.TextSize = 13; lab1.TextColor3 = THEME.WHITE; lab1.TextXAlignment = "Left"; lab1.Text = "Auto Buy Speed Upgrade"
-    
+    -- 1. Auto Buy
+    local row1 = Instance.new("Frame", scroll); row1.Name = "SPD_Row1"; row1.Size = UDim2.new(1, 0, 0, 48); row1.BackgroundColor3 = THEME.BLACK; row1.LayoutOrder = 101; corner(row1); stroke(row1)
+    local lab1 = Instance.new("TextLabel", row1); lab1.BackgroundTransparency = 1; lab1.Size = UDim2.new(0, 250, 1, 0); lab1.Position = UDim2.new(0, 16, 0, 0); lab1.Font = "GothamBold"; lab1.TextSize = 13; lab1.TextColor3 = THEME.WHITE; lab1.TextXAlignment = "Left"; lab1.Text = "Auto Buy Speed Upgrade"
     local sw = Instance.new("Frame", row1); sw.AnchorPoint = Vector2.new(1, 0.5); sw.Position = UDim2.new(1, -16, 0.5, 0); sw.Size = UDim2.new(0, 52, 0, 26); sw.BackgroundColor3 = THEME.BLACK; corner(sw, 13)
-    local swStr = stroke(sw, 1.8, THEME.RED)
-    local knobToggle = Instance.new("Frame", sw); knobToggle.Size = UDim2.new(0, 22, 0, 22); knobToggle.Position = UDim2.new(0, 2, 0.5, -11); knobToggle.BackgroundColor3 = THEME.WHITE; corner(knobToggle, 11)
-    
-    local function updateSw(on)
-        swStr.Color = on and THEME.GREEN or THEME.RED
-        TweenService:Create(knobToggle, TweenInfo.new(0.15), {Position = on and UDim2.new(1, -24, 0.5, -11) or UDim2.new(0, 2, 0.5, -11)}):Play()
-    end
-    local swBtn = Instance.new("TextButton", sw); swBtn.Size = UDim2.fromScale(1,1); swBtn.BackgroundTransparency = 1; swBtn.Text = ""
-    swBtn.MouseButton1Click:Connect(function() SPD_STATE.Enabled = not SPD_STATE.Enabled; SaveSet("Enabled", SPD_STATE.Enabled); updateSw(SPD_STATE.Enabled) end)
-    updateSw(SPD_STATE.Enabled)
+    local swStr = stroke(sw, 1.8, THEME.RED); local knobToggle = Instance.new("Frame", sw); knobToggle.Size = UDim2.new(0, 22, 0, 22); knobToggle.Position = UDim2.new(0, 2, 0.5, -11); knobToggle.BackgroundColor3 = THEME.WHITE; corner(knobToggle, 11)
+    local function updateSw(on) swStr.Color = on and THEME.GREEN or THEME.RED; TweenService:Create(knobToggle, TweenInfo.new(0.15), {Position = on and UDim2.new(1, -24, 0.5, -11) or UDim2.new(0, 2, 0.5, -11)}):Play() end
+    local swBtn = Instance.new("TextButton", sw); swBtn.Size = UDim2.fromScale(1,1); swBtn.BackgroundTransparency = 1; swBtn.Text = ""; swBtn.MouseButton1Click:Connect(function() SPD_STATE.Enabled = not SPD_STATE.Enabled; SaveSet("Enabled", SPD_STATE.Enabled); updateSw(SPD_STATE.Enabled) end); updateSw(SPD_STATE.Enabled)
 
-    -- 2. Select Buy Speed Upgrade
-    local row2 = Instance.new("Frame", scroll); row2.Name = "SPD_Row2"; row2.Size = UDim2.new(1, 0, 0, 48); row2.BackgroundColor3 = THEME.BLACK; row2.LayoutOrder = 102
-    corner(row2); stroke(row2)
-    local lab2 = Instance.new("TextLabel", row2); lab2.BackgroundTransparency = 1; lab2.Size = UDim2.new(0, 250, 1, 0); lab2.Position = UDim2.new(0, 16, 0, 0)
-    lab2.Font = "GothamBold"; lab2.TextSize = 13; lab2.TextColor3 = THEME.WHITE; lab2.TextXAlignment = "Left"; lab2.Text = "Select Buy Speed Upgrade"
+    -- 2. Select Upgrade (FIXED PANEL BUTTONS)
+    local row2 = Instance.new("Frame", scroll); row2.Name = "SPD_Row2"; row2.Size = UDim2.new(1, 0, 0, 48); row2.BackgroundColor3 = THEME.BLACK; row2.LayoutOrder = 102; corner(row2); stroke(row2)
+    local lab2 = Instance.new("TextLabel", row2); lab2.BackgroundTransparency = 1; lab2.Size = UDim2.new(0, 250, 1, 0); lab2.Position = UDim2.new(0, 16, 0, 0); lab2.Font = "GothamBold"; lab2.TextSize = 13; lab2.TextColor3 = THEME.WHITE; lab2.TextXAlignment = "Left"; lab2.Text = "Select Buy Speed Upgrade"
 
-    local selectBtn = Instance.new("TextButton", row2)
-    selectBtn.AnchorPoint = Vector2.new(1, 0.5); selectBtn.Position = UDim2.new(1, -16, 0.5, 0); selectBtn.Size = UDim2.new(0, 180, 0, 30); selectBtn.BackgroundColor3 = THEME.BLACK; selectBtn.Text = "🔍 Select Options"; selectBtn.Font = "GothamBold"; selectBtn.TextSize = 13; selectBtn.TextColor3 = THEME.WHITE; corner(selectBtn, 8)
-    local selectStroke = stroke(selectBtn, 1.8, THEME.GREEN_DARK); selectStroke.Transparency = 0.4
+    local selectBtn = Instance.new("TextButton", row2); selectBtn.AnchorPoint = Vector2.new(1, 0.5); selectBtn.Position = UDim2.new(1, -16, 0.5, 0); selectBtn.Size = UDim2.new(0, 180, 0, 30); selectBtn.BackgroundColor3 = THEME.BLACK; selectBtn.Text = "🔍 Select Options"; selectBtn.Font = "GothamBold"; selectBtn.TextSize = 13; selectBtn.TextColor3 = THEME.WHITE; corner(selectBtn, 8); local selectStroke = stroke(selectBtn, 1.8, THEME.GREEN_DARK); selectStroke.Transparency = 0.4
 
     local optionsPanel, inputConn, opened = nil, nil, false
-    local function closePanel()
-        if optionsPanel then optionsPanel:Destroy(); optionsPanel = nil end
-        if inputConn then inputConn:Disconnect(); inputConn = nil end
-        opened = false; selectStroke.Color = THEME.GREEN_DARK; selectStroke.Transparency = 0.4
-    end
+    local function closePanel() if optionsPanel then optionsPanel:Destroy(); optionsPanel = nil end; if inputConn then inputConn:Disconnect(); inputConn = nil end; opened = false; selectStroke.Color = THEME.GREEN_DARK; selectStroke.Transparency = 0.4 end
 
     local function openPanel()
-        closePanel(); opened = true
-        selectStroke.Color = THEME.GREEN; selectStroke.Transparency = 0
+        closePanel(); opened = true; selectStroke.Color = THEME.GREEN; selectStroke.Transparency = 0
         local pw, ph = scroll.Parent.AbsoluteSize.X, scroll.Parent.AbsoluteSize.Y
-        optionsPanel = Instance.new("Frame", scroll.Parent); optionsPanel.Name = "SPD_OptionsPanel"; optionsPanel.BackgroundColor3 = THEME.BLACK; optionsPanel.Position = UDim2.new(0, math.floor(pw * 0.65), 0, 10); optionsPanel.Size = UDim2.new(0, math.floor(pw * 0.33), 0, ph - 20); optionsPanel.ZIndex = 100; corner(optionsPanel); stroke(optionsPanel, 2, THEME.GREEN)
+        optionsPanel = Instance.new("Frame", scroll.Parent); optionsPanel.Name = "SPD_OptionsPanel"; optionsPanel.BackgroundColor3 = THEME.BLACK; optionsPanel.Position = UDim2.new(0, math.floor(pw * 0.65), 0, 10); optionsPanel.Size = UDim2.new(0, math.floor(pw * 0.335), 0, ph - 20); optionsPanel.ZIndex = 100; corner(optionsPanel); stroke(optionsPanel, 2, THEME.GREEN)
 
-        local search = Instance.new("TextBox", optionsPanel); search.Size = UDim2.new(1, -16, 0, 30); search.Position = UDim2.new(0, 8, 0, 8); search.BackgroundColor3 = Color3.fromRGB(20,20,20); search.PlaceholderText = "🔍 Search Upgrade"; search.Text = ""; search.Font = "GothamBold"; search.TextSize = 12; search.TextColor3 = THEME.WHITE; corner(search, 6); stroke(search, 1.2, THEME.GREEN)
+        local search = Instance.new("TextBox", optionsPanel); search.Size = UDim2.new(1, -16, 0, 32); search.Position = UDim2.new(0, 8, 0, 8); search.BackgroundColor3 = Color3.fromRGB(15,15,15); search.PlaceholderText = "🔍 Search..."; search.Text = ""; search.Font = "GothamBold"; search.TextSize = 12; search.TextColor3 = THEME.WHITE; corner(search, 6); stroke(search, 1.2, THEME.GREEN)
 
-        local scroller = Instance.new("ScrollingFrame", optionsPanel); scroller.Size = UDim2.new(1, -10, 1, -50); scroller.Position = UDim2.new(0, 5, 0, 45); scroller.BackgroundTransparency = 1; scroller.ScrollBarThickness = 0; scroller.AutomaticCanvasSize = "Y"
-        local lay = Instance.new("UIListLayout", scroller); lay.Padding = UDim.new(0, 6); lay.HorizontalAlignment = "Center"
+        -- FIXED: Adding Padding to the Scroller to prevent top button (+1) from being cut off
+        local scroller = Instance.new("ScrollingFrame", optionsPanel); scroller.Size = UDim2.new(1, -4, 1, -55); scroller.Position = UDim2.new(0, 2, 0, 48); scroller.BackgroundTransparency = 1; scroller.ScrollBarThickness = 2; scroller.ScrollBarImageColor3 = THEME.GREEN; scroller.AutomaticCanvasSize = "Y"; scroller.CanvasPosition = Vector2.new(0,0)
+        
+        local innerPad = Instance.new("UIPadding", scroller)
+        innerPad.PaddingTop = UDim.new(0, 10) -- ดันรายการแรกลงมาอีก 10 pixel
+        innerPad.PaddingBottom = UDim.new(0, 10); innerPad.PaddingLeft = UDim.new(0, 6); innerPad.PaddingRight = UDim.new(0, 6)
+
+        local lay = Instance.new("UIListLayout", scroller); lay.Padding = UDim.new(0, 8); lay.HorizontalAlignment = "Center"
         
         local allButtons = {}
         local function makeGlowButton(val, label)
-            local btn = Instance.new("TextButton", scroller); btn.Size = UDim2.new(0.92, 0, 0, 32); btn.BackgroundColor3 = THEME.BLACK; btn.Font = "GothamBold"; btn.TextSize = 10.5; btn.TextColor3 = THEME.WHITE; btn.Text = label; corner(btn, 6)
+            local btn = Instance.new("TextButton", scroller); btn.Size = UDim2.new(1, 0, 0, 36); btn.BackgroundColor3 = THEME.BLACK; btn.Font = "GothamBold"; btn.TextSize = 10.5; btn.TextColor3 = THEME.WHITE; btn.Text = label; corner(btn, 6)
             local st = stroke(btn, 1.5, THEME.GREEN_DARK); st.Transparency = 0.4
-            local function refresh()
-                local isOn = SPD_STATE.Selected[tostring(val)]
-                st.Color = isOn and THEME.GREEN or THEME.GREEN_DARK; st.Transparency = isOn and 0 or 0.4
-            end
-            btn.MouseButton1Click:Connect(function()
-                SPD_STATE.Selected[tostring(val)] = not SPD_STATE.Selected[tostring(val)]
-                SaveSet("Selected", SPD_STATE.Selected); refresh()
-            end)
+            local function refresh() local isOn = SPD_STATE.Selected[tostring(val)]; st.Color = isOn and THEME.GREEN or THEME.GREEN_DARK; st.Transparency = isOn and 0 or 0.4 end
+            btn.MouseButton1Click:Connect(function() SPD_STATE.Selected[tostring(val)] = not SPD_STATE.Selected[tostring(val)]; SaveSet("Selected", SPD_STATE.Selected); refresh() end)
             refresh(); table.insert(allButtons, {Btn = btn, Upd = refresh})
         end
 
@@ -2280,71 +2260,25 @@ local function InitShopUI(scroll)
         makeGlowButton(5, "Buy Speed Upgrade +5")
         makeGlowButton(10, "Buy Speed Upgrade +10")
 
-        search:GetPropertyChangedSignal("Text"):Connect(function()
-            local q = search.Text:lower()
-            for _, b in ipairs(allButtons) do b.Btn.Visible = (q == "" or b.Btn.Text:lower():find(q)) end
-        end)
-
-        inputConn = UserInputService.InputBegan:Connect(function(input)
-            if (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
-                local pos = input.Position; local op, os = optionsPanel.AbsolutePosition, optionsPanel.AbsoluteSize
-                if not (pos.X >= op.X and pos.X <= op.X + os.X and pos.Y >= op.Y and pos.Y <= op.Y + os.Y) then closePanel() end
-            end
-        end)
+        search:GetPropertyChangedSignal("Text"):Connect(function() local q = search.Text:lower(); for _, b in ipairs(allButtons) do b.Btn.Visible = (q == "" or b.Btn.Text:lower():find(q)) end end)
+        inputConn = UserInputService.InputBegan:Connect(function(input) if (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then local pos = input.Position; local op, os = optionsPanel.AbsolutePosition, optionsPanel.AbsoluteSize; if not (pos.X >= op.X and pos.X <= op.X + os.X and pos.Y >= op.Y and pos.Y <= op.Y + os.Y) then closePanel() end end end)
     end
     selectBtn.MouseButton1Click:Connect(function() if opened then closePanel() else openPanel() end end)
 
-    -- 3. Adjust Speed Upgrade Sensitivity
-    local currentRel = SPD_STATE.SpeedRel; local visRel = SPD_STATE.SpeedRel
-    local dragging = false
-
+    -- 3. Sensitivity
+    local currentRel = SPD_STATE.SpeedRel; local visRel = SPD_STATE.SpeedRel; local dragging = false
     local sRow = Instance.new("Frame", scroll); sRow.Name = "SPD_Row_Sens"; sRow.Size = UDim2.new(1, 0, 0, 75); sRow.BackgroundColor3 = THEME.BLACK; sRow.LayoutOrder = 103; corner(sRow, 12); stroke(sRow, 2.2, THEME.GREEN)
     local sLab = Instance.new("TextLabel", sRow); sLab.BackgroundTransparency = 1; sLab.Position = UDim2.new(0, 16, 0, 4); sLab.Size = UDim2.new(1, -32, 0, 24); sLab.Font = "GothamBold"; sLab.TextSize = 13; sLab.TextColor3 = THEME.WHITE; sLab.TextXAlignment = "Left"; sLab.Text = "Adjust Speed Upgrade Sensitivity"
-    
     local bar = Instance.new("Frame", sRow); bar.Position = UDim2.new(0, 16, 0, 38); bar.Size = UDim2.new(1, -32, 0, 18); bar.BackgroundColor3 = THEME.BLACK; corner(bar, 9); stroke(bar, 1.8, THEME.GREEN); bar.Active = true
     local fill = Instance.new("Frame", bar); fill.BackgroundColor3 = THEME.GREEN; corner(fill, 9); fill.Size = UDim2.fromScale(visRel, 1)
-
     local knobShadow = Instance.new("Frame", bar); knobShadow.Size = UDim2.fromOffset(18, 34); knobShadow.AnchorPoint = Vector2.new(0.5, 0.5); knobShadow.Position = UDim2.new(visRel, 0, 0.5, 2); knobShadow.BackgroundColor3 = THEME.DARK; knobShadow.BackgroundTransparency = 0.45; knobShadow.BorderSizePixel = 0; knobShadow.ZIndex = 2
     local knobBtn = Instance.new("ImageButton", bar); knobBtn.AutoButtonColor = false; knobBtn.BackgroundColor3 = THEME.GREY; knobBtn.Size = UDim2.fromOffset(16, 32); knobBtn.AnchorPoint = Vector2.new(0.5, 0.5); knobBtn.Position = UDim2.new(visRel, 0, 0.5, 0); knobBtn.BorderSizePixel = 0; knobBtn.ZIndex = 3
-    local kStroke = Instance.new("UIStroke", knobBtn); kStroke.Thickness = 1.2; kStroke.Color = Color3.fromRGB(210,210,215)
-    
-    local centerVal = Instance.new("TextLabel", bar); centerVal.BackgroundTransparency = 1; centerVal.Size = UDim2.fromScale(1,1); centerVal.Font = "GothamBlack"; centerVal.TextSize = 16; centerVal.TextColor3 = THEME.WHITE; centerVal.TextStrokeTransparency = 0.2; centerVal.Text = math.floor(visRel * 100 + 0.5) .. "%"
-
-    local function updateSlider(input)
-        local pos = input.Position.X
-        local start = bar.AbsolutePosition.X
-        local width = bar.AbsoluteSize.X
-        local rel = math.clamp((pos - start) / width, 0, 1)
-        currentRel = rel
-        SPD_STATE.SpeedRel = rel
-        SaveSet("SpeedRel", rel)
-    end
-
-    bar.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = true; scroll.ScrollingEnabled = false; updateSlider(input)
-        end
-    end)
-
-    UserInputService.InputChanged:Connect(function(input)
-        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-            updateSlider(input)
-        end
-    end)
-
-    UserInputService.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = false; scroll.ScrollingEnabled = true
-        end
-    end)
-
-    RunService.RenderStepped:Connect(function()
-        visRel = visRel + (currentRel - visRel) * 0.2
-        fill.Size = UDim2.fromScale(visRel, 1)
-        knobBtn.Position = UDim2.new(visRel, 0, 0.5, 0)
-        knobShadow.Position = UDim2.new(visRel, 0, 0.5, 2)
-        centerVal.Text = string.format("%d%%", math.floor(visRel * 100 + 0.5))
-    end)
+    local kStroke = Instance.new("UIStroke", knobBtn); kStroke.Thickness = 1.2; kStroke.Color = Color3.fromRGB(210,210,215); local centerVal = Instance.new("TextLabel", bar); centerVal.BackgroundTransparency = 1; centerVal.Size = UDim2.fromScale(1,1); centerVal.Font = "GothamBlack"; centerVal.TextSize = 16; centerVal.TextColor3 = THEME.WHITE; centerVal.TextStrokeTransparency = 0.2; centerVal.Text = math.floor(visRel * 100 + 0.5) .. "%"
+    local function updateSlider(input) local pos = input.Position.X; local start = bar.AbsolutePosition.X; local width = bar.AbsoluteSize.X; local rel = math.clamp((pos - start) / width, 0, 1); currentRel = rel; SPD_STATE.SpeedRel = rel; SaveSet("SpeedRel", rel) end
+    bar.InputBegan:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then dragging = true; scroll.ScrollingEnabled = false; updateSlider(input) end end)
+    UserInputService.InputChanged:Connect(function(input) if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then updateSlider(input) end end)
+    UserInputService.InputEnded:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then dragging = false; scroll.ScrollingEnabled = true end end)
+    RunService.RenderStepped:Connect(function() visRel = visRel + (currentRel - visRel) * 0.2; fill.Size = UDim2.fromScale(visRel, 1); knobBtn.Position = UDim2.new(visRel, 0, 0.5, 0); knobShadow.Position = UDim2.new(visRel, 0, 0.5, 2); centerVal.Text = string.format("%d%%", math.floor(visRel * 100 + 0.5)) end)
 end
 
 ------------------------------------------------------------------
