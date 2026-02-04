@@ -2107,6 +2107,198 @@ if not success then
         end
     end)
 end
+--===== ⚡ UFO HUB X • Auto Buy Speed Upgrade (MODEL AAA2 SHOP SYSTEM) =====
+-- SYSTEM: Speed Upgrade (Located in Shop)
+-- MODEL: AAA2 (Full Length, No Shortening)
+-- [RULE] : NEVER SHORTEN THE SCRIPT
+
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local lp = Players.LocalPlayer
+
+------------------------------------------------------------------
+-- [ SAVE & STATE SYSTEM - SHOP ]
+------------------------------------------------------------------
+local function SaveGet(key, default)
+    if getgenv and getgenv().UFOX_SAVE and getgenv().UFOX_SAVE.get then
+        return getgenv().UFOX_SAVE.get("AAA1/UFOX_SHOP_SPD/" .. game.PlaceId .. "/" .. key, default)
+    end
+    return default
+end
+
+local function SaveSet(key, val)
+    if getgenv and getgenv().UFOX_SAVE and getgenv().UFOX_SAVE.set then
+        pcall(function() 
+            getgenv().UFOX_SAVE.set("AAA1/UFOX_SHOP_SPD/" .. game.PlaceId .. "/" .. key, val) 
+        end)
+    end
+end
+
+_G.UFOX_SHOP_SPD = _G.UFOX_SHOP_SPD or {
+    Enabled = SaveGet("Enabled", false),
+    Selected = SaveGet("Selected", {["1"] = true}), -- Default +1
+}
+local SPD_STATE = _G.UFOX_SHOP_SPD
+
+------------------------------------------------------------------
+-- [ SPEED UPGRADE LOGIC LOOP ]
+------------------------------------------------------------------
+task.spawn(function()
+    while true do
+        if SPD_STATE.Enabled then
+            local rf = ReplicatedStorage:WaitForChild("RemoteFunctions"):WaitForChild("UpgradeSpeed")
+            
+            -- ทำงานตามปุ่มที่เลือกไว้ (สามารถเลือกหลายอันพร้อมกันได้)
+            for amount, active in pairs(SPD_STATE.Selected) do
+                if not SPD_STATE.Enabled then break end
+                if active then
+                    task.spawn(function()
+                        pcall(function() 
+                            rf:InvokeServer(tonumber(amount)) 
+                        end)
+                    end)
+                end
+            end
+            task.wait(0.5) -- หน่วงเวลามาตรฐานสำหรับ Shop
+        else
+            task.wait(1)
+        end
+    end
+end)
+
+------------------------------------------------------------------
+-- [ UI BUILDER - SHOP SECTION ]
+------------------------------------------------------------------
+local function InitShopUI(scroll)
+    if not scroll then return end
+    
+    local THEME = {
+        GREEN = Color3.fromRGB(25,255,125),
+        GREEN_DARK = Color3.fromRGB(0,120,60),
+        WHITE = Color3.fromRGB(255,255,255),
+        BLACK = Color3.fromRGB(0,0,0),
+        RED = Color3.fromRGB(255,40,40)
+    }
+
+    local function corner(ui, r) Instance.new("UICorner", ui).CornerRadius = UDim.new(0, r or 12) end
+    local function stroke(ui, th, col)
+        local s = Instance.new("UIStroke", ui)
+        s.Thickness = th or 2.2; s.Color = col or THEME.GREEN; s.ApplyStrokeMode = "Border"
+        return s
+    end
+
+    -- Cleanup
+    for _, name in ipairs({"SPD_Header","SPD_Row1","SPD_Row2","SPD_OptionsPanel"}) do
+        local o = scroll:FindFirstChild(name) or scroll.Parent:FindFirstChild(name)
+        if o then o:Destroy() end
+    end
+
+    scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    local vlist = scroll:FindFirstChildOfClass("UIListLayout") or Instance.new("UIListLayout", scroll)
+    vlist.Padding = UDim.new(0, 12); vlist.SortOrder = "LayoutOrder"
+
+    -- Header: ⚡ Buy Speed Upgrade (มีอีโมจิ)
+    local header = Instance.new("TextLabel", scroll)
+    header.Name = "SPD_Header"; header.BackgroundTransparency = 1; header.Size = UDim2.new(1, 0, 0, 30); header.Font = "GothamBold"; header.TextSize = 16; header.TextColor3 = THEME.WHITE; header.TextXAlignment = "Left"; header.Text = "⚡ Buy Speed Upgrade"; header.LayoutOrder = 20
+
+    -- Row 1: Auto Buy Speed Upgrade (ไม่มีอีโมจิ)
+    local row1 = Instance.new("Frame", scroll); row1.Name = "SPD_Row1"; row1.Size = UDim2.new(1, -6, 0, 46); row1.BackgroundColor3 = THEME.BLACK; row1.LayoutOrder = 21
+    corner(row1); stroke(row1)
+    local lab1 = Instance.new("TextLabel", row1); lab1.BackgroundTransparency = 1; lab1.Size = UDim2.new(0, 250, 1, 0); lab1.Position = UDim2.new(0, 16, 0, 0)
+    lab1.Font = "GothamBold"; lab1.TextSize = 13; lab1.TextColor3 = THEME.WHITE; lab1.TextXAlignment = "Left"; lab1.Text = "Auto Buy Speed Upgrade"
+    
+    local sw = Instance.new("Frame", row1); sw.AnchorPoint = Vector2.new(1, 0.5); sw.Position = UDim2.new(1, -16, 0.5, 0); sw.Size = UDim2.new(0, 52, 0, 26); sw.BackgroundColor3 = THEME.BLACK; corner(sw, 13)
+    local swStr = stroke(sw, 1.8, THEME.RED)
+    local knobToggle = Instance.new("Frame", sw); knobToggle.Size = UDim2.new(0, 22, 0, 22); knobToggle.Position = UDim2.new(0, 2, 0.5, -11); knobToggle.BackgroundColor3 = THEME.WHITE; corner(knobToggle, 11)
+    
+    local function updateSw(on)
+        swStr.Color = on and THEME.GREEN or THEME.RED
+        TweenService:Create(knobToggle, TweenInfo.new(0.15), {Position = on and UDim2.new(1, -24, 0.5, -11) or UDim2.new(0, 2, 0.5, -11)}):Play()
+    end
+    local swBtn = Instance.new("TextButton", sw); swBtn.Size = UDim2.fromScale(1,1); swBtn.BackgroundTransparency = 1; swBtn.Text = ""
+    swBtn.MouseButton1Click:Connect(function() SPD_STATE.Enabled = not SPD_STATE.Enabled; SaveSet("Enabled", SPD_STATE.Enabled); updateSw(SPD_STATE.Enabled) end)
+    updateSw(SPD_STATE.Enabled)
+
+    -- Row 2: Select Buy Speed Upgrade (หน้าตาเหมือน AAA2)
+    local row2 = Instance.new("Frame", scroll); row2.Name = "SPD_Row2"; row2.Size = UDim2.new(1, -6, 0, 46); row2.BackgroundColor3 = THEME.BLACK; row2.LayoutOrder = 22
+    corner(row2); stroke(row2)
+    local lab2 = Instance.new("TextLabel", row2); lab2.BackgroundTransparency = 1; lab2.Size = UDim2.new(0, 250, 1, 0); lab2.Position = UDim2.new(0, 16, 0, 0)
+    lab2.Font = "GothamBold"; lab2.TextSize = 13; lab2.TextColor3 = THEME.WHITE; lab2.TextXAlignment = "Left"; lab2.Text = "Select Buy Speed Upgrade"
+
+    local selectBtn = Instance.new("TextButton", row2)
+    selectBtn.AnchorPoint = Vector2.new(1, 0.5); selectBtn.Position = UDim2.new(1, -16, 0.5, 0); selectBtn.Size = UDim2.new(0, 180, 0, 28); selectBtn.BackgroundColor3 = THEME.BLACK; selectBtn.Text = "🔍 Select Upgrade"; selectBtn.Font = "GothamBold"; selectBtn.TextSize = 13; selectBtn.TextColor3 = THEME.WHITE; corner(selectBtn, 8)
+    local selectStroke = stroke(selectBtn, 1.8, THEME.GREEN_DARK); selectStroke.Transparency = 0.4
+
+    local optionsPanel, inputConn, opened = nil, nil, false
+    local function closePanel()
+        if optionsPanel then optionsPanel:Destroy(); optionsPanel = nil end
+        if inputConn then inputConn:Disconnect(); inputConn = nil end
+        opened = false; selectStroke.Color = THEME.GREEN_DARK; selectStroke.Transparency = 0.4
+    end
+
+    local function openPanel()
+        closePanel(); opened = true
+        selectStroke.Color = THEME.GREEN; selectStroke.Transparency = 0
+        local pw, ph = scroll.Parent.AbsoluteSize.X, scroll.Parent.AbsoluteSize.Y
+        optionsPanel = Instance.new("Frame", scroll.Parent); optionsPanel.Name = "SPD_OptionsPanel"; optionsPanel.BackgroundColor3 = THEME.BLACK; optionsPanel.Position = UDim2.new(0, math.floor(pw * 0.65), 0, 10); optionsPanel.Size = UDim2.new(0, math.floor(pw * 0.33), 0, ph - 20); optionsPanel.ZIndex = 100; corner(optionsPanel); stroke(optionsPanel, 2, THEME.GREEN)
+
+        local scroller = Instance.new("ScrollingFrame", optionsPanel); scroller.Size = UDim2.new(1, -10, 1, -20); scroller.Position = UDim2.new(0, 5, 0, 10); scroller.BackgroundTransparency = 1; scroller.ScrollBarThickness = 0; scroller.AutomaticCanvasSize = "Y"
+        local lay = Instance.new("UIListLayout", scroller); lay.Padding = UDim.new(0, 6); lay.HorizontalAlignment = "Center"
+        local listPadding = Instance.new("UIPadding", scroller); listPadding.PaddingTop = UDim.new(0, 10); listPadding.PaddingBottom = UDim.new(0, 15)
+        
+        local allButtons = {}
+        local function makeGlowButton(val, label)
+            local btn = Instance.new("TextButton", scroller); btn.Size = UDim2.new(0.92, 0, 0, 32); btn.BackgroundColor3 = THEME.BLACK; btn.Font = "GothamBold"; btn.TextSize = 10.5; btn.TextColor3 = THEME.WHITE; btn.Text = label; corner(btn, 6)
+            local st = stroke(btn, 1.5, THEME.GREEN_DARK); st.Transparency = 0.4
+            local function refresh()
+                local isOn = SPD_STATE.Selected[tostring(val)]
+                st.Color = isOn and THEME.GREEN or THEME.GREEN_DARK; st.Transparency = isOn and 0 or 0.4
+            end
+            btn.MouseButton1Click:Connect(function()
+                SPD_STATE.Selected[tostring(val)] = not SPD_STATE.Selected[tostring(val)]
+                SaveSet("Selected", SPD_STATE.Selected)
+                refresh()
+            end)
+            refresh(); table.insert(allButtons, {Btn = btn, Upd = refresh})
+        end
+
+        -- 3 ปุ่มตามสั่ง
+        makeGlowButton(1, "Buy Speed Upgrade +1")
+        makeGlowButton(5, "Buy Speed Upgrade +5")
+        makeGlowButton(10, "Buy Speed Upgrade +10")
+
+        inputConn = UserInputService.InputBegan:Connect(function(input)
+            if (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
+                local pos = input.Position; local op, os = optionsPanel.AbsolutePosition, optionsPanel.AbsoluteSize
+                if not (pos.X >= op.X and pos.X <= op.X + os.X and pos.Y >= op.Y and pos.Y <= op.Y + os.Y) then closePanel() end
+            end
+        end)
+    end
+    selectBtn.MouseButton1Click:Connect(function() if opened then closePanel() else openPanel() end end)
+end
+
+------------------------------------------------------------------
+-- [ UI REGISTRATION - SHOP TAB ]
+------------------------------------------------------------------
+local success, err = pcall(function()
+    registerRight("Shop", function(scroll)
+        InitShopUI(scroll)
+    end)
+end)
+
+if not success then
+    task.spawn(function()
+        local mainGui = lp:WaitForChild("PlayerGui"):FindFirstChild("UFO_HUB") or lp.PlayerGui:FindFirstChildOfClass("ScreenGui")
+        if mainGui then
+            -- พยายามหา ScrollingFrame ที่เกี่ยวข้องกับ Shop หรือสร้างใหม่
+            local scroll = mainGui:FindFirstChild("ShopScroll", true) or mainGui:FindFirstChildOfClass("ScrollingFrame", true)
+            if scroll then InitShopUI(scroll) end
+        end
+    end)
+end
 --===== UFO HUB X • SETTINGS — Smoother 🚀 (A V1 • fixed 3 rows) + Runner Save (per-map) + AA1 =====
 registerRight("Settings", function(scroll)
     local TweenService = game:GetService("TweenService")
