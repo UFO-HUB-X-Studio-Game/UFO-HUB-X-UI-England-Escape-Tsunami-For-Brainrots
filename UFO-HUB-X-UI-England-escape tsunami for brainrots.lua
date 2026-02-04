@@ -663,7 +663,8 @@ end
 -- map ชื่อแท็บ (key ภาษาอังกฤษด้านใน) -> หัวข้อภาษาไทยที่โชว์
 local TAB_TITLE_TH = {
     Home = "Home",
-    Shop = "Shop",
+    Event = "Event",
+    Shop= "Shop",
     Settings = "Settings",
 }
 
