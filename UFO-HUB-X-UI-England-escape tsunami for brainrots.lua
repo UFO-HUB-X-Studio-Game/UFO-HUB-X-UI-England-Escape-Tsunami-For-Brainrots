@@ -1531,8 +1531,9 @@ registerRight("Home", function(scroll)
     end)
 
 end)
---===== UFO HUB X • Auto Collect Money (Model A V1 + V2 FIXED & METAL AAA2 SLIDER) =====
+--===== UFO HUB X • Auto Collect Money (Model A V1 + V2 FIXED & METAL AAA2 TRUE GLOBAL) =====
 -- FIXED: ป้องกัน UI ค้าง และแก้ปัญหาปุ่มสุดท้ายโดนบัง + ระบบ Search สมบูรณ์
+-- FIXED: ปรับปรุงระบบ Slider ให้ลากตามเมาส์ได้ทุกที่บนหน้าจอ (Global Drag Fixed)
 -- ADDED: Item 3 Metal Slider (Starting at 5% / 0.05)
 -- [RULE] : NEVER SHORTEN THE SCRIPT (FULL LENGTH)
 
@@ -1566,7 +1567,7 @@ _G.UFOX_AAA1 = _G.UFOX_AAA1 or {}
 _G.UFOX_AAA1["AutoCollect"] = _G.UFOX_AAA1["AutoCollect"] or {
     Enabled = SaveGet("Enabled", false),
     Selected = SaveGet("Selected", {["All"] = true}), 
-    SpeedRel = SaveGet("SpeedRel", 0.05), -- เริ่มต้นที่ 5% เสมอ
+    SpeedRel = SaveGet("SpeedRel", 0.05),
 }
 local STATE = _G.UFOX_AAA1["AutoCollect"]
 
@@ -1662,7 +1663,7 @@ registerRight("Home", function(scroll)
     local vlist = scroll:FindFirstChildOfClass("UIListLayout") or Instance.new("UIListLayout", scroll)
     vlist.Padding = UDim.new(0, 12); vlist.SortOrder = "LayoutOrder"
 
-    -- [HEADER NAME]
+    -- [HEADER]
     local header = Instance.new("TextLabel", scroll)
     header.Name = "VA2_Header"; header.BackgroundTransparency = 1; header.Size = UDim2.new(1, 0, 0, 30); header.Font = "GothamBold"; header.TextSize = 16; header.TextColor3 = THEME.WHITE; header.TextXAlignment = "Left"; header.Text = "Auto Collect System"; header.LayoutOrder = 0
 
@@ -1689,7 +1690,7 @@ registerRight("Home", function(scroll)
     end)
     updateSw(STATE.Enabled)
 
-    -- รายการที่ 2: Select Target Slots (Model A V2 Fixed)
+    -- รายการที่ 2: Select Target Slots (Fixed All Default)
     local row2 = Instance.new("Frame", scroll); row2.Name = "VA2_Row2"; row2.Size = UDim2.new(1, -6, 0, 46); row2.BackgroundColor3 = THEME.BLACK; row2.LayoutOrder = 2
     corner(row2); stroke(row2)
     local lab2 = Instance.new("TextLabel", row2); lab2.BackgroundTransparency = 1; lab2.Size = UDim2.new(0, 200, 1, 0); lab2.Position = UDim2.new(0, 16, 0, 0)
@@ -1756,14 +1757,11 @@ registerRight("Home", function(scroll)
     end
     selectBtn.MouseButton1Click:Connect(function() if opened then closePanel() else openPanel() end end)
 
-    -- รายการที่ 3: Metal Speed Slider (MODEL A - UI)
+    -- รายการที่ 3: Metal Global Speed Slider (TRUE GLOBAL FIXED)
     local currentRel = STATE.SpeedRel
     local visRel = STATE.SpeedRel
     local dragging = false
-    local maybeDrag = false
-    local downX
-    local DRAG_THRESHOLD = 5
-    local RSdragConn, EndDragConn
+    local RSdragConn, EndDragConn, ChangeConn
     local sliderCenterLabel
 
     local sRow = Instance.new("Frame", scroll); sRow.Name = "Row_Sens"; sRow.Size = UDim2.new(1, -6, 0, 70); sRow.BackgroundColor3 = THEME.BLACK; sRow.LayoutOrder = 3; corner(sRow, 12); stroke(sRow, 2.2, THEME.GREEN)
@@ -1788,45 +1786,60 @@ registerRight("Home", function(scroll)
     end
 
     local function syncVisual(now)
-        if now then visRel = currentRel else visRel = visRel + (currentRel - visRel) * 0.3 end
+        if now then visRel = currentRel else visRel = visRel + (currentRel - visRel) * 0.35 end
         visRel = math.clamp(visRel, 0, 1)
         fill.Size = UDim2.fromScale(visRel, 1); knobBtn.Position = UDim2.new(visRel, 0, 0.5, 0); knobShadow.Position = UDim2.new(visRel, 0, 0.5, 2); centerVal.Text = string.format("%d%%", math.floor(visRel * 100 + 0.5))
     end
 
-    local function relFrom(x) return (x - bar.AbsolutePosition.X) / math.max(1, bar.AbsoluteSize.X) end
+    local function updateFromPos(px)
+        local barPos = bar.AbsolutePosition.X
+        local barSize = bar.AbsoluteSize.X
+        applyRel((px - barPos) / barSize)
+    end
 
-    local function stopDrag()
-        dragging = false; maybeDrag = false; downX = nil
-        if RSdragConn then RSdragConn:Disconnect() RSdragConn = nil end
-        if EndDragConn then EndDragConn:Disconnect() EndDragConn = nil end
+    -- ระบบ True Global Hook
+    local function stopDragging()
+        dragging = false
         scroll.ScrollingEnabled = true
+        if ChangeConn then ChangeConn:Disconnect() ChangeConn = nil end
+        if EndDragConn then EndDragConn:Disconnect() EndDragConn = nil end
     end
 
-    local function beginDrag()
-        dragging = true; maybeDrag = false
-        RSdragConn = RunService.RenderStepped:Connect(function()
-            local x = UserInputService:GetMouseLocation().X
-            applyRel(relFrom(x))
-            syncVisual(false)
+    local function startDragging(startPx)
+        dragging = true
+        scroll.ScrollingEnabled = false
+        updateFromPos(startPx)
+        
+        -- Hook เข้ากับหน้าจอทั้งหมดทันที
+        ChangeConn = UserInputService.InputChanged:Connect(function(input)
+            if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+                updateFromPos(input.Position.X)
+            end
         end)
-        EndDragConn = UserInputService.InputEnded:Connect(function(io)
-            if io.UserInputType == Enum.UserInputType.MouseButton1 or io.UserInputType == Enum.UserInputType.Touch then stopDrag() end
+        
+        EndDragConn = UserInputService.InputEnded:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                stopDragging()
+            end
         end)
     end
 
-    local function onPress(px) maybeDrag = true; downX = px; scroll.ScrollingEnabled = false; applyRel(relFrom(px)); syncVisual(true) end
-
-    bar.InputBegan:Connect(function(io) if io.UserInputType == Enum.UserInputType.MouseButton1 or io.UserInputType == Enum.UserInputType.Touch then onPress(io.Position.X) end end)
-    knobBtn.InputBegan:Connect(function(io) if io.UserInputType == Enum.UserInputType.MouseButton1 or io.UserInputType == Enum.UserInputType.Touch then onPress(io.Position.X) end end)
-
-    UserInputService.InputChanged:Connect(function(io)
-        if not maybeDrag then return end
-        if io.UserInputType == Enum.UserInputType.MouseMovement or io.UserInputType == Enum.UserInputType.Touch then
-            if math.abs(io.Position.X - downX) >= DRAG_THRESHOLD then beginDrag() end
+    bar.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            startDragging(input.Position.X)
         end
     end)
 
-    UserInputService.InputEnded:Connect(function(io) if maybeDrag and (io.UserInputType == Enum.UserInputType.MouseButton1 or io.UserInputType == Enum.UserInputType.Touch) then stopDrag() end end)
+    knobBtn.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            startDragging(input.Position.X)
+        end
+    end)
+
+    -- การ Sync หน้าตา UI ให้ลื่นไหล
+    RunService.RenderStepped:Connect(function()
+        syncVisual(false)
+    end)
 end)
 --===== UFO HUB X • SETTINGS — Smoother 🚀 (A V1 • fixed 3 rows) + Runner Save (per-map) + AA1 =====
 registerRight("Settings", function(scroll)
