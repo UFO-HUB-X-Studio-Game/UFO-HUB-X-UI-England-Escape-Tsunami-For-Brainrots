@@ -1969,7 +1969,7 @@ local function InitUI(scroll)
 
     -- HEADER: 🧠 Auto Upgrade Brainrots
     local header = Instance.new("TextLabel", scroll)
-    header.Name = "UUPG_Header"; header.BackgroundTransparency = 1; header.Size = UDim2.new(1, 0, 0, 30); header.Font = "GothamBold"; header.TextSize = 16; header.TextColor3 = THEME.WHITE; header.TextXAlignment = "Left"; header.Text = "🧠 Auto Upgrade Brainrots"; header.LayoutOrder = 10
+    header.Name = "UUPG_Header"; header.BackgroundTransparency = 1; header.Size = UDim2.new(1, 0, 0, 30); header.Font = "GothamBold"; header.TextSize = 16; header.TextColor3 = THEME.WHITE; header.TextXAlignment = "Left"; header.Text = "》》》Auto Upgrade Brainrots 🧬《《《"; header.LayoutOrder = 10
 
     -- รายการที่ 1: Auto Upgrade Brainrots
     local row1 = Instance.new("Frame", scroll); row1.Name = "UUPG_Row1"; row1.Size = UDim2.new(1, -6, 0, 46); row1.BackgroundColor3 = THEME.BLACK; row1.LayoutOrder = 11
@@ -2223,7 +2223,7 @@ local function InitShopUI(scroll)
 
     -- Header
     local header = Instance.new("TextLabel", scroll)
-    header.Name = "SPD_Header"; header.BackgroundTransparency = 1; header.Size = UDim2.new(1, 0, 0, 30); header.Font = "GothamBold"; header.TextSize = 16; header.TextColor3 = THEME.WHITE; header.TextXAlignment = "Left"; header.Text = "⚡ Buy Speed Upgrade"; header.LayoutOrder = 100
+    header.Name = "SPD_Header"; header.BackgroundTransparency = 1; header.Size = UDim2.new(1, 0, 0, 30); header.Font = "GothamBold"; header.TextSize = 16; header.TextColor3 = THEME.WHITE; header.TextXAlignment = "Left"; header.Text = "》》》Buy Speed Upgrade 🛒《《《"; header.LayoutOrder = 100
 
     -- 1. Auto Buy
     local row1 = Instance.new("Frame", scroll); row1.Name = "SPD_Row1"; row1.Size = UDim2.new(1, 0, 0, 48); row1.BackgroundColor3 = THEME.BLACK; row1.LayoutOrder = 101; corner(row1); stroke(row1)
